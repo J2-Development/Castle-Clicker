@@ -57,7 +57,7 @@ const SkullIcon = ({ color = "#8bb8d0", size = 28 }) => (
   </svg>
 );
 
-const GearIcon = ({ color = "#b0885a", size = 28 }) => (
+const GearIcon = ({ color = "#e85d3a", size = 28 }) => (
   <svg viewBox="0 0 40 40" width={size} height={size}>
     <g transform="translate(20,20)">
       {[0,45,90,135,180,225,270,315].map((a, i) => (
@@ -170,23 +170,51 @@ const VENTURE_ICONS = [
    ═══════════════════════════════════════════════════════════════ */
 
 const VENTURES = [
-  { id:0, name:"Torch Scavenging",     color:"#e8a023", colorDark:"#a06810", baseCost:4,           baseRevenue:1,            baseTime:600,    unlockCost:0 },
-  { id:1, name:"Goblin Pickpocketing",  color:"#6dba4a", colorDark:"#3d7a22", baseCost:60,          baseRevenue:60,           baseTime:3000,   unlockCost:60 },
-  { id:2, name:"Mushroom Foraging",     color:"#c74f8e", colorDark:"#8a2a5e", baseCost:720,         baseRevenue:540,          baseTime:6000,   unlockCost:720 },
-  { id:3, name:"Skeleton Looting",      color:"#8bb8d0", colorDark:"#4a7a94", baseCost:8640,        baseRevenue:4320,         baseTime:12000,  unlockCost:8640 },
-  { id:4, name:"Trap Disarming",        color:"#b0885a", colorDark:"#7a5a30", baseCost:103680,      baseRevenue:51840,        baseTime:24000,  unlockCost:103680 },
-  { id:5, name:"Mimic Hunting",         color:"#d4a843", colorDark:"#9a7420", baseCost:1244160,     baseRevenue:622080,       baseTime:48000,  unlockCost:1244160 },
-  { id:6, name:"Dragon Hoard Raid",     color:"#d45050", colorDark:"#8a2020", baseCost:14929920,    baseRevenue:7464960,      baseTime:96000,  unlockCost:14929920 },
-  { id:7, name:"Lich Vault Breach",     color:"#a855f7", colorDark:"#6a2aaa", baseCost:179159040,   baseRevenue:89579520,     baseTime:192000, unlockCost:179159040 },
-  { id:8, name:"Demon Gate Siege",      color:"#ef4444", colorDark:"#991b1b", baseCost:2149908480,  baseRevenue:1074954240,   baseTime:384000, unlockCost:2149908480 },
-  { id:9, name:"Elder God Pact",        color:"#06b6d4", colorDark:"#0e7490", baseCost:25798901760, baseRevenue:12899450880,  baseTime:768000, unlockCost:25798901760 },
+  { id:0, name:"Torch Scavenging",     color:"#e8a023", colorDark:"#a06810", baseCost:4,           baseRevenue:1,              baseTime:600,    unlockCost:0 },
+  { id:1, name:"Goblin Pickpocketing",  color:"#6dba4a", colorDark:"#3d7a22", baseCost:60,          baseRevenue:17,             baseTime:1000,   unlockCost:60 },
+  { id:2, name:"Mushroom Foraging",     color:"#c74f8e", colorDark:"#8a2a5e", baseCost:720,         baseRevenue:267,            baseTime:1600,   unlockCost:720 },
+  { id:3, name:"Skeleton Looting",      color:"#8bb8d0", colorDark:"#4a7a94", baseCost:8640,        baseRevenue:4200,           baseTime:2500,   unlockCost:8640 },
+  { id:4, name:"Trap Disarming",        color:"#e85d3a", colorDark:"#a33820", baseCost:103680,      baseRevenue:66700,          baseTime:4000,   unlockCost:103680 },
+  { id:5, name:"Potion Brewing",        color:"#a855f7", colorDark:"#6a2aaa", baseCost:1244160,     baseRevenue:1083000,        baseTime:6500,   unlockCost:1244160 },
+  { id:6, name:"Dragon Taming",         color:"#ef4444", colorDark:"#991b1b", baseCost:14929920,    baseRevenue:16670000,       baseTime:10000,  unlockCost:14929920 },
+  { id:7, name:"Dungeon Expansion",     color:"#14b8a6", colorDark:"#0d7a6e", baseCost:179159040,   baseRevenue:266700000,      baseTime:16000,  unlockCost:179159040 },
+  { id:8, name:"Demon Gate Siege",      color:"#f97316", colorDark:"#b45210", baseCost:2149908480,  baseRevenue:4334000000,     baseTime:26000,  unlockCost:2149908480 },
+  { id:9, name:"Elder God Pact",        color:"#6366f1", colorDark:"#4338ca", baseCost:25798901760, baseRevenue:70000000000,    baseTime:42000,  unlockCost:25798901760 },
 ];
 
-// Revenue doubles at each of these ownership counts
+// Revenue multiplied at ownership thresholds (sawtooth spikes)
+// { at: count, mult: multiplier } — bigger spikes at 25, 100, 500 for dopamine hits
 const MILESTONES = [
-  25, 50, 100, 200, 300, 400, 500, 600, 700, 800,
-  900, 1000, 1100, 1200, 1300, 1400, 1500, 1600, 1700, 1800,
-  1900, 2000, 2250, 2500, 2750, 3000, 3500, 4000, 4500, 5000,
+  { at:25,   mult:3 },
+  { at:50,   mult:2 },
+  { at:100,  mult:3 },
+  { at:200,  mult:2 },
+  { at:300,  mult:2 },
+  { at:400,  mult:2 },
+  { at:500,  mult:3 },
+  { at:600,  mult:2 },
+  { at:700,  mult:2 },
+  { at:800,  mult:2 },
+  { at:900,  mult:2 },
+  { at:1000, mult:3 },
+  { at:1100, mult:2 },
+  { at:1200, mult:2 },
+  { at:1300, mult:2 },
+  { at:1400, mult:2 },
+  { at:1500, mult:2 },
+  { at:1600, mult:2 },
+  { at:1700, mult:2 },
+  { at:1800, mult:2 },
+  { at:1900, mult:2 },
+  { at:2000, mult:3 },
+  { at:2250, mult:2 },
+  { at:2500, mult:2 },
+  { at:2750, mult:2 },
+  { at:3000, mult:2 },
+  { at:3500, mult:2 },
+  { at:4000, mult:2 },
+  { at:4500, mult:2 },
+  { at:5000, mult:3 },
 ];
 
 // Cost to recruit each companion (auto-runner)
@@ -224,16 +252,19 @@ const COMPANION_DESCS = [
 
 // Prestige config
 const PRESTIGE_BASE = 1e10;       // lifetime gold needed for first gem
-const PRESTIGE_GEM_BONUS = 0.02;  // +2% per gem
+const PRESTIGE_GEM_BONUS = 0.03;  // +3% per gem
 
 // Cost scaling
-const COST_EXPONENT = 1.07;       // each unit costs 7% more
+const COST_EXPONENT = 1.12;       // each unit costs 12% more
 
-// Offline earnings multiplier (1.0 = full, 0.5 = half)
-const OFFLINE_EFFICIENCY = 0.5;
+// Offline earnings multiplier (1.0 = full, 0.25 = quarter)
+const OFFLINE_EFFICIENCY = 0.25;
+
+// Max offline time counted (8 hours in ms)
+const OFFLINE_CAP = 8 * 60 * 60 * 1000;
 
 // Save key for localStorage / AsyncStorage
-const SAVE_KEY = "castle_capitalist_v3";
+const SAVE_KEY = "castle_capitalist_v4";
 
 
 // ═══ MATH UTILS ═══
@@ -250,7 +281,7 @@ const SAVE_KEY = "castle_capitalist_v3";
 const getMilestoneMultiplier = (count) => {
   let mult = 1;
   for (const ms of MILESTONES) {
-    if (count >= ms) mult *= 2;
+    if (count >= ms.at) mult *= ms.mult;
     else break;
   }
   return mult;
@@ -307,7 +338,8 @@ const calcPrestigeGems = (lifetimeGold) => {
  * Find the next milestone threshold above current count.
  */
 const getNextMilestone = (count) => {
-  return MILESTONES.find(m => m > count) || "MAX";
+  const next = MILESTONES.find(m => count < m.at);
+  return next ? next.at : "MAX";
 };
 
 /**
@@ -361,12 +393,6 @@ const formatTime = (ms) => {
    React Native + Expo for iOS/Android release.
    ═══════════════════════════════════════════════════════════════ */
 
-  VENTURES, MILESTONES, COMPANION_COSTS, COMPANION_NAMES, COMPANION_DESCS,
-  PRESTIGE_BASE, PRESTIGE_GEM_BONUS, OFFLINE_EFFICIENCY, SAVE_KEY,
-} from "../config/gameConfig";
-  getMilestoneMultiplier, getUnitCost, getBulkCost, getRevenue,
-  getMaxBuyable, calcPrestigeGems, getNextMilestone, formatNumber, formatTime,
-} from "../utils/gameMath";
 
 // ── Initial State ──
 const createInitialState = () =>
@@ -413,7 +439,7 @@ export default function CastleCapitalist() {
 
       // Offline earnings
       if (save.lastSave && save.ventures) {
-        const elapsed = Date.now() - save.lastSave;
+        const elapsed = Math.min(Date.now() - save.lastSave, OFFLINE_CAP);
         if (elapsed > 5000) {
           let offlineGold = 0;
           const pm = 1 + (save.totalGems || 0) * PRESTIGE_GEM_BONUS;
