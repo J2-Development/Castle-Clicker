@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { VentureIcon, CompanionPortrait, GoldCoinIcon, SoulGemIcon } from "./src/GameAssets.jsx";
 
 // ═══ ICONS ═══
 /* ═══════════════════════════════════════════════════════════════
@@ -46,14 +47,14 @@ const SkullIcon = ({ color = "#8bb8d0", size = 28 }) => (
     <ellipse cx="20" cy="17" rx="11" ry="12" fill="#e8e0d0"/>
     <ellipse cx="20" cy="17" rx="11" ry="12" fill={color} opacity="0.2"/>
     <ellipse cx="20" cy="16" rx="9" ry="10" fill="#f0eade" opacity="0.3"/>
-    <ellipse cx="15" cy="16" rx="3.5" ry="4" fill="#1a1510"/>
-    <ellipse cx="25" cy="16" rx="3.5" ry="4" fill="#1a1510"/>
+    <ellipse cx="15" cy="16" rx="3.5" ry="4" fill="#0d0f14"/>
+    <ellipse cx="25" cy="16" rx="3.5" ry="4" fill="#0d0f14"/>
     <ellipse cx="15" cy="15.5" rx="1.5" ry="2" fill={color} opacity="0.6"/>
     <ellipse cx="25" cy="15.5" rx="1.5" ry="2" fill={color} opacity="0.6"/>
-    <path d="M17 24 L17 28" stroke="#1a1510" strokeWidth="1.5" strokeLinecap="round"/>
-    <path d="M20 25 L20 29" stroke="#1a1510" strokeWidth="1.5" strokeLinecap="round"/>
-    <path d="M23 24 L23 28" stroke="#1a1510" strokeWidth="1.5" strokeLinecap="round"/>
-    <ellipse cx="20" cy="21" rx="2" ry="1.5" fill="#2a2018"/>
+    <path d="M17 24 L17 28" stroke="#0d0f14" strokeWidth="1.5" strokeLinecap="round"/>
+    <path d="M20 25 L20 29" stroke="#0d0f14" strokeWidth="1.5" strokeLinecap="round"/>
+    <path d="M23 24 L23 28" stroke="#0d0f14" strokeWidth="1.5" strokeLinecap="round"/>
+    <ellipse cx="20" cy="21" rx="2" ry="1.5" fill="#151922"/>
   </svg>
 );
 
@@ -64,13 +65,13 @@ const GearIcon = ({ color = "#e85d3a", size = 28 }) => (
         <rect key={i} x="-2.8" y="-14" width="5.6" height="6" rx="1.2" fill={color} transform={`rotate(${a})`} stroke="#5a4510" strokeWidth="0.4"/>
       ))}
       <circle r="9" fill={color} stroke="#5a4510" strokeWidth="0.6"/>
-      <circle r="4" fill="#1a1510"/>
+      <circle r="4" fill="#0d0f14"/>
       <circle r="2.5" fill={color} opacity="0.3"/>
     </g>
   </svg>
 );
 
-const ChestIcon = ({ color = "#d4a843", size = 28 }) => (
+const ChestIcon = ({ color = "#a855f7", size = 28 }) => (
   <svg viewBox="0 0 40 40" width={size} height={size}>
     <rect x="7" y="18" width="26" height="14" rx="2" fill="#8B6914" stroke="#5a4510" strokeWidth="0.8"/>
     <rect x="8" y="19" width="24" height="5" fill="#a07820" opacity="0.3"/>
@@ -82,27 +83,27 @@ const ChestIcon = ({ color = "#d4a843", size = 28 }) => (
   </svg>
 );
 
-const DragonIcon = ({ color = "#d45050", size = 28 }) => (
+const DragonIcon = ({ color = "#ef4444", size = 28 }) => (
   <svg viewBox="0 0 40 40" width={size} height={size}>
     <ellipse cx="20" cy="22" rx="10" ry="9" fill={color}/>
     <ellipse cx="20" cy="21" rx="8" ry="7" fill="#e06060" opacity="0.3"/>
     <path d="M10 18 L6 8 L14 14 Z" fill={color} stroke="#8a2020" strokeWidth="0.5"/>
     <path d="M30 18 L34 8 L26 14 Z" fill={color} stroke="#8a2020" strokeWidth="0.5"/>
-    <ellipse cx="15" cy="19" rx="3" ry="3.5" fill="#1a1510"/>
-    <ellipse cx="25" cy="19" rx="3" ry="3.5" fill="#1a1510"/>
+    <ellipse cx="15" cy="19" rx="3" ry="3.5" fill="#0d0f14"/>
+    <ellipse cx="25" cy="19" rx="3" ry="3.5" fill="#0d0f14"/>
     <ellipse cx="15.8" cy="18.5" rx="1.2" ry="2" fill="#f0c030"/>
     <ellipse cx="25.8" cy="18.5" rx="1.2" ry="2" fill="#f0c030"/>
-    <ellipse cx="18" cy="27" rx="1" ry="0.6" fill="#1a1510"/>
-    <ellipse cx="22" cy="27" rx="1" ry="0.6" fill="#1a1510"/>
+    <ellipse cx="18" cy="27" rx="1" ry="0.6" fill="#0d0f14"/>
+    <ellipse cx="22" cy="27" rx="1" ry="0.6" fill="#0d0f14"/>
     <path d="M16 30 L18 32 L20 30 L22 32 L24 30" stroke={color} strokeWidth="1.2" fill="none" opacity="0.6"/>
   </svg>
 );
 
-const CrownIcon = ({ color = "#a855f7", size = 28 }) => (
+const CrownIcon = ({ color = "#14b8a6", size = 28 }) => (
   <svg viewBox="0 0 40 40" width={size} height={size}>
-    <path d="M8 28 L8 16 L14 22 L20 12 L26 22 L32 16 L32 28 Z" fill={color} stroke="#6a2aaa" strokeWidth="0.8"/>
-    <path d="M10 27 L10 18 L14.5 22.5 L20 14 L25.5 22.5 L30 18 L30 27 Z" fill="#c084fc" opacity="0.25"/>
-    <rect x="8" y="27" width="24" height="4" rx="1" fill={color} stroke="#6a2aaa" strokeWidth="0.8"/>
+    <path d="M8 28 L8 16 L14 22 L20 12 L26 22 L32 16 L32 28 Z" fill={color} stroke="#0d7a6e" strokeWidth="0.8"/>
+    <path d="M10 27 L10 18 L14.5 22.5 L20 14 L25.5 22.5 L30 18 L30 27 Z" fill="#5eead4" opacity="0.25"/>
+    <rect x="8" y="27" width="24" height="4" rx="1" fill={color} stroke="#0d7a6e" strokeWidth="0.8"/>
     <circle cx="14" cy="16" r="2" fill="#f0c030"/>
     <circle cx="20" cy="12" r="2.5" fill="#f0c030"/>
     <circle cx="26" cy="16" r="2" fill="#f0c030"/>
@@ -112,7 +113,7 @@ const CrownIcon = ({ color = "#a855f7", size = 28 }) => (
   </svg>
 );
 
-const VolcanoIcon = ({ color = "#ef4444", size = 28 }) => (
+const VolcanoIcon = ({ color = "#f97316", size = 28 }) => (
   <svg viewBox="0 0 40 40" width={size} height={size}>
     <path d="M4 36 L15 12 L25 12 L36 36 Z" fill="#5a3a1a" stroke="#3a2510" strokeWidth="0.6"/>
     <path d="M8 36 L16 14 L24 14 L32 36 Z" fill="#6a4a2a" opacity="0.4"/>
@@ -126,7 +127,7 @@ const VolcanoIcon = ({ color = "#ef4444", size = 28 }) => (
   </svg>
 );
 
-const VoidIcon = ({ color = "#06b6d4", size = 28 }) => (
+const VoidIcon = ({ color = "#6366f1", size = 28 }) => (
   <svg viewBox="0 0 40 40" width={size} height={size}>
     <circle cx="20" cy="20" r="13" fill="#0a1a2a" stroke={color} strokeWidth="1"/>
     <circle cx="20" cy="20" r="10" fill="none" stroke={color} strokeWidth="0.6" opacity="0.5"/>
@@ -580,16 +581,16 @@ export default function CastleCapitalist() {
         <div className="hd-top">
           <span className="hd-title">⚔ CASTLE CAPITALIST</span>
           <span className="hd-gems" onClick={() => setTab("prestige")}>
-            <SoulGem /> {prestigeGems} ({prestigeMultiplier.toFixed(2)}x)
+            <SoulGemIcon /> {prestigeGems} ({prestigeMultiplier.toFixed(2)}x)
           </span>
         </div>
         <div className="hd-gold">
           <div className="hd-gold-left">
-            <GoldCoin size={18} />
+            <GoldCoinIcon size={18} />
             <span className="hd-amount">{formatNumber(gold)}</span>
             <span className="hd-label">GOLD</span>
           </div>
-          <span className="hd-gps"><GoldCoin /> {formatNumber(goldPerSecond)}/sec</span>
+          <span className="hd-gps"><GoldCoinIcon /> {formatNumber(goldPerSecond)}/sec</span>
         </div>
       </div>
 
@@ -640,16 +641,18 @@ export default function CastleCapitalist() {
             const IconComponent = VENTURE_ICONS[i];
 
             return (
-              <div key={v.id} className={`vrow ${!unlocked ? 'vrow-locked' : ''}`}>
+              <div key={v.id} className={`vrow ${!unlocked ? 'vrow-locked' : ''} ${!unlocked && canAfford ? 'vrow-afford' : ''}`}>
                 {/* Badge */}
-                <div className="badge"
-                  style={{
-                    background: `linear-gradient(135deg, ${v.color}33, ${v.colorDark}55)`,
-                    borderColor: v.color + '88',
-                  }}
-                  onClick={() => unlocked && handleStartVenture(i)}
-                >
-                  <IconComponent color={v.color} />
+                <div className="badge-wrap" onClick={() => unlocked && handleStartVenture(i)}>
+                  <div className="badge"
+                    style={{
+                      background: `linear-gradient(135deg, ${v.color}33, ${v.colorDark}55)`,
+                      borderColor: v.color + '88',
+                      overflow: 'hidden',
+                    }}
+                  >
+                    <VentureIcon index={i} color={v.color} size={56} />
+                  </div>
                   <span className="badge-ct">{vs.owned}</span>
                 </div>
 
@@ -660,7 +663,7 @@ export default function CastleCapitalist() {
                     {vs.hasCompanion && <span className="auto-tag">AUTO</span>}
                   </div>
                   <div className="vrev">
-                    <GoldCoin /> {formatNumber(rev)}
+                    <GoldCoinIcon /> {formatNumber(rev)}
                     <span className="vps">{formatNumber(perSec)}/s</span>
                   </div>
                   <div className="bar-out">
@@ -680,7 +683,7 @@ export default function CastleCapitalist() {
                 {/* Buy */}
                 <button className="buy-btn" disabled={!canAfford} onClick={() => handleBuyVenture(i)}>
                   <div className="buy-q">{unlocked ? (buyQty === -1 ? `×${qty}` : `×${buyQty}`) : "UNLOCK"}</div>
-                  <div className="buy-c"><GoldCoin />{formatNumber(cost)}</div>
+                  <div className="buy-c"><GoldCoinIcon />{formatNumber(cost)}</div>
                   <div className="buy-l">{unlocked ? "Buy" : "New"}</div>
                 </button>
               </div>
@@ -698,8 +701,6 @@ export default function CastleCapitalist() {
             const vs = ventures[i];
             const cost = COMPANION_COSTS[i];
             const canAfford = gold >= cost && !vs.hasCompanion && vs.owned > 0;
-            const IconComponent = VENTURE_ICONS[i];
-
             return (
               <div key={v.id} className="comp-row">
                 <div className="comp-info">
@@ -709,7 +710,7 @@ export default function CastleCapitalist() {
                       borderColor: v.color + '66',
                     }}
                   >
-                    <IconComponent color={v.color} size={22} />
+                    <CompanionPortrait index={i} color={v.color} size={32} />
                   </div>
                   <div>
                     <div className="comp-name">{COMPANION_NAMES[i]}</div>
@@ -722,7 +723,7 @@ export default function CastleCapitalist() {
                   <span className="comp-locked">🔒 Locked</span>
                 ) : (
                   <button className="comp-btn" disabled={!canAfford} onClick={() => handleBuyCompanion(i)}>
-                    Recruit · <GoldCoin />{formatNumber(cost)}
+                    Recruit · <GoldCoinIcon />{formatNumber(cost)}
                   </button>
                 )}
               </div>
@@ -753,7 +754,7 @@ export default function CastleCapitalist() {
           <div className="prest-grid">
             <div className="prest-stat">
               <div className="prest-label">Current Gems</div>
-              <div className="prest-val" style={{ color: 'var(--gm)' }}><SoulGem size={18} /> {prestigeGems}</div>
+              <div className="prest-val" style={{ color: 'var(--gm)' }}><SoulGemIcon size={18} /> {prestigeGems}</div>
             </div>
             <div className="prest-stat">
               <div className="prest-label">Enchantment</div>
@@ -772,7 +773,7 @@ export default function CastleCapitalist() {
             {pendingGems > 0 ? `⚡ ASCEND (+${pendingGems} Gems)` : "Gather more gold to ascend"}
           </button>
           <p className="prest-hint">
-            Next gem at: <GoldCoin />{formatNumber(Math.pow(prestigeGems + totalGems + 1, 2) * PRESTIGE_BASE)} lifetime gold
+            Next gem at: <GoldCoinIcon />{formatNumber(Math.pow(prestigeGems + totalGems + 1, 2) * PRESTIGE_BASE)} lifetime gold
           </p>
         </div>
       )}
@@ -794,13 +795,13 @@ const STYLES = `
 @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Almendra:wght@400;700&family=Fira+Code:wght@400;600&display=swap');
 
 .cc {
-  --bg: #1a1510; --bg2: #241e16;
-  --sf: #352b1e; --sf2: #3d3122;
-  --bd: #5a4a32; --bd2: #7a6842;
+  --bg: #0d0f14; --bg2: #151922;
+  --sf: #1c2030; --sf2: #242a3a;
+  --bd: #2a3045; --bd2: #3d4a6a;
   --gd: #f0c030; --gdl: #ffe082; --gdd: #a07818;
   --gm: #c084fc; --gmd: #7c3aed;
   --gn: #4ade80; --rd: #ef4444;
-  --tx: #ede0cc; --txd: #9a8a6e; --txb: #fff8e8;
+  --tx: #e0e4f0; --txd: #7a84a6; --txb: #f0f2ff;
   font-family: 'Almendra', serif;
   background: var(--bg); color: var(--tx);
   min-height: 100vh; max-width: 480px;
@@ -810,14 +811,14 @@ const STYLES = `
 .cc::before {
   content: ''; position: fixed; inset: 0;
   background:
-    repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,.03) 3px, rgba(0,0,0,.03) 4px),
-    repeating-linear-gradient(90deg, transparent, transparent 3px, rgba(0,0,0,.02) 3px, rgba(0,0,0,.02) 4px);
+    repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(100,130,200,.03) 3px, rgba(100,130,200,.03) 4px),
+    repeating-linear-gradient(90deg, transparent, transparent 3px, rgba(100,130,200,.02) 3px, rgba(100,130,200,.02) 4px);
   pointer-events: none; z-index: 0;
 }
 .cc * { position: relative; z-index: 1; box-sizing: border-box; }
 
 /* Header */
-.hd { background: linear-gradient(180deg,#2a2218,#1e1810); border-bottom: 3px solid var(--bd2); padding: 12px 16px 10px; position: sticky; top: 0; z-index: 20; box-shadow: 0 4px 20px rgba(0,0,0,.5); }
+.hd { background: linear-gradient(180deg,#1a1f2e,#0d0f14); border-bottom: 3px solid var(--bd2); padding: 12px 16px 10px; position: sticky; top: 0; z-index: 20; box-shadow: 0 4px 20px rgba(0,0,0,.6); }
 .hd::after { content:''; position:absolute; bottom:-6px; left:0; right:0; height:3px; background:linear-gradient(90deg,transparent,var(--gdd),transparent); }
 .hd-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
 .hd-title { font-family:'Cinzel',serif; font-size:16px; font-weight:900; color:var(--gd); text-shadow:0 2px 4px rgba(0,0,0,.6),0 0 20px rgba(240,192,48,.15); letter-spacing:2px; }
@@ -844,11 +845,14 @@ const STYLES = `
 .vrow { display:flex; align-items:center; gap:6px; padding:8px 6px; margin-bottom:4px; background:linear-gradient(135deg,var(--sf),var(--sf2)); border:1px solid var(--bd); border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,.2),inset 0 1px 0 rgba(255,255,255,.03); transition:border-color .2s; }
 .vrow:hover { border-color:var(--bd2); }
 .vrow-locked { opacity:.4; filter:grayscale(.3); }
+.vrow-afford { opacity:1; filter:none; border-color:rgba(74,222,128,.8); animation:row-glow 1.5s ease-in-out infinite; }
+@keyframes row-glow { 0%,100% { box-shadow:0 0 8px rgba(74,222,128,.3), 0 0 2px rgba(74,222,128,.5); border-color:rgba(74,222,128,.5); } 50% { box-shadow:0 0 20px rgba(74,222,128,.6), 0 0 8px rgba(74,222,128,.8); border-color:rgba(74,222,128,1); } }
 
 /* Icon Badge */
-.badge { width:56px; height:56px; border-radius:50%; display:flex; flex-direction:column; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; border:2px solid; box-shadow:0 2px 8px rgba(0,0,0,.3),inset 0 -2px 4px rgba(0,0,0,.2),inset 0 2px 4px rgba(255,255,255,.1); transition:transform .1s; }
-.badge:active { transform:scale(.92); }
-.badge-ct { font-family:'Fira Code',monospace; font-size:10px; font-weight:700; color:var(--txb); text-shadow:0 1px 3px rgba(0,0,0,.8); margin-top:1px; }
+.badge-wrap { display:flex; flex-direction:column; align-items:center; flex-shrink:0; cursor:pointer; }
+.badge-wrap:active .badge { transform:scale(.92); }
+.badge { width:56px; height:56px; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0; border:2px solid; box-shadow:0 2px 8px rgba(0,0,0,.3),inset 0 -2px 4px rgba(0,0,0,.2),inset 0 2px 4px rgba(255,255,255,.1); transition:transform .1s; overflow:hidden; }
+.badge-ct { font-family:'Fira Code',monospace; font-size:10px; font-weight:700; color:var(--txb); text-shadow:0 1px 3px rgba(0,0,0,.8); margin-top:3px; }
 
 /* Venture Middle */
 .vmid { flex:1; min-width:0; cursor:pointer; }
@@ -858,7 +862,7 @@ const STYLES = `
 .vps { font-size:9px; color:var(--txd); margin-left:6px; }
 
 /* Progress Bar */
-.bar-out { height:14px; background:#1a1408; border-radius:7px; overflow:hidden; border:1px solid var(--bd); box-shadow:inset 0 2px 4px rgba(0,0,0,.4); margin-bottom:3px; position:relative; }
+.bar-out { height:14px; background:#0a0c12; border-radius:7px; overflow:hidden; border:1px solid var(--bd); box-shadow:inset 0 2px 4px rgba(0,0,0,.4); margin-bottom:3px; position:relative; }
 .bar-in { height:100%; border-radius:6px; position:relative; overflow:hidden; }
 .bar-in::after { content:''; position:absolute; inset:0; background:repeating-linear-gradient(-45deg,transparent,transparent 4px,rgba(255,255,255,.08) 4px,rgba(255,255,255,.08) 8px); animation:stripe .8s linear infinite; }
 @keyframes stripe { 0%{background-position:0 0} 100%{background-position:16px 0} }
