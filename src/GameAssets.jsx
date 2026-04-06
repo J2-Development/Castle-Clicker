@@ -1,5 +1,5 @@
 /**
- * Castle Capitalist — Game Asset Components
+ * Castle Clicker — Game Asset Components
  *
  * Provides <VentureIcon>, <CompanionPortrait>, <CurrencyIcon>
  * that load AI-generated images from /assets/ with graceful

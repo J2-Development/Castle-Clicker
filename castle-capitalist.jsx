@@ -3,7 +3,7 @@ import { VentureIcon, CompanionPortrait, GoldCoinIcon, SoulGemIcon } from "./src
 
 // ═══ ICONS ═══
 /* ═══════════════════════════════════════════════════════════════
-   Castle Capitalist — Custom SVG Icon Library
+   Castle Clicker — Custom SVG Icon Library
    Hand-crafted dungeon-themed icons. No emoji. No AI slop.
    ═══════════════════════════════════════════════════════════════ */
 
@@ -166,63 +166,50 @@ const VENTURE_ICONS = [
 
 // ═══ CONFIG ═══
 /* ═══════════════════════════════════════════════════════════════
-   Castle Capitalist — Game Configuration
+   Castle Clicker — Game Configuration
    All tuning knobs in one place. Tweak these to balance the game.
    ═══════════════════════════════════════════════════════════════ */
 
 const VENTURES = [
-  { id:0, name:"Torch Scavenging",     color:"#e8a023", colorDark:"#a06810", baseCost:4,           baseRevenue:1,              baseTime:600,    unlockCost:0 },
-  { id:1, name:"Goblin Pickpocketing",  color:"#6dba4a", colorDark:"#3d7a22", baseCost:60,          baseRevenue:17,             baseTime:1000,   unlockCost:60 },
-  { id:2, name:"Mushroom Foraging",     color:"#c74f8e", colorDark:"#8a2a5e", baseCost:720,         baseRevenue:267,            baseTime:1600,   unlockCost:720 },
-  { id:3, name:"Skeleton Looting",      color:"#8bb8d0", colorDark:"#4a7a94", baseCost:8640,        baseRevenue:4200,           baseTime:2500,   unlockCost:8640 },
-  { id:4, name:"Trap Disarming",        color:"#e85d3a", colorDark:"#a33820", baseCost:103680,      baseRevenue:66700,          baseTime:4000,   unlockCost:103680 },
-  { id:5, name:"Potion Brewing",        color:"#a855f7", colorDark:"#6a2aaa", baseCost:1244160,     baseRevenue:1083000,        baseTime:6500,   unlockCost:1244160 },
-  { id:6, name:"Dragon Taming",         color:"#ef4444", colorDark:"#991b1b", baseCost:14929920,    baseRevenue:16670000,       baseTime:10000,  unlockCost:14929920 },
-  { id:7, name:"Dungeon Expansion",     color:"#14b8a6", colorDark:"#0d7a6e", baseCost:179159040,   baseRevenue:266700000,      baseTime:16000,  unlockCost:179159040 },
-  { id:8, name:"Demon Gate Siege",      color:"#f97316", colorDark:"#b45210", baseCost:2149908480,  baseRevenue:4334000000,     baseTime:26000,  unlockCost:2149908480 },
-  { id:9, name:"Elder God Pact",        color:"#6366f1", colorDark:"#4338ca", baseCost:25798901760, baseRevenue:70000000000,    baseTime:42000,  unlockCost:25798901760 },
+  //                                                          cost         revenue/cycle    cycle(ms)   unlock
+  // Pacing targets (active play, no companions, no prestige):
+  //   Tier 2: ~2-3 min | Tier 3: ~8-10 min | Tier 4: ~25-35 min | Tier 5: ~1-2 hr
+  //   Tier 6: ~3-5 hr  | Tier 7+: overnight / prestige territory
+  { id:0, name:"Torch Scavenging",     color:"#e8a023", colorDark:"#a06810", baseCost:4,             baseRevenue:1,            baseTime:1000,    unlockCost:0 },
+  { id:1, name:"Goblin Pickpocketing",  color:"#6dba4a", colorDark:"#3d7a22", baseCost:60,           baseRevenue:4,            baseTime:3000,    unlockCost:200 },
+  { id:2, name:"Mushroom Foraging",     color:"#c74f8e", colorDark:"#8a2a5e", baseCost:1400,         baseRevenue:22,           baseTime:6000,    unlockCost:5000 },
+  { id:3, name:"Skeleton Looting",      color:"#8bb8d0", colorDark:"#4a7a94", baseCost:36000,        baseRevenue:200,          baseTime:10000,   unlockCost:130000 },
+  { id:4, name:"Trap Disarming",        color:"#e85d3a", colorDark:"#a33820", baseCost:950000,       baseRevenue:650,          baseTime:20000,   unlockCost:3500000 },
+  { id:5, name:"Potion Brewing",        color:"#a855f7", colorDark:"#6a2aaa", baseCost:26000000,     baseRevenue:3400,         baseTime:36000,   unlockCost:100000000 },
+  { id:6, name:"Dragon Taming",         color:"#ef4444", colorDark:"#991b1b", baseCost:750000000,    baseRevenue:17500,        baseTime:60000,   unlockCost:3000000000 },
+  { id:7, name:"Dungeon Expansion",     color:"#14b8a6", colorDark:"#0d7a6e", baseCost:22000000000,  baseRevenue:88000,        baseTime:96000,   unlockCost:90000000000 },
+  { id:8, name:"Demon Gate Siege",      color:"#f97316", colorDark:"#b45210", baseCost:700000000000, baseRevenue:430000,       baseTime:150000,  unlockCost:2800000000000 },
+  { id:9, name:"Elder God Pact",        color:"#6366f1", colorDark:"#4338ca", baseCost:25000000000000,baseRevenue:2100000,     baseTime:240000,  unlockCost:90000000000000 },
 ];
 
 // Revenue multiplied at ownership thresholds (sawtooth spikes)
-// { at: count, mult: multiplier } — bigger spikes at 25, 100, 500 for dopamine hits
+// Spaced out, earned not given — big spikes are rare dopamine hits
 const MILESTONES = [
-  { at:25,   mult:3 },
+  { at:25,   mult:2 },
   { at:50,   mult:2 },
-  { at:100,  mult:3 },
+  { at:100,  mult:2 },
   { at:200,  mult:2 },
   { at:300,  mult:2 },
-  { at:400,  mult:2 },
-  { at:500,  mult:3 },
-  { at:600,  mult:2 },
-  { at:700,  mult:2 },
-  { at:800,  mult:2 },
-  { at:900,  mult:2 },
+  { at:500,  mult:3 },   // first big spike — reward for commitment
+  { at:750,  mult:2 },
   { at:1000, mult:3 },
-  { at:1100, mult:2 },
-  { at:1200, mult:2 },
-  { at:1300, mult:2 },
-  { at:1400, mult:2 },
   { at:1500, mult:2 },
-  { at:1600, mult:2 },
-  { at:1700, mult:2 },
-  { at:1800, mult:2 },
-  { at:1900, mult:2 },
-  { at:2000, mult:3 },
-  { at:2250, mult:2 },
-  { at:2500, mult:2 },
-  { at:2750, mult:2 },
-  { at:3000, mult:2 },
-  { at:3500, mult:2 },
-  { at:4000, mult:2 },
-  { at:4500, mult:2 },
+  { at:2000, mult:2 },
+  { at:3000, mult:3 },
   { at:5000, mult:3 },
 ];
 
 // Cost to recruit each companion (auto-runner)
+// Priced as a mid-tier luxury — you feel it when you buy one
 const COMPANION_COSTS = [
-  1000, 15000, 100000, 500000, 10_000_000,
-  100_000_000, 1_000_000_000, 100_000_000_000,
-  5_000_000_000_000, 500_000_000_000_000,
+  2500, 60000, 800000, 20000000, 500000000,
+  15000000000, 500000000000, 20000000000000,
+  800000000000000, 40000000000000000,
 ];
 
 const COMPANION_NAMES = [
@@ -256,7 +243,7 @@ const PRESTIGE_BASE = 1e10;       // lifetime gold needed for first gem
 const PRESTIGE_GEM_BONUS = 0.03;  // +3% per gem
 
 // Cost scaling
-const COST_EXPONENT = 1.12;       // each unit costs 12% more
+const COST_EXPONENT = 1.15;       // each unit costs 15% more — steeper scaling
 
 // Offline earnings multiplier (1.0 = full, 0.25 = quarter)
 const OFFLINE_EFFICIENCY = 0.25;
@@ -265,12 +252,169 @@ const OFFLINE_EFFICIENCY = 0.25;
 const OFFLINE_CAP = 8 * 60 * 60 * 1000;
 
 // Save key for localStorage / AsyncStorage
-const SAVE_KEY = "castle_capitalist_v4";
+const SAVE_KEY = "castle_clicker_v7"; // bumped: profession evolution
+
+// ═══ SPECIALTY MATERIALS ═══
+/* ═══════════════════════════════════════════════════════════════
+   Profession-specific currencies. 3 tiers per profession.
+   T1 = common (upgrade fuel), T2 = uncommon, T3 = rare catalyst
+   ═══════════════════════════════════════════════════════════════ */
+
+const SPECIALTY_MATERIALS = [
+  { id:0, t1:{name:"Cinder Ash",       color:"#e8a023"}, t2:{name:"Core Ember",             color:"#ff6b35"}, t3:{name:"Eternal Flame Essence",      color:"#ff2d2d"} },
+  { id:1, t1:{name:"Filched Coin",      color:"#6dba4a"}, t2:{name:"Thieves' Sigil",         color:"#3daa22"}, t3:{name:"Shadow King's Token",        color:"#1a5c0a"} },
+  { id:2, t1:{name:"Spore Dust",        color:"#c74f8e"}, t2:{name:"Lotus Petal",             color:"#e06aaa"}, t3:{name:"Mycelium Heart",             color:"#ff3090"} },
+  { id:3, t1:{name:"Bone Shard",        color:"#8bb8d0"}, t2:{name:"Soul Marrow",             color:"#5a9aba"}, t3:{name:"Lich King's Phylactery",     color:"#2a7a9a"} },
+  { id:4, t1:{name:"Sprung Spring",     color:"#e85d3a"}, t2:{name:"Mithril Gearwork",        color:"#cc4422"}, t3:{name:"Architect's Eye",            color:"#aa2200"} },
+  { id:5, t1:{name:"Vial Residue",      color:"#a855f7"}, t2:{name:"Philosopher's Salt",      color:"#8a30dd"}, t3:{name:"Elixir of Transmutation",    color:"#6a10bb"} },
+  { id:6, t1:{name:"Shed Scale",        color:"#ef4444"}, t2:{name:"Drake Heartstone",        color:"#cc2222"}, t3:{name:"Primordial Dragon Egg",      color:"#991111"} },
+  { id:7, t1:{name:"Hewn Stone",        color:"#14b8a6"}, t2:{name:"Enchanted Cornerstone",   color:"#0d9a88"}, t3:{name:"Infinite Blueprint",         color:"#087a6a"} },
+  { id:8, t1:{name:"Brimstone Chip",    color:"#f97316"}, t2:{name:"Infernal Seal",           color:"#dd5500"}, t3:{name:"Abyssal Keystone",           color:"#bb3300"} },
+  { id:9, t1:{name:"Void Whisper",      color:"#6366f1"}, t2:{name:"Eldritch Ink",            color:"#4a4ad0"}, t3:{name:"Cosmic Covenant Scroll",     color:"#3030aa"} },
+];
+
+const MAT_DROP_RATES = { t1: 0.35, t2: 0.05, t3: 0.0015 };
+const MAT_LEVEL_SCALING = { t1: 0.01, t2: 0.005, t3: 0.0001 }; // bonus per 10 owned levels
+
+const rollMaterialDrop = (ventureIndex, owned, watchBonus = 1) => {
+  const levelBonus = Math.floor(owned / 10);
+  const drops = {};
+  for (const tier of ["t3", "t2", "t1"]) {
+    const rate = MAT_DROP_RATES[tier] * (1 + levelBonus * MAT_LEVEL_SCALING[tier]) * watchBonus;
+    if (Math.random() < rate) {
+      drops[tier] = (drops[tier] || 0) + 1;
+    }
+  }
+  return Object.keys(drops).length > 0 ? drops : null;
+};
+
+// ═══ PROFESSION UPGRADES ═══
+const UPGRADE_TIERS = [
+  { name:"—",            t1:0,    t2:0,   t3:0, revBonus:0,    speedBonus:0    },
+  { name:"Apprentice",   t1:15,   t2:0,   t3:0, revBonus:0.25, speedBonus:0    },
+  { name:"Journeyman",   t1:50,   t2:5,   t3:0, revBonus:0.50, speedBonus:0.10 },
+  { name:"Expert",       t1:150,  t2:20,  t3:0, revBonus:1.00, speedBonus:0.20 },
+  { name:"Master",       t1:400,  t2:60,  t3:1, revBonus:2.00, speedBonus:0.30 },
+  { name:"Grandmaster",  t1:1000, t2:150, t3:3, revBonus:4.00, speedBonus:0.40 },
+];
+
+// ═══ PROFESSION TRANSFORMATIONS ═══
+const TRANSFORM_TREES = [
+  { id:0, a:{ name:"Inferno Hunting",       color:"#ff3333", colorDark:"#aa1111", revMult:2,   speedMult:1,   passive:"Pyroclasm",          passiveDesc:"Every 10th cycle triggers a free cycle on 2 random professions",       cost:{t3:2, cross:{ventureId:8, tier:"t2", qty:3}} },
+         b:{ name:"Moonlight Gathering",    color:"#c0d8f0", colorDark:"#7090b0", revMult:1,   speedMult:2,   passive:"Lunar Tide",          passiveDesc:"All profession speeds +5% during night hours (6pm-6am)",              cost:{t3:2, cross:{ventureId:9, tier:"t2", qty:3}} } },
+  { id:1, a:{ name:"Skeleton Pickpocketing", color:"#d4c8a8", colorDark:"#8a7e68", revMult:3,   speedMult:1,   passive:"Grave Robber",        passiveDesc:"+25% Bone Shard drops from Skeleton Looting",                        cost:{t3:2, cross:{ventureId:3, tier:"t2", qty:3}} },
+         b:{ name:"Boss Pickpocketing",     color:"#9b59b6", colorDark:"#6a3a80", revMult:1.5, speedMult:1.5, passive:"Big Score",            passiveDesc:"1% chance per cycle for 50x gold",                                   cost:{t3:2, cross:{ventureId:6, tier:"t2", qty:3}} } },
+  { id:2, a:{ name:"Plague Cultivation",    color:"#8fce00", colorDark:"#5a8a00", revMult:2.5, speedMult:1,   passive:"Contagion",           passiveDesc:"15% chance per cycle to auto-start a random idle profession",         cost:{t3:2, cross:{ventureId:5, tier:"t2", qty:3}} },
+         b:{ name:"Crystal Gardening",      color:"#00bcd4", colorDark:"#008a9a", revMult:1,   speedMult:1,   passive:"Crystalline Growth",   passiveDesc:"ALL material drop rates +10%",                                       cost:{t3:2, cross:{ventureId:5, tier:"t2", qty:3}} } },
+  { id:3, a:{ name:"Necromancer's Harvest", color:"#2d5a2d", colorDark:"#1a3a1a", revMult:3,   speedMult:1,   passive:"Raise Dead",          passiveDesc:"5% chance per cycle to gain +1 free owned level",                     cost:{t3:2, cross:{ventureId:9, tier:"t2", qty:3}} },
+         b:{ name:"Relic Archaeology",      color:"#d4a24a", colorDark:"#a07020", revMult:1,   speedMult:1,   passive:"Ancient Knowledge",    passiveDesc:"+30% Soul Gems earned on prestige",                                  cost:{t3:2, cross:{ventureId:7, tier:"t2", qty:3}} } },
+  { id:4, a:{ name:"Siege Engineering",     color:"#708090", colorDark:"#4a5a6a", revMult:2,   speedMult:1.5, passive:"Fortification",        passiveDesc:"Companions produce 50% more gold offline",                           cost:{t3:2, cross:{ventureId:7, tier:"t2", qty:3}} },
+         b:{ name:"Arcane Defusing",        color:"#00aaff", colorDark:"#0070aa", revMult:1,   speedMult:1,   passive:"Mana Siphon",          passiveDesc:"Each cycle steals 5% of highest-revenue profession as bonus gold",    cost:{t3:2, cross:{ventureId:5, tier:"t2", qty:3}} } },
+  { id:5, a:{ name:"Elixir Mastery",       color:"#ffd700", colorDark:"#aa9000", revMult:3,   speedMult:1,   passive:"Golden Draught",       passiveDesc:"Once per hour, next cycle grants 10x gold",                          cost:{t3:2, cross:{ventureId:0, tier:"t2", qty:3}} },
+         b:{ name:"Poison Distilling",      color:"#39ff14", colorDark:"#20aa0a", revMult:1,   speedMult:2,   passive:"Weakening Toxin",      passiveDesc:"All profession buy costs reduced 5%",                                cost:{t3:2, cross:{ventureId:8, tier:"t2", qty:3}} } },
+  { id:6, a:{ name:"Dragon Riding",        color:"#4fc3f7", colorDark:"#2090c0", revMult:1,   speedMult:3,   passive:"Aerial Survey",        passiveDesc:"Reveals hidden expedition rewards",                                  cost:{t3:2, cross:{ventureId:4, tier:"t2", qty:3}} },
+         b:{ name:"Dragon Breeding",        color:"#8b0000", colorDark:"#5a0000", revMult:4,   speedMult:1,   passive:"Brood Mother",         passiveDesc:"Every 100 cycles, permanently +1% revenue to this profession",       cost:{t3:2, cross:{ventureId:6, tier:"t1", qty:50}} } },
+  { id:7, a:{ name:"Realm Architecture",    color:"#f5f5dc", colorDark:"#b0b090", revMult:3,   speedMult:1,   passive:"Grand Architect",      passiveDesc:"Every 5th profession upgrade costs 50% less materials",              cost:{t3:2, cross:{ventureId:4, tier:"t2", qty:3}} },
+         b:{ name:"Void Tunneling",         color:"#2a0845", colorDark:"#1a0030", revMult:1,   speedMult:2,   passive:"Dimensional Shortcut", passiveDesc:"All profession cycle times reduced 3% globally",                     cost:{t3:2, cross:{ventureId:9, tier:"t2", qty:3}} } },
+  { id:8, a:{ name:"Demon Pact Brokering",  color:"#cc3300", colorDark:"#881a00", revMult:3,   speedMult:1,   passive:"Infernal Contract",    passiveDesc:"+15% revenue from ALL professions, but Demon cycle time doubled",    cost:{t3:2, cross:{ventureId:9, tier:"t2", qty:3}} },
+         b:{ name:"Hellfire Conquest",      color:"#ffee00", colorDark:"#bbaa00", revMult:1,   speedMult:2,   passive:"Scorched Earth",       passiveDesc:"10% chance per cycle to grant 2x materials from all profs for 60s",  cost:{t3:2, cross:{ventureId:6, tier:"t2", qty:3}} } },
+  { id:9, a:{ name:"Cosmic Ascension",     color:"#ffffff", colorDark:"#aaaaaa", revMult:5,   speedMult:1,   passive:"Transcendence",        passiveDesc:"Soul Gems give +5% instead of +3%",                                 cost:{t3:3, crossAll:{tier:"t2", qty:5}} },
+         b:{ name:"Eldritch Dominion",      color:"#2a1a4a", colorDark:"#1a0a30", revMult:1,   speedMult:3,   passive:"The Deep",             passiveDesc:"Unlocks Abyss auto-clear +5 floors per run",                        cost:{t3:3, crossAll:{tier:"t3", qty:1}} } },
+];
+
+// ═══ DUNGEON CLOCK ═══
+// Real local time → 4 watches. Each profession has a preferred watch.
+// During preferred watch: +25% revenue, +50% material drops.
+const WATCHES = [
+  { name: "Dawn",   icon: "🌅", hours: [5,6,7,8,9,10] },
+  { name: "Zenith", icon: "☀️", hours: [11,12,13,14,15,16] },
+  { name: "Dusk",   icon: "🌙", hours: [17,18,19,20,21,22] },
+  { name: "Abyss",  icon: "🌑", hours: [23,0,1,2,3,4] },
+];
+// Which watch each profession prefers (index into WATCHES)
+const PROF_WATCH = [0, 1, 0, 2, 1, 1, 2, 0, 3, 3]; // Dawn/Zenith/Dawn/Dusk/Zenith/Zenith/Dusk/Dawn/Abyss/Abyss
+
+const getCurrentWatch = () => {
+  const h = new Date().getHours();
+  return WATCHES.findIndex(w => w.hours.includes(h));
+};
+
+const isProfInWatch = (ventureIdx, watchIdx) => PROF_WATCH[ventureIdx] === watchIdx;
+
+// ═══ LOOT SYSTEM ═══
+/* ═══════════════════════════════════════════════════════════════
+   Rarity tiers, drop rates, and loot table.
+   Effects are data-only in Phase 1 — active in Phase 2 equipping.
+   ═══════════════════════════════════════════════════════════════ */
+
+const RARITY_TIERS = {
+  common:    { label: "Common",    color: "#9d9d9d", glow: "none" },
+  uncommon:  { label: "Uncommon",  color: "#1eff00", glow: "0 0 6px rgba(30,255,0,.3)" },
+  rare:      { label: "Rare",      color: "#0070dd", glow: "0 0 8px rgba(0,112,221,.4)" },
+  epic:      { label: "Epic",      color: "#a335ee", glow: "0 0 10px rgba(163,53,238,.4)" },
+  legendary: { label: "Legendary", color: "#ff8000", glow: "0 0 12px rgba(255,128,0,.5)" },
+};
+
+const DROP_RATES = {
+  common:    0.12,
+  uncommon:  0.04,
+  rare:      0.008,
+  epic:      0.0008,
+  legendary: 0.0001,
+};
+const DROP_LEVEL_BONUS = 0.005; // +0.5% per skill level, multiplicative
+
+const LOOT_TABLE = [
+  // ── Common ──
+  { id:"rusty_coin_pouch",  name:"Rusty Coin Pouch",  rarity:"common", description:"+3% gold from all skills",             effect:{ type:"goldMultiplier", target:"all", value:0.03 }},
+  { id:"worn_gloves",       name:"Worn Gloves",        rarity:"common", description:"+5% speed for Torch Scavenging",       effect:{ type:"speedBoost",     target:0,     value:0.05 }},
+  { id:"cracked_gem",       name:"Cracked Gem",        rarity:"common", description:"+1% drop rates",                       effect:{ type:"dropRateBoost",  target:"all", value:0.01 }},
+  { id:"dull_blade",        name:"Dull Blade",         rarity:"common", description:"+4% gold from Skeleton Looting",       effect:{ type:"goldMultiplier", target:3,     value:0.04 }},
+  { id:"tattered_map",      name:"Tattered Map",       rarity:"common", description:"+3% speed for Goblin Pickpocketing",   effect:{ type:"speedBoost",     target:1,     value:0.03 }},
+  { id:"copper_ring",       name:"Copper Ring",        rarity:"common", description:"+2% gold from all skills",             effect:{ type:"goldMultiplier", target:"all", value:0.02 }},
+  { id:"broken_lockpick",   name:"Broken Lockpick",    rarity:"common", description:"+4% speed for Trap Disarming",         effect:{ type:"speedBoost",     target:4,     value:0.04 }},
+  { id:"minor_rune",        name:"Minor Rune",         rarity:"common", description:"+2% drop rates",                       effect:{ type:"dropRateBoost",  target:"all", value:0.02 }},
+  { id:"bone_fragment",     name:"Bone Fragment",      rarity:"common", description:"+5% gold from Skeleton Looting",       effect:{ type:"goldMultiplier", target:3,     value:0.05 }},
+  { id:"mushroom_cap",      name:"Mushroom Cap",       rarity:"common", description:"+3% gold from Mushroom Foraging",      effect:{ type:"goldMultiplier", target:2,     value:0.03 }},
+  { id:"candle_stub",       name:"Candle Stub",        rarity:"common", description:"+4% speed for Torch Scavenging",       effect:{ type:"speedBoost",     target:0,     value:0.04 }},
+  { id:"frayed_rope",       name:"Frayed Rope",        rarity:"common", description:"+3% speed for all skills",             effect:{ type:"speedBoost",     target:"all", value:0.03 }},
+
+  // ── Uncommon ──
+  { id:"goblin_lucky_charm", name:"Goblin's Lucky Charm", rarity:"uncommon", description:"+8% gold from all skills",          effect:{ type:"goldMultiplier", target:"all", value:0.08 }},
+  { id:"shadow_dagger",      name:"Shadow Dagger",        rarity:"uncommon", description:"+15% Goblin Pickpocketing gold",    effect:{ type:"goldMultiplier", target:1,     value:0.15 }},
+  { id:"torch_oil",          name:"Torch Oil Flask",      rarity:"uncommon", description:"-10% Torch Scavenging cooldown",    effect:{ type:"speedBoost",     target:0,     value:0.10 }},
+  { id:"alchemists_flask",   name:"Alchemist's Flask",    rarity:"uncommon", description:"+12% Potion Brewing gold",          effect:{ type:"goldMultiplier", target:5,     value:0.12 }},
+  { id:"silver_compass",     name:"Silver Compass",       rarity:"uncommon", description:"+6% speed for all skills",          effect:{ type:"speedBoost",     target:"all", value:0.06 }},
+  { id:"ember_stone",        name:"Ember Stone",          rarity:"uncommon", description:"+10% Demon Gate gold",              effect:{ type:"goldMultiplier", target:8,     value:0.10 }},
+  { id:"whispering_skull",   name:"Whispering Skull",     rarity:"uncommon", description:"Skill levels count +15% for drops", effect:{ type:"xpBoost",        target:"all", value:0.15 }},
+  { id:"enchanted_satchel",  name:"Enchanted Satchel",    rarity:"uncommon", description:"+5% drop rates",                    effect:{ type:"dropRateBoost",  target:"all", value:0.05 }},
+  { id:"iron_gauntlets",     name:"Iron Gauntlets",       rarity:"uncommon", description:"+8% gold from combat skills",       effect:{ type:"goldMultiplier", target:"all", value:0.08 }},
+  { id:"mystic_lens",        name:"Mystic Lens",          rarity:"uncommon", description:"+10% Dungeon Expansion gold",       effect:{ type:"goldMultiplier", target:7,     value:0.10 }},
+
+  // ── Rare ──
+  { id:"shadow_step_boots",  name:"Shadow Step Boots",    rarity:"rare", description:"3% chance to instant-complete next run",   effect:{ type:"instantComplete", target:"all", value:0.03 }},
+  { id:"alchemist_stone",    name:"Alchemist Stone",      rarity:"rare", description:"2x Potion Brewing gold",                  effect:{ type:"goldMultiplier",  target:5,     value:1.00 }},
+  { id:"bone_whistle",       name:"Bone Whistle",         rarity:"rare", description:"Skeleton levels count double for drops",   effect:{ type:"xpBoost",         target:3,     value:1.00 }},
+  { id:"dragon_scale_shield",name:"Dragon Scale Shield",  rarity:"rare", description:"+20% Dragon Taming gold, +10% speed",     effect:{ type:"goldMultiplier",  target:6,     value:0.20 }},
+  { id:"void_shard",         name:"Void Shard",           rarity:"rare", description:"+15% all drop rates",                     effect:{ type:"dropRateBoost",   target:"all", value:0.15 }},
+  { id:"runic_hammer",       name:"Runic Hammer",         rarity:"rare", description:"+25% Trap Disarming gold",                effect:{ type:"goldMultiplier",  target:4,     value:0.25 }},
+
+  // ── Epic ──
+  { id:"chain_lightning",    name:"Chain Lightning Scroll", rarity:"epic", description:"6% chance to auto-trigger adjacent skill",  effect:{ type:"chainRun",       target:"all", value:0.06 }},
+  { id:"phoenix_feather",    name:"Phoenix Feather",        rarity:"epic", description:"3% chance to reset ALL skill timers",       effect:{ type:"instantComplete",target:"all", value:0.03 }},
+  { id:"greater_void_shard", name:"Greater Void Shard",     rarity:"epic", description:"+50% all drop rates",                      effect:{ type:"dropRateBoost",  target:"all", value:0.50 }},
+  { id:"warlords_signet",    name:"Warlord's Signet",       rarity:"epic", description:"+20% gold all, +10% speed all",            effect:{ type:"goldMultiplier", target:"all", value:0.20 }},
+
+  // ── Legendary ──
+  { id:"crown_dungeon_lord", name:"Crown of the Dungeon Lord", rarity:"legendary", description:"+30% all gold, +20% all speed",          effect:{ type:"goldMultiplier", target:"all", value:0.30 }},
+  { id:"elder_gods_eye",     name:"Elder God's Eye",           rarity:"legendary", description:"All drop rates doubled",                  effect:{ type:"dropRateBoost",  target:"all", value:1.00 }},
+  { id:"blade_forgotten_king",name:"Blade of the Forgotten King",rarity:"legendary",description:"0.5% chance for 50x gold on completion", effect:{ type:"critGold",       target:"all", value:0.005}},
+];
 
 
 // ═══ MATH UTILS ═══
 /* ═══════════════════════════════════════════════════════════════
-   Castle Capitalist — Game Math Utilities
+   Castle Clicker — Game Math Utilities
    Pure functions for all game calculations.
    ═══════════════════════════════════════════════════════════════ */
 
@@ -309,8 +453,16 @@ const getBulkCost = (baseCost, owned, qty) => {
 /**
  * Revenue per cycle for a venture at given count and prestige multiplier.
  */
-const getRevenue = (venture, count, prestigeMultiplier) => {
-  return venture.baseRevenue * count * getMilestoneMultiplier(count) * prestigeMultiplier;
+const getRevenue = (venture, count, prestigeMultiplier, upgradeTier = 0, transformPath = null) => {
+  const upgradeBonus = 1 + UPGRADE_TIERS[upgradeTier].revBonus;
+  const transformBonus = transformPath ? TRANSFORM_TREES[venture.id][transformPath].revMult : 1;
+  return venture.baseRevenue * count * getMilestoneMultiplier(count) * prestigeMultiplier * upgradeBonus * transformBonus;
+};
+
+const getEffectiveCycleTime = (venture, upgradeTier = 0, transformPath = null) => {
+  const speedReduction = UPGRADE_TIERS[upgradeTier].speedBonus;
+  const transformSpeed = transformPath ? TRANSFORM_TREES[venture.id][transformPath].speedMult : 1;
+  return Math.max(100, venture.baseTime * (1 - speedReduction) / transformSpeed);
 };
 
 /**
@@ -384,10 +536,28 @@ const formatTime = (ms) => {
   return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 };
 
+/**
+ * Roll for a loot drop on venture cycle completion.
+ * Checks from legendary down to common — only one drop per roll.
+ */
+const rollLootDrop = (ventureIndex, skillLevel) => {
+  const levelBonus = 1 + skillLevel * DROP_LEVEL_BONUS;
+  const tiers = ["legendary", "epic", "rare", "uncommon", "common"];
+  for (const tier of tiers) {
+    if (Math.random() < DROP_RATES[tier] * levelBonus) {
+      const tierItems = LOOT_TABLE.filter(item => item.rarity === tier);
+      return tierItems[Math.floor(Math.random() * tierItems.length)];
+    }
+  }
+  return null;
+};
+
+const getRarityStyle = (rarity) => RARITY_TIERS[rarity] || RARITY_TIERS.common;
+
 
 // ═══ MAIN GAME ═══
 /* ═══════════════════════════════════════════════════════════════
-   Castle Capitalist — Main Game Component
+   Castle Clicker — Main Game Component
    An idle/incremental dungeon game inspired by Adventure Capitalist.
    
    Web prototype (React). Architecture designed to port cleanly to
@@ -412,23 +582,87 @@ export default function CastleCapitalist() {
   const [buyQty, setBuyQty] = useState(1);
   const [tab, setTab] = useState("ventures");
   const [lifetimeGold, setLifetimeGold] = useState(0);
+  const [inventory, setInventory] = useState({});
+  const [lootToast, setLootToast] = useState(null);
+  const [hasFoundRare, setHasFoundRare] = useState(false);
+  const [materials, setMaterials] = useState({});
+  const [profUpgrades, setProfUpgrades] = useState(Array(10).fill(0));
+  const [profTransforms, setProfTransforms] = useState(Array(10).fill(null));
 
   const lastTick = useRef(Date.now());
   const animRef = useRef(null);
   const goldRef = useRef(gold);
   const venturesRef = useRef(ventures);
   const gemsRef = useRef(prestigeGems);
+  const inventoryRef = useRef(inventory);
+  const hasFoundRareRef = useRef(hasFoundRare);
+  const materialsRef = useRef(materials);
+  const profUpgradesRef = useRef(profUpgrades);
+  const profTransformsRef = useRef(profTransforms);
+  const pendingDropsRef = useRef([]);
+  const pendingMatsRef = useRef([]);
+  const particleContainerRef = useRef(null);
+  const pendingCompletionsRef = useRef([]);
+  const lastParticleTimeRef = useRef(new Array(VENTURES.length).fill(0));
 
   goldRef.current = gold;
   venturesRef.current = ventures;
   gemsRef.current = prestigeGems;
+  inventoryRef.current = inventory;
+  hasFoundRareRef.current = hasFoundRare;
+  materialsRef.current = materials;
+  profUpgradesRef.current = profUpgrades;
+  profTransformsRef.current = profTransforms;
 
   const prestigeMultiplier = 1 + totalGems * PRESTIGE_GEM_BONUS;
+
+  // ═══ PARTICLE SYSTEM ═══
+  const spawnParticle = useCallback((type, x, y, color, text) => {
+    const container = particleContainerRef.current;
+    if (!container) return;
+    // Cap concurrent particles
+    if (container.childElementCount >= 30) container.firstChild?.remove();
+
+    const el = document.createElement('div');
+    el.className = `particle particle-${type}`;
+    el.style.left = `${x}px`;
+    el.style.top = `${y}px`;
+    el.style.setProperty('--p-color', color);
+
+    if (type === 'coin') {
+      const rad = (Math.random() - 0.5) * Math.PI * 0.6;
+      const dist = 35 + Math.random() * 35;
+      el.style.setProperty('--p-tx', `${Math.sin(rad) * dist}px`);
+      el.style.setProperty('--p-ty', `${-Math.abs(Math.cos(rad) * dist)}px`);
+      el.style.animationDelay = `${Math.random() * 100}ms`;
+    }
+
+    if (text) el.textContent = text;
+    container.appendChild(el);
+    el.addEventListener('animationend', () => el.remove(), { once: true });
+    setTimeout(() => { if (el.parentNode) el.remove(); }, 1500);
+  }, []);
+
+  const emitClickRipple = useCallback((x, y, color) => {
+    spawnParticle('ripple', x, y, color);
+  }, [spawnParticle]);
+
+  const emitGoldParticles = useCallback((x, y, color, count = 4) => {
+    for (let i = 0; i < count; i++) {
+      setTimeout(() => {
+        spawnParticle('coin', x + (Math.random() - 0.5) * 20, y, color);
+      }, i * 40);
+    }
+  }, [spawnParticle]);
+
+  const emitGoldText = useCallback((x, y, amount) => {
+    spawnParticle('gold-text', x, y, '#ffcfa8', `+${formatNumber(amount)}`);
+  }, [spawnParticle]);
 
   // ═══ SAVE / LOAD ═══
   useEffect(() => {
     try {
-      const raw = localStorage.getItem(SAVE_KEY);
+      const raw = localStorage.getItem(SAVE_KEY) || localStorage.getItem("castle_clicker_v6") || localStorage.getItem("castle_clicker_v5");
       if (!raw) return;
       const save = JSON.parse(raw);
 
@@ -437,6 +671,11 @@ export default function CastleCapitalist() {
       if (save.prestigeGems != null) setPrestigeGems(save.prestigeGems);
       if (save.totalGems != null) setTotalGems(save.totalGems);
       if (save.lifetimeGold != null) setLifetimeGold(save.lifetimeGold);
+      if (save.inventory) setInventory(save.inventory);
+      if (save.hasFoundRare) setHasFoundRare(save.hasFoundRare);
+      if (save.materials) setMaterials(save.materials);
+      if (save.profUpgrades) setProfUpgrades(save.profUpgrades);
+      if (save.profTransforms) setProfTransforms(save.profTransforms);
 
       // Offline earnings
       if (save.lastSave && save.ventures) {
@@ -444,10 +683,13 @@ export default function CastleCapitalist() {
         if (elapsed > 5000) {
           let offlineGold = 0;
           const pm = 1 + (save.totalGems || 0) * PRESTIGE_GEM_BONUS;
+          const savedUpg = save.profUpgrades || Array(10).fill(0);
+          const savedTrans = save.profTransforms || Array(10).fill(null);
           save.ventures.forEach((vs, i) => {
             if (vs.hasCompanion && vs.owned > 0) {
-              const rev = getRevenue(VENTURES[i], vs.owned, pm);
-              const cycles = Math.floor(elapsed / VENTURES[i].baseTime);
+              const rev = getRevenue(VENTURES[i], vs.owned, pm, savedUpg[i] || 0, savedTrans[i] || null);
+              const ct = getEffectiveCycleTime(VENTURES[i], savedUpg[i] || 0, savedTrans[i] || null);
+              const cycles = Math.floor(elapsed / ct);
               offlineGold += rev * cycles * OFFLINE_EFFICIENCY;
             }
           });
@@ -469,6 +711,11 @@ export default function CastleCapitalist() {
           prestigeGems: gemsRef.current,
           totalGems,
           lifetimeGold,
+          inventory: inventoryRef.current,
+          hasFoundRare: hasFoundRareRef.current,
+          materials: materialsRef.current,
+          profUpgrades: profUpgradesRef.current,
+          profTransforms: profTransformsRef.current,
           lastSave: Date.now(),
         }));
       } catch (e) {}
@@ -482,17 +729,36 @@ export default function CastleCapitalist() {
     const dt = now - lastTick.current;
     lastTick.current = now;
 
+    pendingDropsRef.current = [];
+    pendingMatsRef.current = [];
+    pendingCompletionsRef.current = [];
+    const currentWatch = getCurrentWatch();
+
     setVentures(prev => {
       let earned = 0;
       const next = prev.map((vs, i) => {
         if (vs.owned === 0 || (!vs.running && !vs.hasCompanion)) return vs;
 
         let newProgress = vs.progress + dt;
-        const cycleTime = VENTURES[i].baseTime;
+        const upgTier = profUpgradesRef.current[i] || 0;
+        const tPath = profTransformsRef.current[i] || null;
+        const cycleTime = getEffectiveCycleTime(VENTURES[i], upgTier, tPath);
+        const inWatch = isProfInWatch(i, currentWatch);
 
         if (newProgress >= cycleTime) {
           const cycles = Math.floor(newProgress / cycleTime);
-          earned += getRevenue(VENTURES[i], vs.owned, prestigeMultiplier) * cycles;
+          const rev = getRevenue(VENTURES[i], vs.owned, prestigeMultiplier, upgTier, tPath) * cycles * (inWatch ? 1.25 : 1);
+          earned += rev;
+          pendingCompletionsRef.current.push({ ventureIndex: i, revenue: rev, color: VENTURES[i].color });
+
+          // Loot rolls — one per completed cycle
+          for (let c = 0; c < cycles; c++) {
+            const drop = rollLootDrop(i, vs.owned);
+            if (drop) pendingDropsRef.current.push(drop);
+            // Material drops
+            const matDrop = rollMaterialDrop(i, vs.owned, inWatch ? 1.5 : 1);
+            if (matDrop) pendingMatsRef.current.push({ ventureId: i, drops: matDrop });
+          }
 
           if (vs.hasCompanion) {
             return { ...vs, progress: newProgress % cycleTime, running: true };
@@ -509,13 +775,75 @@ export default function CastleCapitalist() {
       return next;
     });
 
+    // Process loot drops after state update
+    if (pendingDropsRef.current.length > 0) {
+      const drops = pendingDropsRef.current;
+      setInventory(prev => {
+        const next = { ...prev };
+        for (const drop of drops) {
+          next[drop.id] = (next[drop.id] || 0) + 1;
+        }
+        return next;
+      });
+      // Show toast for the rarest drop
+      const rarityOrder = ["legendary", "epic", "rare", "uncommon", "common"];
+      const rarest = drops.sort((a, b) =>
+        rarityOrder.indexOf(a.rarity) - rarityOrder.indexOf(b.rarity)
+      )[0];
+      setLootToast({ item: rarest, fadeOut: false });
+      if (["rare", "epic", "legendary"].includes(rarest.rarity)) {
+        setHasFoundRare(true);
+      }
+    }
+
+    // Process material drops
+    if (pendingMatsRef.current.length > 0) {
+      const matDrops = pendingMatsRef.current;
+      setMaterials(prev => {
+        const next = { ...prev };
+        for (const { ventureId, drops } of matDrops) {
+          if (!next[ventureId]) next[ventureId] = { t1: 0, t2: 0, t3: 0 };
+          for (const [tier, qty] of Object.entries(drops)) {
+            next[ventureId][tier] = (next[ventureId][tier] || 0) + qty;
+          }
+        }
+        return next;
+      });
+    }
+
+    // Process completion particles
+    if (pendingCompletionsRef.current.length > 0) {
+      const now2 = Date.now();
+      for (const comp of pendingCompletionsRef.current) {
+        if (now2 - lastParticleTimeRef.current[comp.ventureIndex] < 2000) continue;
+        lastParticleTimeRef.current[comp.ventureIndex] = now2;
+        const row = document.querySelector(`[data-venture="${comp.ventureIndex}"]`);
+        if (row && particleContainerRef.current) {
+          const cr = particleContainerRef.current.getBoundingClientRect();
+          const rr = row.getBoundingClientRect();
+          const x = rr.left - cr.left + rr.width * 0.4;
+          const y = rr.top - cr.top + rr.height * 0.3;
+          emitGoldParticles(x, y, comp.color);
+          emitGoldText(x + rr.width * 0.1, y - 5, comp.revenue);
+        }
+      }
+    }
+
     animRef.current = requestAnimationFrame(tick);
-  }, [prestigeMultiplier]);
+  }, [prestigeMultiplier, emitGoldParticles, emitGoldText]);
 
   useEffect(() => {
     animRef.current = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(animRef.current);
   }, [tick]);
+
+  // Loot toast auto-dismiss
+  useEffect(() => {
+    if (!lootToast) return;
+    const fade = setTimeout(() => setLootToast(t => t ? { ...t, fadeOut: true } : null), 2500);
+    const remove = setTimeout(() => setLootToast(null), 3200);
+    return () => { clearTimeout(fade); clearTimeout(remove); };
+  }, [lootToast?.item?.id]);
 
   // ═══ ACTIONS ═══
   const handleBuyVenture = (idx) => {
@@ -528,10 +856,16 @@ export default function CastleCapitalist() {
     setVentures(prev => prev.map((s, i) => i === idx ? { ...s, owned: s.owned + qty } : s));
   };
 
-  const handleStartVenture = (idx) => {
+  const handleStartVenture = (idx, e) => {
     setVentures(prev => prev.map((s, i) =>
       i === idx && s.owned > 0 && !s.running ? { ...s, running: true, progress: 0 } : s
     ));
+    if (e && particleContainerRef.current) {
+      const cr = particleContainerRef.current.getBoundingClientRect();
+      const cx = (e.clientX || 0) - cr.left;
+      const cy = (e.clientY || 0) - cr.top;
+      emitClickRipple(cx, cy, VENTURES[idx].color);
+    }
   };
 
   const handleBuyCompanion = (idx) => {
@@ -543,6 +877,71 @@ export default function CastleCapitalist() {
     ));
   };
 
+  const handleUpgradeProfession = (ventureIdx) => {
+    const currentTier = profUpgrades[ventureIdx] || 0;
+    if (currentTier >= UPGRADE_TIERS.length - 1) return; // already max
+    const nextTier = UPGRADE_TIERS[currentTier + 1];
+    const m = materials[ventureIdx] || { t1: 0, t2: 0, t3: 0 };
+    if (m.t1 < nextTier.t1 || m.t2 < nextTier.t2 || m.t3 < nextTier.t3) return; // can't afford
+    // Deduct materials
+    setMaterials(prev => ({
+      ...prev,
+      [ventureIdx]: {
+        t1: (prev[ventureIdx]?.t1 || 0) - nextTier.t1,
+        t2: (prev[ventureIdx]?.t2 || 0) - nextTier.t2,
+        t3: (prev[ventureIdx]?.t3 || 0) - nextTier.t3,
+      }
+    }));
+    setProfUpgrades(prev => prev.map((t, i) => i === ventureIdx ? t + 1 : t));
+  };
+
+  const handleTransformProfession = (ventureIdx, path) => {
+    const tree = TRANSFORM_TREES[ventureIdx];
+    const transform = tree[path];
+    const m = materials[ventureIdx] || { t1: 0, t2: 0, t3: 0 };
+    const cost = transform.cost;
+
+    // Check own T3 materials
+    if ((m.t3 || 0) < cost.t3) return;
+
+    // Check cross-profession materials
+    if (cost.cross) {
+      const crossM = materials[cost.cross.ventureId] || { t1: 0, t2: 0, t3: 0 };
+      if ((crossM[cost.cross.tier] || 0) < cost.cross.qty) return;
+    }
+    if (cost.crossAll) {
+      // Need qty of every other profession's tier material
+      for (let j = 0; j < 10; j++) {
+        if (j === ventureIdx) continue;
+        const otherM = materials[j] || { t1: 0, t2: 0, t3: 0 };
+        if ((otherM[cost.crossAll.tier] || 0) < cost.crossAll.qty) return;
+      }
+    }
+
+    // Deduct materials
+    setMaterials(prev => {
+      const next = { ...prev };
+      // Deduct own T3
+      next[ventureIdx] = { ...next[ventureIdx], t3: (next[ventureIdx]?.t3 || 0) - cost.t3 };
+      // Deduct cross materials
+      if (cost.cross) {
+        const cid = cost.cross.ventureId;
+        next[cid] = { ...next[cid] || { t1: 0, t2: 0, t3: 0 } };
+        next[cid][cost.cross.tier] = (next[cid][cost.cross.tier] || 0) - cost.cross.qty;
+      }
+      if (cost.crossAll) {
+        for (let j = 0; j < 10; j++) {
+          if (j === ventureIdx) continue;
+          next[j] = { ...next[j] || { t1: 0, t2: 0, t3: 0 } };
+          next[j][cost.crossAll.tier] = (next[j][cost.crossAll.tier] || 0) - cost.crossAll.qty;
+        }
+      }
+      return next;
+    });
+
+    setProfTransforms(prev => prev.map((t, i) => i === ventureIdx ? path : t));
+  };
+
   const pendingGems = calcPrestigeGems(lifetimeGold);
 
   const handlePrestige = () => {
@@ -552,24 +951,30 @@ export default function CastleCapitalist() {
     setGold(4);
     setVentures(createInitialState());
     setLifetimeGold(0);
+    setMaterials({});
+    setProfUpgrades(Array(10).fill(0));
+    setProfTransforms(Array(10).fill(null));
   };
 
   const handleHardReset = () => {
     if (!confirm("Hard reset everything? This erases ALL progress including Soul Gems.")) return;
     localStorage.removeItem(SAVE_KEY);
+    localStorage.removeItem("castle_clicker_v6");
+    localStorage.removeItem("castle_clicker_v5");
     setGold(4);
     setVentures(createInitialState());
     setPrestigeGems(0);
     setTotalGems(0);
     setLifetimeGold(0);
+    setInventory({});
+    setHasFoundRare(false);
+    setLootToast(null);
+    setMaterials({});
+    setProfUpgrades(Array(10).fill(0));
+    setProfTransforms(Array(10).fill(null));
   };
 
   // ═══ DERIVED VALUES ═══
-  const goldPerSecond = VENTURES.reduce((sum, v, i) => {
-    const vs = ventures[i];
-    if (vs.owned === 0 || (!vs.running && !vs.hasCompanion)) return sum;
-    return sum + getRevenue(v, vs.owned, prestigeMultiplier) / (v.baseTime / 1000);
-  }, 0);
 
   // ═══ RENDER ═══
   return (
@@ -578,37 +983,45 @@ export default function CastleCapitalist() {
 
       {/* ── HEADER ── */}
       <div className="hd">
-        <div className="hd-top">
-          <span className="hd-title">⚔ CASTLE CAPITALIST</span>
+        <div className="hd-brand">
+          <div className="hd-title-wrap">
+            <span className="hd-title-castle">CASTLE</span>
+            <span className="hd-title-clicker">CLICKER</span>
+          </div>
+        </div>
+        <div className="hd-stats">
+          <div className="hd-gold-box">
+            <GoldCoinIcon size={18} />
+            <span className="hd-amount">{formatNumber(gold)}</span>
+          </div>
+          <span className="hd-watch">{WATCHES[getCurrentWatch()].icon} {WATCHES[getCurrentWatch()].name}</span>
           <span className="hd-gems" onClick={() => setTab("prestige")}>
             <SoulGemIcon /> {prestigeGems} ({prestigeMultiplier.toFixed(2)}x)
           </span>
         </div>
-        <div className="hd-gold">
-          <div className="hd-gold-left">
-            <GoldCoinIcon size={18} />
-            <span className="hd-amount">{formatNumber(gold)}</span>
-            <span className="hd-label">GOLD</span>
-          </div>
-          <span className="hd-gps"><GoldCoinIcon /> {formatNumber(goldPerSecond)}/sec</span>
-        </div>
       </div>
 
-      {/* ── TABS ── */}
-      <div className="tabs">
+      {/* ── BOTTOM NAV ── */}
+      <div className="bnav">
         {[
-          { key: "ventures",   label: "⚔ Ventures" },
-          { key: "companions", label: "🛡 Companions" },
-          { key: "upgrades",   label: "⬆ Upgrades" },
-          { key: "prestige",   label: "✦ Ascend" },
+          { key: "ventures",   label: "Professions", icon: "\u2694",      mod: "skills" },
+          { key: "companions", label: "Allies",     icon: "\uD83D\uDEE1", mod: "allies" },
+          { key: "inventory",  label: "Loot",       icon: "\uD83C\uDF81", mod: "loot" },
+          { key: "upgrades",   label: "Upgrades",   icon: "\u2B06",      mod: "upgrades" },
+          { key: "prestige",   label: "Ascend",     icon: "\u2726",      mod: "ascend" },
         ].map(t => (
           <button key={t.key}
-            className={`tab ${tab === t.key ? 'tab-on' : ''}`}
+            className={`bnav-btn ${tab === t.key ? 'bnav-on' : ''}`}
+            style={tab === t.key ? { color: `var(--mod-${t.mod})` } : undefined}
             onClick={() => setTab(t.key)}
-          >{t.label}</button>
+          >
+            <span className="bnav-icon">{t.icon}</span>
+            <span className="bnav-label">{t.label}</span>
+          </button>
         ))}
       </div>
 
+      <div className="cc-content">
       {/* ── BUY QTY ── */}
       {tab === "ventures" && (
         <div className="qty-row">
@@ -630,10 +1043,11 @@ export default function CastleCapitalist() {
             const qty = buyQty === -1 ? Math.max(1, getMaxBuyable(v.baseCost, vs.owned, gold)) : buyQty;
             const cost = unlocked ? getBulkCost(v.baseCost, vs.owned, qty) : v.unlockCost;
             const canAfford = gold >= cost;
-            const pct = unlocked ? Math.min(100, (vs.progress / v.baseTime) * 100) : 0;
-            const rev = unlocked ? getRevenue(v, vs.owned, prestigeMultiplier) : 0;
-            const perSec = unlocked ? rev / (v.baseTime / 1000) : 0;
-            const remaining = unlocked && vs.running ? Math.max(0, v.baseTime - vs.progress) : v.baseTime;
+            const upgTier = profUpgrades[i] || 0;
+            const tPath = profTransforms[i] || null;
+            const effCycle = getEffectiveCycleTime(v, upgTier, tPath);
+            const pct = unlocked ? Math.min(100, (vs.progress / effCycle) * 100) : 0;
+            const remaining = unlocked && vs.running ? Math.max(0, effCycle - vs.progress) : effCycle;
 
             // Hide far-away ventures
             if (!unlocked && gold < v.unlockCost * 0.05 && i > 2) return null;
@@ -641,9 +1055,17 @@ export default function CastleCapitalist() {
             const IconComponent = VENTURE_ICONS[i];
 
             return (
-              <div key={v.id} className={`vrow ${!unlocked ? 'vrow-locked' : ''} ${!unlocked && canAfford ? 'vrow-afford' : ''}`}>
+              <div key={v.id} data-venture={i} className={`vrow ${!unlocked ? 'vrow-locked' : ''} ${!unlocked && canAfford ? 'vrow-afford' : ''} ${unlocked && canAfford ? 'vrow-can-buy' : ''}`}
+                style={{
+                  background: !unlocked
+                    ? `linear-gradient(135deg, ${v.colorDark}12, ${v.color}08)`
+                    : `linear-gradient(135deg, ${v.colorDark}30, ${v.color}18)`,
+                  borderColor: v.color + '35',
+                  borderLeftColor: v.color,
+                }}
+              >
                 {/* Badge */}
-                <div className="badge-wrap" onClick={() => unlocked && handleStartVenture(i)}>
+                <div className="badge-wrap" onClick={(e) => unlocked && handleStartVenture(i, e)}>
                   <div className="badge"
                     style={{
                       background: `linear-gradient(135deg, ${v.color}33, ${v.colorDark}55)`,
@@ -653,18 +1075,15 @@ export default function CastleCapitalist() {
                   >
                     <VentureIcon index={i} color={v.color} size={56} />
                   </div>
-                  <span className="badge-ct">{vs.owned}</span>
+                  <span className="badge-ct">Lvl {vs.owned}</span>
                 </div>
 
                 {/* Info */}
-                <div className="vmid" onClick={() => unlocked && handleStartVenture(i)}>
+                <div className="vmid" onClick={(e) => unlocked && handleStartVenture(i, e)}>
                   <div className="vname">
                     {v.name}
                     {vs.hasCompanion && <span className="auto-tag">AUTO</span>}
-                  </div>
-                  <div className="vrev">
-                    <GoldCoinIcon /> {formatNumber(rev)}
-                    <span className="vps">{formatNumber(perSec)}/s</span>
+                    {unlocked && isProfInWatch(i, getCurrentWatch()) && <span className="watch-tag">{WATCHES[getCurrentWatch()].icon}</span>}
                   </div>
                   <div className="bar-out">
                     <div className="bar-in"
@@ -678,13 +1097,20 @@ export default function CastleCapitalist() {
                   <div className="vms">
                     next: <span className="vms-n">{getNextMilestone(vs.owned)}</span>
                   </div>
+                  {unlocked && materials[i] && (materials[i].t1 > 0 || materials[i].t2 > 0 || materials[i].t3 > 0) && (
+                    <div className="vmat-row">
+                      {materials[i].t1 > 0 && <span className="vmat" style={{color: SPECIALTY_MATERIALS[i].t1.color}}>{materials[i].t1} {SPECIALTY_MATERIALS[i].t1.name}</span>}
+                      {materials[i].t2 > 0 && <span className="vmat vmat-t2" style={{color: SPECIALTY_MATERIALS[i].t2.color}}>{materials[i].t2} {SPECIALTY_MATERIALS[i].t2.name}</span>}
+                      {materials[i].t3 > 0 && <span className="vmat vmat-t3" style={{color: SPECIALTY_MATERIALS[i].t3.color}}>{materials[i].t3} {SPECIALTY_MATERIALS[i].t3.name}</span>}
+                    </div>
+                  )}
                 </div>
 
                 {/* Buy */}
-                <button className="buy-btn" disabled={!canAfford} onClick={() => handleBuyVenture(i)}>
+                <button className={`buy-btn ${canAfford ? 'buy-btn-go' : ''}`} disabled={!canAfford} onClick={() => handleBuyVenture(i)}>
                   <div className="buy-q">{unlocked ? (buyQty === -1 ? `×${qty}` : `×${buyQty}`) : "UNLOCK"}</div>
                   <div className="buy-c"><GoldCoinIcon />{formatNumber(cost)}</div>
-                  <div className="buy-l">{unlocked ? "Buy" : "New"}</div>
+                  <div className="buy-l">{unlocked ? "Train" : "Learn"}</div>
                 </button>
               </div>
             );
@@ -696,7 +1122,7 @@ export default function CastleCapitalist() {
       {tab === "companions" && (
         <div className="comp-list">
           <div className="comp-hdr">🛡 Recruit Dungeon Companions</div>
-          <p className="comp-sub">Companions auto-run ventures so you earn gold even while away.</p>
+          <p className="comp-sub">Companions auto-run skills so you earn gold even while away.</p>
           {VENTURES.map((v, i) => {
             const vs = ventures[i];
             const cost = COMPANION_COSTS[i];
@@ -732,14 +1158,188 @@ export default function CastleCapitalist() {
         </div>
       )}
 
+      {/* ── INVENTORY TAB ── */}
+      {tab === "inventory" && (
+        <div className="inv-panel">
+          {/* Materials Section */}
+          {Object.keys(materials).some(k => materials[k].t1 > 0 || materials[k].t2 > 0 || materials[k].t3 > 0) && (
+            <>
+              <div className="inv-hdr">Specialty Materials</div>
+              <p className="inv-sub">Profession-specific currencies. Used for upgrades and transformations.</p>
+              <div className="mat-grid">
+                {VENTURES.map((v, i) => {
+                  const m = materials[i];
+                  if (!m || (m.t1 === 0 && m.t2 === 0 && m.t3 === 0)) return null;
+                  const sm = SPECIALTY_MATERIALS[i];
+                  return (
+                    <div key={i} className="mat-card" style={{borderColor: v.color + '40'}}>
+                      <div className="mat-card-hdr" style={{color: v.color}}>{v.name}</div>
+                      <div className="mat-card-items">
+                        {m.t1 > 0 && <div className="mat-entry"><span className="mat-dot" style={{background: sm.t1.color}}/><span className="mat-name">{sm.t1.name}</span><span className="mat-ct">{m.t1}</span></div>}
+                        {m.t2 > 0 && <div className="mat-entry"><span className="mat-dot mat-dot-t2" style={{background: sm.t2.color}}/><span className="mat-name">{sm.t2.name}</span><span className="mat-ct" style={{color: sm.t2.color}}>{m.t2}</span></div>}
+                        {m.t3 > 0 && <div className="mat-entry"><span className="mat-dot mat-dot-t3" style={{background: sm.t3.color, boxShadow:`0 0 6px ${sm.t3.color}`}}/><span className="mat-name">{sm.t3.name}</span><span className="mat-ct" style={{color: sm.t3.color}}>{m.t3}</span></div>}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div style={{height:16}}/>
+            </>
+          )}
+          <div className="inv-hdr">Dungeon Loot</div>
+          <p className="inv-sub">Items found from completing professions. Equip them in the Specialty Bar soon.</p>
+          {Object.keys(inventory).length === 0 ? (
+            <div className="inv-empty">No loot yet. Complete skills to find items!</div>
+          ) : (
+            <div className="inv-grid">
+              {LOOT_TABLE
+                .filter(item => inventory[item.id] > 0)
+                .sort((a, b) => {
+                  const order = ["legendary", "epic", "rare", "uncommon", "common"];
+                  return order.indexOf(a.rarity) - order.indexOf(b.rarity);
+                })
+                .map(item => {
+                  const style = getRarityStyle(item.rarity);
+                  return (
+                    <div key={item.id} className="inv-item"
+                      style={{ borderColor: style.color + '60', boxShadow: style.glow }}>
+                      <div className="inv-item-hdr">
+                        <span className="inv-item-name" style={{ color: style.color }}>
+                          {item.name}
+                        </span>
+                        <span className="inv-item-qty">x{inventory[item.id]}</span>
+                      </div>
+                      <div className="inv-item-rarity" style={{ color: style.color }}>
+                        {style.label}
+                      </div>
+                      <div className="inv-item-desc">{item.description}</div>
+                    </div>
+                  );
+                })}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* ── UPGRADES TAB ── */}
       {tab === "upgrades" && (
         <div className="upgrades">
-          <div className="up-hdr">⬆ Enchantments & Upgrades</div>
-          <p className="up-sub">
-            Speed potions, revenue multipliers, and dungeon-wide enchantments will be forged here.
-            This is where rewarded ad boosts and premium power-ups would live in the mobile release.
-          </p>
+          <div className="up-hdr">Profession Upgrades</div>
+          <p className="up-sub">Spend specialty materials to upgrade your professions.</p>
+          <div className="up-grid">
+            {VENTURES.map((v, i) => {
+              const vs = ventures[i];
+              const unlocked = vs.owned > 0;
+              if (!unlocked) return null;
+              const currentTier = profUpgrades[i] || 0;
+              const atMax = currentTier >= UPGRADE_TIERS.length - 1;
+              const current = UPGRADE_TIERS[currentTier];
+              const next = atMax ? null : UPGRADE_TIERS[currentTier + 1];
+              const m = materials[i] || { t1: 0, t2: 0, t3: 0 };
+              const sm = SPECIALTY_MATERIALS[i];
+              const canUpgrade = next && m.t1 >= next.t1 && m.t2 >= next.t2 && m.t3 >= next.t3;
+              const tPath = profTransforms[i];
+              const tree = TRANSFORM_TREES[i];
+              const canTransform = currentTier >= 4 && !tPath; // Master+ and not yet transformed
+
+              // Helper to check if a transform is affordable
+              const canAffordTransform = (path) => {
+                const tf = tree[path];
+                const cost = tf.cost;
+                if ((m.t3 || 0) < cost.t3) return false;
+                if (cost.cross) {
+                  const crossM = materials[cost.cross.ventureId] || { t1: 0, t2: 0, t3: 0 };
+                  if ((crossM[cost.cross.tier] || 0) < cost.cross.qty) return false;
+                }
+                if (cost.crossAll) {
+                  for (let j = 0; j < 10; j++) {
+                    if (j === i) continue;
+                    const otherM = materials[j] || { t1: 0, t2: 0, t3: 0 };
+                    if ((otherM[cost.crossAll.tier] || 0) < cost.crossAll.qty) return false;
+                  }
+                }
+                return true;
+              };
+
+              return (
+                <div key={i} className="up-card" style={{borderLeftColor: tPath ? tree[tPath].color : v.color}}>
+                  <div className="up-card-top">
+                    <div className="up-card-name" style={{color: tPath ? tree[tPath].color : v.color}}>
+                      {tPath ? tree[tPath].name : v.name}
+                    </div>
+                    <div className="up-card-tier">{current.name === "—" ? "No Rank" : current.name}</div>
+                  </div>
+                  {current.revBonus > 0 && (
+                    <div className="up-card-bonuses">
+                      <span className="up-bonus">+{Math.round(current.revBonus * 100)}% rev</span>
+                      {current.speedBonus > 0 && <span className="up-bonus">-{Math.round(current.speedBonus * 100)}% time</span>}
+                      {tPath && tree[tPath].revMult > 1 && <span className="up-bonus" style={{color:'var(--gd)'}}>×{tree[tPath].revMult} transform</span>}
+                      {tPath && tree[tPath].speedMult > 1 && <span className="up-bonus" style={{color:'var(--accent)'}}>×{tree[tPath].speedMult} speed</span>}
+                    </div>
+                  )}
+                  {/* Active transform passive display */}
+                  {tPath && (
+                    <div className="up-passive">
+                      <span className="up-passive-name">{tree[tPath].passive}</span>
+                      <span className="up-passive-desc">{tree[tPath].passiveDesc}</span>
+                    </div>
+                  )}
+                  {/* Transform choice - available at Master IV+ with no transform */}
+                  {canTransform && (
+                    <div className="up-transform">
+                      <div className="up-transform-label">Choose Transformation</div>
+                      {["a", "b"].map(path => {
+                        const tf = tree[path];
+                        const affordable = canAffordTransform(path);
+                        const cost = tf.cost;
+                        return (
+                          <div key={path} className="up-tf-option" style={{borderColor: tf.color + '40'}}>
+                            <div className="up-tf-name" style={{color: tf.color}}>{tf.name}</div>
+                            <div className="up-tf-stats">
+                              {tf.revMult > 1 && <span className="up-bonus">×{tf.revMult} rev</span>}
+                              {tf.speedMult > 1 && <span className="up-bonus" style={{color:'var(--accent)'}}>×{tf.speedMult} speed</span>}
+                            </div>
+                            <div className="up-tf-passive"><strong>{tf.passive}:</strong> {tf.passiveDesc}</div>
+                            <div className="up-cost-row">
+                              <span className={`up-cost ${(m.t3||0) >= cost.t3 ? 'up-cost-ok' : 'up-cost-no'}`} style={{color: sm.t3.color}}>
+                                {m.t3||0}/{cost.t3} {sm.t3.name}
+                              </span>
+                              {cost.cross && (
+                                <span className={`up-cost ${((materials[cost.cross.ventureId]||{})[cost.cross.tier]||0) >= cost.cross.qty ? 'up-cost-ok' : 'up-cost-no'}`}
+                                  style={{color: SPECIALTY_MATERIALS[cost.cross.ventureId][cost.cross.tier].color}}>
+                                  {(materials[cost.cross.ventureId]||{})[cost.cross.tier]||0}/{cost.cross.qty} {SPECIALTY_MATERIALS[cost.cross.ventureId][cost.cross.tier].name}
+                                </span>
+                              )}
+                              {cost.crossAll && <span className="up-cost up-cost-no" style={{color:'var(--txd)'}}>{cost.crossAll.qty}× every other {cost.crossAll.tier === 't3' ? 'T3 catalyst' : 'T2 material'}</span>}
+                            </div>
+                            <button className={`up-btn ${affordable ? 'up-btn-transform' : ''}`} disabled={!affordable} onClick={() => handleTransformProfession(i, path)}>
+                              {affordable ? `Transform` : "Need Materials"}
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {/* Normal upgrade path */}
+                  {next ? (
+                    <div className="up-card-next">
+                      <div className="up-next-label">Next: <strong>{next.name}</strong></div>
+                      <div className="up-cost-row">
+                        {next.t1 > 0 && <span className={`up-cost ${m.t1 >= next.t1 ? 'up-cost-ok' : 'up-cost-no'}`} style={{color: sm.t1.color}}>{m.t1}/{next.t1} {sm.t1.name}</span>}
+                        {next.t2 > 0 && <span className={`up-cost ${m.t2 >= next.t2 ? 'up-cost-ok' : 'up-cost-no'}`} style={{color: sm.t2.color}}>{m.t2}/{next.t2} {sm.t2.name}</span>}
+                        {next.t3 > 0 && <span className={`up-cost ${m.t3 >= next.t3 ? 'up-cost-ok' : 'up-cost-no'}`} style={{color: sm.t3.color}}>{m.t3}/{next.t3} {sm.t3.name}</span>}
+                      </div>
+                      <button className={`up-btn ${canUpgrade ? 'up-btn-go' : ''}`} disabled={!canUpgrade} onClick={() => handleUpgradeProfession(i)}>
+                        {canUpgrade ? `Upgrade to ${next.name}` : "Need Materials"}
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="up-card-max">GRANDMASTER</div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 
@@ -778,11 +1378,35 @@ export default function CastleCapitalist() {
         </div>
       )}
 
+      </div>
+
+      {/* ── LOOT TOAST ── */}
+      {lootToast && (
+        <div className={`loot-toast ${lootToast.fadeOut ? 'loot-toast-out' : ''}`}
+          style={{ borderColor: getRarityStyle(lootToast.item.rarity).color }}>
+          <span className="loot-toast-rarity"
+            style={{ color: getRarityStyle(lootToast.item.rarity).color }}>
+            {getRarityStyle(lootToast.item.rarity).label}
+          </span>
+          <span className="loot-toast-name"
+            style={{ color: getRarityStyle(lootToast.item.rarity).color }}>
+            {lootToast.item.name}
+          </span>
+          <span className="loot-toast-desc">{lootToast.item.description}</span>
+        </div>
+      )}
+
       {/* ── FOOTER ── */}
       <div className="ft">
-        <span className="ft-text">Castle Capitalist v0.3</span>
+        <span className="ft-text">Castle Clicker v0.3</span>
         <button className="ft-reset" onClick={handleHardReset}>Reset</button>
       </div>
+
+      {/* Particle overlay */}
+      <div ref={particleContainerRef} className="particle-container" />
+
+      {/* Bottom nav spacer */}
+      <div style={{ height: 64 }} />
     </div>
   );
 }
@@ -793,60 +1417,69 @@ export default function CastleCapitalist() {
    ═══════════════════════════════════════════════════════════════ */
 const STYLES = `
 @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Almendra:wght@400;700&family=Fira+Code:wght@400;600&display=swap');
+@font-face { font-family:'GothicByte'; src:url('/assets/GothicByte.ttf') format('truetype'); font-display:swap; }
+@font-face { font-family:'EnchantedLand'; src:url('/assets/EnchantedLand.otf') format('opentype'); font-display:swap; }
 
 .cc {
-  --bg: #0d0f14; --bg2: #151922;
-  --sf: #1c2030; --sf2: #242a3a;
-  --bd: #2a3045; --bd2: #3d4a6a;
-  --gd: #f0c030; --gdl: #ffe082; --gdd: #a07818;
-  --gm: #c084fc; --gmd: #7c3aed;
-  --gn: #4ade80; --rd: #ef4444;
-  --tx: #e0e4f0; --txd: #7a84a6; --txb: #f0f2ff;
+  --bg: #1a1b26; --bg2: #1f2030;
+  --sf: #24283b; --sf2: #2a2f45;
+  --bd: #33384d; --bd2: #444b63;
+  --gd: #ff9e64; --gdl: #ffcfa8; --gdd: #cc7a3f;
+  --gm: #bb9af7; --gmd: #7c3aed;
+  --gn: #9ece6a; --rd: #f7768e;
+  --tx: #c0caf5; --txd: #7982a9; --txb: #e0e4f5;
+  --accent: #7aa2f7;
+  --mod-skills: #e0af68; --mod-allies: #bb9af7; --mod-loot: #f7768e; --mod-upgrades: #7dcfff; --mod-ascend: #cfc9c2;
   font-family: 'Almendra', serif;
   background: var(--bg); color: var(--tx);
-  min-height: 100vh; max-width: 480px;
+  min-height: 100vh; min-height: 100dvh; max-width: 480px;
   margin: 0 auto; user-select: none;
   position: relative; overflow-x: hidden;
+  -webkit-tap-highlight-color: transparent;
 }
-.cc::before {
-  content: ''; position: fixed; inset: 0;
-  background:
-    repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(100,130,200,.03) 3px, rgba(100,130,200,.03) 4px),
-    repeating-linear-gradient(90deg, transparent, transparent 3px, rgba(100,130,200,.02) 3px, rgba(100,130,200,.02) 4px);
-  pointer-events: none; z-index: 0;
-}
+.cc-content { position:relative; flex:1; min-height:0; }
+.cc-content::before { content:''; position:fixed; top:0; left:50%; transform:translateX(-50%); width:100%; max-width:480px; height:100vh; height:100dvh; background:url('/assets/backgrounds/dungeon_bg.png') center/cover no-repeat; z-index:0; pointer-events:none; opacity:0.15; animation:bg-flicker 4s ease-in-out infinite; }
+@keyframes bg-flicker { 0%,100%{opacity:0.15;} 30%{opacity:0.18;} 50%{opacity:0.13;} 70%{opacity:0.17;} 85%{opacity:0.14;} }
 .cc * { position: relative; z-index: 1; box-sizing: border-box; }
 
 /* Header */
-.hd { background: linear-gradient(180deg,#1a1f2e,#0d0f14); border-bottom: 3px solid var(--bd2); padding: 12px 16px 10px; position: sticky; top: 0; z-index: 20; box-shadow: 0 4px 20px rgba(0,0,0,.6); }
-.hd::after { content:''; position:absolute; bottom:-6px; left:0; right:0; height:3px; background:linear-gradient(90deg,transparent,var(--gdd),transparent); }
-.hd-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
-.hd-title { font-family:'Cinzel',serif; font-size:16px; font-weight:900; color:var(--gd); text-shadow:0 2px 4px rgba(0,0,0,.6),0 0 20px rgba(240,192,48,.15); letter-spacing:2px; }
-.hd-gems { font-family:'Fira Code',monospace; font-size:11px; color:var(--gm); padding:3px 10px; border-radius:12px; background:rgba(192,132,252,.1); border:1px solid rgba(192,132,252,.25); cursor:pointer; display:flex; align-items:center; gap:4px; }
-.hd-gold { display:flex; justify-content:space-between; align-items:baseline; }
-.hd-gold-left { display:flex; align-items:baseline; gap:4px; }
-.hd-amount { font-family:'Cinzel',serif; font-size:26px; font-weight:900; color:var(--gdl); text-shadow:0 2px 8px rgba(240,192,48,.3); }
-.hd-label { font-family:'Fira Code',monospace; font-size:9px; color:var(--gdd); }
-.hd-gps { font-family:'Fira Code',monospace; font-size:11px; color:var(--gdd); display:flex; align-items:center; gap:2px; }
+.hd { background: linear-gradient(180deg,#24283b,#1a1b26); border-bottom: 1px solid var(--bd2); padding: 10px 16px 10px; position: sticky; top: 0; z-index: 20; box-shadow: 0 4px 24px rgba(0,0,0,.5); }
+.hd::after { content:''; position:absolute; bottom:-3px; left:0; right:0; height:3px; background:linear-gradient(90deg,transparent,rgba(255,158,100,.4),rgba(122,162,247,.3),transparent); }
+.hd-brand { display:flex; justify-content:center; margin-bottom:6px; perspective:500px; }
+.hd-title-wrap { display:flex; flex-direction:column; align-items:center; line-height:1; transform:rotateX(12deg); transform-style:preserve-3d; filter:drop-shadow(0 6px 16px rgba(0,0,0,.8)) drop-shadow(0 2px 0 rgba(0,0,0,.9)); }
+.hd-title-castle { font-family:'GothicByte',serif; font-size:26px; letter-spacing:14px; color:#94a3b8; text-shadow:0 1px 3px rgba(0,0,0,.6); }
+.hd-title-clicker { font-family:'Cinzel',serif; font-size:44px; font-weight:900; letter-spacing:4px; color:#fbbf24; text-shadow: 0 1px 0 #b45309, 0 2px 0 #92400e, 0 3px 0 #78350f, 0 4px 0 #5c2d0a, 0 5px 10px rgba(0,0,0,.6), 0 8px 20px rgba(0,0,0,.4); margin-top:-4px; }
+.hd-stats { display:flex; justify-content:space-between; align-items:center; }
+.hd-watch { font-family:'Fira Code',monospace; font-size:10px; color:var(--txd); padding:3px 8px; border-radius:10px; background:rgba(255,255,255,.05); border:1px solid var(--bd); }
+.hd-gold-box { display:flex; align-items:baseline; gap:6px; }
+.hd-amount { font-family:'Cinzel',serif; font-size:24px; font-weight:900; color:var(--gdl); text-shadow:0 2px 8px rgba(251,191,36,.3); }
+.hd-gems { font-family:'Fira Code',monospace; font-size:11px; color:var(--gm); padding:4px 10px; border-radius:12px; background:rgba(192,132,252,.12); border:1px solid rgba(192,132,252,.25); cursor:pointer; display:flex; align-items:center; gap:4px; transition:all .2s; }
+.hd-gems:active { background:rgba(192,132,252,.2); }
 
-/* Tabs */
-.tabs { display:flex; background:var(--bg2); border-bottom:2px solid var(--bd); }
-.tab { flex:1; padding:10px 0; background:none; border:none; font-family:'Cinzel',serif; font-size:11px; font-weight:700; color:var(--txd); cursor:pointer; border-bottom:2px solid transparent; letter-spacing:.5px; transition:all .2s; }
-.tab:hover { color:var(--tx); }
-.tab-on { color:var(--gd) !important; border-bottom-color:var(--gd); background:rgba(240,192,48,.04); }
+/* Bottom Navigation */
+.bnav { position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:480px; display:flex; background:linear-gradient(180deg,#24283b,#1a1b26); border-top:1px solid var(--bd2); z-index:30; padding:4px 0; padding-bottom:max(4px, env(safe-area-inset-bottom)); box-shadow:0 -4px 20px rgba(0,0,0,.4); }
+.bnav::before { content:''; position:absolute; top:-3px; left:0; right:0; height:3px; background:linear-gradient(90deg,transparent,rgba(255,158,100,.25),rgba(122,162,247,.2),transparent); }
+.bnav-btn { flex:1; display:flex; flex-direction:column; align-items:center; gap:2px; padding:8px 0 6px; background:none; border:none; cursor:pointer; color:var(--txd); transition:color .2s; -webkit-tap-highlight-color:transparent; }
+.bnav-btn:active { transform:scale(.95); }
+.bnav-icon { font-size:18px; line-height:1; }
+.bnav-label { font-family:'Cinzel',serif; font-size:9px; font-weight:700; letter-spacing:.5px; }
+.bnav-on { color:inherit; }
+.bnav-on .bnav-icon { filter:drop-shadow(0 0 6px currentColor); }
 
 /* Buy Quantity */
-.qty-row { display:flex; gap:4px; padding:8px 12px; justify-content:flex-end; background:var(--bg2); }
-.qty { padding:4px 14px; font-family:'Fira Code',monospace; font-size:11px; font-weight:600; background:var(--sf); color:var(--txd); border:1px solid var(--bd); border-radius:4px; cursor:pointer; transition:all .15s; }
-.qty-on { background:var(--gd) !important; color:var(--bg) !important; border-color:var(--gd) !important; }
+.qty-row { display:flex; gap:6px; padding:8px 12px; justify-content:flex-end; background:var(--bg2); }
+.qty { padding:8px 16px; font-family:'Fira Code',monospace; font-size:12px; font-weight:700; background:linear-gradient(180deg,var(--sf2),var(--sf)); color:var(--txd); border:2px solid #0a0f1a; border-radius:8px; cursor:pointer; transition:all .15s; min-height:36px; -webkit-tap-highlight-color:transparent; box-shadow:0 2px 4px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.06); text-shadow:0 1px 2px rgba(0,0,0,.5); }
+.qty:active { transform:scale(.95); }
+.qty-on { background:linear-gradient(180deg,#ffcfa8,#ff9e64) !important; color:#1a1b26 !important; border-color:#1a1b26 !important; box-shadow:0 2px 12px rgba(255,158,100,.4),inset 0 1px 0 rgba(255,255,255,.3) !important; text-shadow:none !important; }
 
 /* Venture List */
-.vent-list { padding:4px 8px 100px; }
-.vrow { display:flex; align-items:center; gap:6px; padding:8px 6px; margin-bottom:4px; background:linear-gradient(135deg,var(--sf),var(--sf2)); border:1px solid var(--bd); border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,.2),inset 0 1px 0 rgba(255,255,255,.03); transition:border-color .2s; }
+.vent-list { padding:4px 8px 20px; }
+.vrow { display:flex; align-items:center; gap:6px; padding:8px 6px 8px 10px; margin-bottom:4px; background:linear-gradient(135deg,var(--sf),var(--sf2)); border:1px solid var(--bd); border-left:4px solid var(--bd); border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,.2),inset 0 1px 0 rgba(255,255,255,.03); transition:all .3s; }
 .vrow:hover { border-color:var(--bd2); }
-.vrow-locked { opacity:.4; filter:grayscale(.3); }
-.vrow-afford { opacity:1; filter:none; border-color:rgba(74,222,128,.8); animation:row-glow 1.5s ease-in-out infinite; }
-@keyframes row-glow { 0%,100% { box-shadow:0 0 8px rgba(74,222,128,.3), 0 0 2px rgba(74,222,128,.5); border-color:rgba(74,222,128,.5); } 50% { box-shadow:0 0 20px rgba(74,222,128,.6), 0 0 8px rgba(74,222,128,.8); border-color:rgba(74,222,128,1); } }
+.vrow-locked { opacity:.55; backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); background:rgba(36,40,59,.4) !important; border-color:rgba(51,56,77,.3) !important; border-left-color:rgba(51,56,77,.4) !important; }
+.vrow-afford { opacity:1; backdrop-filter:none; -webkit-backdrop-filter:none; border-color:rgba(52,211,153,.8) !important; border-left-color:rgba(52,211,153,1) !important; animation:row-glow 1.5s ease-in-out infinite; }
+.vrow-can-buy { border-color:rgba(251,191,36,.5) !important; box-shadow:0 2px 8px rgba(0,0,0,.2),inset 0 1px 0 rgba(255,255,255,.03),0 0 12px rgba(251,191,36,.15); }
+@keyframes row-glow { 0%,100% { box-shadow:0 0 8px rgba(52,211,153,.3), 0 0 2px rgba(52,211,153,.5); border-color:rgba(52,211,153,.5); } 50% { box-shadow:0 0 20px rgba(52,211,153,.5), 0 0 8px rgba(52,211,153,.7); border-color:rgba(52,211,153,1); } }
 
 /* Icon Badge */
 .badge-wrap { display:flex; flex-direction:column; align-items:center; flex-shrink:0; cursor:pointer; }
@@ -857,12 +1490,11 @@ const STYLES = `
 /* Venture Middle */
 .vmid { flex:1; min-width:0; cursor:pointer; }
 .vname { font-family:'Cinzel',serif; font-size:12px; font-weight:700; color:var(--txb); margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-shadow:0 1px 2px rgba(0,0,0,.4); }
-.auto-tag { font-family:'Fira Code',monospace; font-size:8px; font-weight:700; color:var(--gn); margin-left:6px; padding:1px 5px; border-radius:3px; background:rgba(74,222,128,.12); }
-.vrev { font-family:'Fira Code',monospace; font-size:11px; font-weight:600; color:var(--gdl); margin-bottom:3px; display:flex; align-items:center; gap:2px; }
-.vps { font-size:9px; color:var(--txd); margin-left:6px; }
+.auto-tag { font-family:'Fira Code',monospace; font-size:8px; font-weight:700; color:var(--gn); margin-left:6px; padding:1px 5px; border-radius:3px; background:rgba(52,211,153,.12); }
+.watch-tag { font-size:10px; margin-left:4px; filter:drop-shadow(0 0 3px rgba(255,200,50,.5)); }
 
 /* Progress Bar */
-.bar-out { height:14px; background:#0a0c12; border-radius:7px; overflow:hidden; border:1px solid var(--bd); box-shadow:inset 0 2px 4px rgba(0,0,0,.4); margin-bottom:3px; position:relative; }
+.bar-out { height:14px; background:#1a1b26; border-radius:7px; overflow:hidden; border:1px solid var(--bd); box-shadow:inset 0 2px 4px rgba(0,0,0,.4); margin-bottom:3px; position:relative; }
 .bar-in { height:100%; border-radius:6px; position:relative; overflow:hidden; }
 .bar-in::after { content:''; position:absolute; inset:0; background:repeating-linear-gradient(-45deg,transparent,transparent 4px,rgba(255,255,255,.08) 4px,rgba(255,255,255,.08) 8px); animation:stripe .8s linear infinite; }
 @keyframes stripe { 0%{background-position:0 0} 100%{background-position:16px 0} }
@@ -870,19 +1502,29 @@ const STYLES = `
 
 /* Milestone */
 .vms { font-family:'Fira Code',monospace; font-size:9px; color:var(--txd); }
-.vms-n { color:#60a5fa; }
+.vms-n { color:var(--gd); }
+
+/* Material Badges */
+.vmat-row { display:flex; flex-wrap:wrap; gap:4px; margin-top:2px; }
+.vmat { font-family:'Fira Code',monospace; font-size:8px; font-weight:600; padding:1px 5px; border-radius:3px; background:rgba(255,255,255,.06); white-space:nowrap; }
+.vmat-t2 { background:rgba(255,255,255,.10); }
+.vmat-t3 { background:rgba(255,255,255,.15); text-shadow:0 0 6px currentColor; }
 
 /* Buy Button */
-.buy-btn { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:6px 8px; min-width:68px; background:linear-gradient(180deg,var(--sf2),var(--sf)); border:2px solid var(--bd); border-radius:8px; cursor:pointer; font-family:'Fira Code',monospace; transition:all .15s; flex-shrink:0; box-shadow:0 2px 6px rgba(0,0,0,.2),inset 0 1px 0 rgba(255,255,255,.05); }
-.buy-btn:hover:not(:disabled) { border-color:var(--gd); box-shadow:0 2px 12px rgba(240,192,48,.2); }
-.buy-btn:active:not(:disabled) { transform:scale(.95); }
-.buy-btn:disabled { opacity:.3; cursor:default; }
-.buy-q { font-size:12px; font-weight:700; color:var(--txb); }
-.buy-c { font-size:9px; color:var(--gdd); margin-top:2px; display:flex; align-items:center; gap:1px; }
-.buy-l { font-size:8px; color:var(--txd); margin-top:1px; text-transform:uppercase; letter-spacing:.5px; }
+.buy-btn { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:10px 12px; min-width:82px; min-height:58px; background:linear-gradient(180deg,#33384d,#24283b); border:2px solid #1a1b26; border-radius:10px; cursor:pointer; font-family:'Fira Code',monospace; transition:all .15s; flex-shrink:0; box-shadow:0 3px 8px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.06); -webkit-tap-highlight-color:transparent; }
+.buy-btn:active:not(:disabled) { transform:scale(.93); }
+.buy-btn:disabled { opacity:.4; cursor:default; }
+.buy-btn-go { background:linear-gradient(180deg,#9ece6a,#6fa33e); border-color:#2a3a15; box-shadow:0 3px 8px rgba(0,0,0,.4),0 0 14px rgba(158,206,106,.25),inset 0 1px 0 rgba(255,255,255,.15); }
+.buy-btn-go:active { box-shadow:0 1px 4px rgba(0,0,0,.4),0 0 8px rgba(158,206,106,.2),inset 0 1px 0 rgba(255,255,255,.1); }
+.buy-q { font-size:13px; font-weight:700; color:var(--txb); }
+.buy-btn-go .buy-q { color:#1a2a0a; }
+.buy-c { font-size:10px; color:var(--gdd); margin-top:2px; display:flex; align-items:center; gap:1px; }
+.buy-btn-go .buy-c { color:#2a3a15; }
+.buy-l { font-size:9px; color:var(--txd); margin-top:1px; text-transform:uppercase; letter-spacing:.5px; font-weight:700; }
+.buy-btn-go .buy-l { color:#354a1e; }
 
 /* Companions */
-.comp-list { padding:12px 12px 100px; }
+.comp-list { padding:12px 12px 20px; }
 .comp-hdr { text-align:center; font-family:'Cinzel',serif; font-size:14px; color:var(--txd); margin-bottom:4px; letter-spacing:1px; }
 .comp-sub { text-align:center; font-size:11px; color:var(--txd); margin:0 0 16px; opacity:.7; }
 .comp-row { display:flex; justify-content:space-between; align-items:center; padding:10px 12px; margin-bottom:4px; background:var(--sf); border:1px solid var(--bd); border-radius:8px; }
@@ -892,17 +1534,48 @@ const STYLES = `
 .comp-desc { font-size:10px; color:var(--txd); font-style:italic; }
 .comp-hired { font-family:'Fira Code',monospace; font-size:11px; color:var(--gn); font-weight:700; }
 .comp-locked { font-size:11px; color:var(--txd); }
-.comp-btn { padding:7px 16px; font-family:'Cinzel',serif; font-size:11px; font-weight:700; background:linear-gradient(180deg,var(--sf2),var(--sf)); color:var(--gd); border:1px solid var(--bd); border-radius:6px; cursor:pointer; transition:all .15s; display:flex; align-items:center; gap:2px; }
+.comp-btn { padding:10px 18px; font-family:'Cinzel',serif; font-size:11px; font-weight:700; background:linear-gradient(180deg,var(--sf2),var(--sf)); color:var(--gd); border:1px solid var(--bd); border-radius:6px; cursor:pointer; transition:all .15s; display:flex; align-items:center; gap:2px; min-height:40px; -webkit-tap-highlight-color:transparent; }
 .comp-btn:hover:not(:disabled) { border-color:var(--gd); }
 .comp-btn:disabled { opacity:.3; cursor:default; }
 
 /* Upgrades */
-.upgrades { padding:12px 12px 100px; }
-.up-hdr { text-align:center; font-family:'Cinzel',serif; font-size:14px; color:var(--txd); margin-bottom:16px; letter-spacing:1px; }
-.up-sub { text-align:center; color:var(--txd); font-size:12px; line-height:1.7; max-width:320px; margin:0 auto; }
+.upgrades { padding:12px 12px 20px; }
+.up-hdr { text-align:center; font-family:'Cinzel',serif; font-size:14px; color:var(--txd); margin-bottom:4px; letter-spacing:1px; }
+.up-sub { text-align:center; color:var(--txd); font-size:11px; margin:0 auto 12px; opacity:.7; }
+.up-grid { display:flex; flex-direction:column; gap:8px; }
+.up-card { background:var(--sf); border:1px solid var(--bd); border-left:4px solid var(--bd); border-radius:8px; padding:10px 12px; }
+.up-card-top { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:4px; }
+.up-card-name { font-family:'Cinzel',serif; font-size:12px; font-weight:700; }
+.up-card-tier { font-family:'Fira Code',monospace; font-size:10px; color:var(--txd); }
+.up-card-bonuses { display:flex; gap:8px; margin-bottom:6px; }
+.up-bonus { font-family:'Fira Code',monospace; font-size:9px; color:var(--gn); padding:1px 6px; border-radius:3px; background:rgba(158,206,106,.1); }
+.up-card-next { }
+.up-next-label { font-family:'Fira Code',monospace; font-size:10px; color:var(--txd); margin-bottom:4px; }
+.up-next-label strong { color:var(--txb); }
+.up-cost-row { display:flex; flex-wrap:wrap; gap:4px 8px; margin-bottom:8px; }
+.up-cost { font-family:'Fira Code',monospace; font-size:9px; font-weight:600; }
+.up-cost-ok { opacity:1; }
+.up-cost-no { opacity:.5; }
+.up-btn { width:100%; padding:8px; font-family:'Cinzel',serif; font-size:11px; font-weight:700; background:linear-gradient(180deg,#33384d,#24283b); color:var(--txd); border:2px solid #1a1b26; border-radius:8px; cursor:pointer; transition:all .15s; }
+.up-btn:disabled { opacity:.4; cursor:default; }
+.up-btn-go { background:linear-gradient(180deg,#9ece6a,#6fa33e); color:#1a2a0a; border-color:#2a3a15; box-shadow:0 2px 10px rgba(158,206,106,.25); }
+.up-btn-go:active { transform:scale(.97); }
+.up-card-max { font-family:'Cinzel',serif; font-size:12px; font-weight:900; text-align:center; color:var(--gd); letter-spacing:2px; padding:6px 0; text-shadow:0 0 8px rgba(255,158,100,.3); }
+.up-passive { margin:4px 0 6px; padding:4px 8px; border-radius:6px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); }
+.up-passive-name { font-family:'Cinzel',serif; font-size:10px; font-weight:700; color:var(--gd); margin-right:6px; }
+.up-passive-desc { font-size:9px; color:var(--txd); }
+.up-transform { margin:8px 0; }
+.up-transform-label { font-family:'Cinzel',serif; font-size:11px; color:var(--gd); text-align:center; margin-bottom:6px; letter-spacing:1px; }
+.up-tf-option { background:rgba(255,255,255,.03); border:1px solid var(--bd); border-radius:8px; padding:8px 10px; margin-bottom:6px; }
+.up-tf-name { font-family:'Cinzel',serif; font-size:12px; font-weight:700; margin-bottom:2px; }
+.up-tf-stats { display:flex; gap:6px; margin-bottom:3px; }
+.up-tf-passive { font-size:9px; color:var(--txd); margin-bottom:6px; line-height:1.4; }
+.up-tf-passive strong { color:var(--txb); }
+.up-btn-transform { background:linear-gradient(180deg,#ff9e64,#cc7a3f); color:#1a1b26; border-color:#4a2a10; box-shadow:0 2px 10px rgba(255,158,100,.25); }
+.up-btn-transform:active { transform:scale(.97); }
 
 /* Prestige */
-.prest { padding:24px 16px 100px; text-align:center; }
+.prest { padding:24px 16px 20px; text-align:center; }
 .prest-title { font-family:'Cinzel',serif; font-size:20px; font-weight:900; color:var(--gm); letter-spacing:3px; text-shadow:0 2px 12px rgba(192,132,252,.3); margin-bottom:8px; }
 .prest-sub { font-size:12px; color:var(--txd); max-width:320px; margin:0 auto 24px; line-height:1.7; }
 .prest-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:24px; }
@@ -915,13 +1588,103 @@ const STYLES = `
 .prest-hint { font-family:'Fira Code',monospace; font-size:10px; color:var(--txd); margin-top:16px; display:flex; align-items:center; justify-content:center; gap:3px; }
 
 /* Footer */
-.ft { display:flex; justify-content:space-between; align-items:center; padding:8px 16px; border-top:2px solid var(--bd); background:var(--bg2); position:sticky; bottom:0; z-index:20; }
+.ft { display:flex; justify-content:space-between; align-items:center; padding:8px 16px; border-top:1px solid var(--bd); background:var(--bg2); }
 .ft-text { font-family:'Fira Code',monospace; font-size:9px; color:var(--txd); }
-.ft-reset { font-family:'Fira Code',monospace; font-size:9px; color:var(--rd); background:none; border:1px solid rgba(239,68,68,.2); border-radius:4px; padding:3px 10px; cursor:pointer; }
+.ft-reset { font-family:'Fira Code',monospace; font-size:9px; color:var(--rd); background:none; border:1px solid rgba(239,68,68,.2); border-radius:4px; padding:6px 14px; cursor:pointer; min-height:36px; }
 
 /* Scrollbar */
 .cc ::-webkit-scrollbar { width:4px; }
 .cc ::-webkit-scrollbar-track { background:transparent; }
 .cc ::-webkit-scrollbar-thumb { background:var(--bd); border-radius:2px; }
+
+/* Loot Toast */
+.loot-toast { position:fixed; top:140px; left:50%; transform:translateX(-50%); background:var(--bg2); border:2px solid; border-radius:10px; padding:10px 20px; z-index:50; text-align:center; min-width:220px; max-width:360px; animation:toast-in .3s ease-out; box-shadow:0 4px 20px rgba(0,0,0,.6); }
+.loot-toast-out { animation:toast-out .7s ease-in forwards; }
+@keyframes toast-in { from { opacity:0; transform:translateX(-50%) translateY(-20px); } to { opacity:1; transform:translateX(-50%) translateY(0); } }
+@keyframes toast-out { from { opacity:1; } to { opacity:0; transform:translateX(-50%) translateY(-20px); } }
+.loot-toast-rarity { font-family:'Fira Code',monospace; font-size:9px; text-transform:uppercase; letter-spacing:1.5px; display:block; margin-bottom:2px; }
+.loot-toast-name { font-family:'Cinzel',serif; font-size:14px; font-weight:700; display:block; }
+.loot-toast-desc { font-size:10px; color:var(--txd); margin-top:4px; display:block; }
+
+/* Inventory Tab */
+.inv-panel { padding:12px 12px 20px; }
+.inv-hdr { text-align:center; font-family:'Cinzel',serif; font-size:14px; color:var(--txd); margin-bottom:4px; letter-spacing:1px; }
+.inv-sub { text-align:center; font-size:11px; color:var(--txd); margin:0 0 16px; opacity:.7; }
+/* Materials Grid */
+.mat-grid { display:flex; flex-direction:column; gap:6px; }
+.mat-card { background:var(--sf); border:1px solid var(--bd); border-radius:8px; padding:8px 12px; }
+.mat-card-hdr { font-family:'Cinzel',serif; font-size:11px; font-weight:700; margin-bottom:4px; }
+.mat-card-items { display:flex; flex-direction:column; gap:3px; }
+.mat-entry { display:flex; align-items:center; gap:6px; }
+.mat-dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
+.mat-dot-t2 { width:7px; height:7px; }
+.mat-dot-t3 { width:8px; height:8px; }
+.mat-name { font-family:'Fira Code',monospace; font-size:10px; color:var(--txd); flex:1; }
+.mat-ct { font-family:'Fira Code',monospace; font-size:11px; font-weight:700; color:var(--txb); }
+
+.inv-empty { text-align:center; color:var(--txd); font-size:12px; padding:40px 20px; opacity:.5; }
+.inv-grid { display:flex; flex-direction:column; gap:6px; }
+.inv-item { background:var(--sf); border:1px solid var(--bd); border-radius:8px; padding:10px 12px; transition:border-color .2s; }
+.inv-item-hdr { display:flex; justify-content:space-between; align-items:baseline; }
+.inv-item-name { font-family:'Cinzel',serif; font-size:12px; font-weight:700; }
+.inv-item-qty { font-family:'Fira Code',monospace; font-size:11px; color:var(--txd); }
+.inv-item-rarity { font-family:'Fira Code',monospace; font-size:9px; text-transform:uppercase; letter-spacing:1px; margin:2px 0; }
+.inv-item-desc { font-size:10px; color:var(--txd); font-style:italic; }
+
+/* ── Particles ── */
+.particle-container {
+  position: fixed;
+  top: 0; left: 50%;
+  transform: translateX(-50%);
+  width: 100%; max-width: 480px;
+  height: 100vh; height: 100dvh;
+  pointer-events: none;
+  z-index: 40;
+  overflow: hidden;
+}
+.particle {
+  position: absolute;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+.particle-ripple {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  border: 2px solid var(--p-color);
+  margin-left: -20px; margin-top: -20px;
+  animation: p-ripple 0.5s ease-out forwards;
+}
+@keyframes p-ripple {
+  0%   { transform: scale(0.3); opacity: 0.8; }
+  100% { transform: scale(2.5); opacity: 0; }
+}
+.particle-coin {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #fff8, var(--p-color));
+  box-shadow: 0 0 4px var(--p-color);
+  margin-left: -4px; margin-top: -4px;
+  animation: p-coin 0.7s ease-out forwards;
+}
+@keyframes p-coin {
+  0%   { transform: translate(0, 0) scale(1); opacity: 1; }
+  60%  { opacity: 0.8; }
+  100% { transform: translate(var(--p-tx), var(--p-ty)) scale(0.3); opacity: 0; }
+}
+.particle-gold-text {
+  font-family: 'Cinzel', serif;
+  font-size: 14px;
+  font-weight: 900;
+  color: var(--p-color);
+  text-shadow: 0 1px 4px rgba(0,0,0,.8), 0 0 8px var(--p-color);
+  white-space: nowrap;
+  transform: translateX(-50%);
+  animation: p-gold-text 1.0s ease-out forwards;
+}
+@keyframes p-gold-text {
+  0%   { transform: translateX(-50%) translateY(0) scale(0.8); opacity: 1; }
+  20%  { transform: translateX(-50%) translateY(-8px) scale(1.1); opacity: 1; }
+  100% { transform: translateX(-50%) translateY(-50px) scale(0.9); opacity: 0; }
+}
 `;
 

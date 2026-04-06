@@ -26,57 +26,57 @@
     },
     {
       "file": "ventures/dragon.png",
-      "status": "generated"
+      "status": "skipped"
     },
     {
       "file": "ventures/dungeon_gate.png",
-      "status": "generated"
+      "status": "skipped"
     },
     {
       "file": "ventures/demon_gate.png",
-      "status": "generated"
+      "status": "skipped"
     },
     {
       "file": "ventures/void_portal.png",
-      "status": "generated"
+      "status": "skipped"
     }
   ],
   "companions": [
     {
       "file": "companions/squire_finn.png",
-      "status": "generated"
+      "status": "skipped"
     },
     {
       "file": "companions/rogue_nyx.png",
-      "status": "generated"
+      "status": "skipped"
     },
     {
       "file": "companions/fungi_sage.png",
-      "status": "generated"
+      "status": "skipped"
     },
     {
       "file": "companions/bone_collector.png",
-      "status": "failed"
+      "status": "skipped"
     },
     {
       "file": "companions/trapmaster_vex.png",
-      "status": "generated"
+      "status": "skipped"
     },
     {
       "file": "companions/chest_warden.png",
-      "status": "generated"
+      "status": "skipped"
     },
     {
       "file": "companions/dragonkeeper_ash.png",
-      "status": "generated"
+      "status": "skipped"
     },
     {
       "file": "companions/lich_morrn.png",
-      "status": "generated"
+      "status": "skipped"
     },
     {
       "file": "companions/demon_binder_kael.png",
-      "status": "generated"
+      "status": "skipped"
     },
     {
       "file": "companions/void_priest_zara.png",
@@ -86,33 +86,33 @@
   "ui": [
     {
       "file": "ui/gold_coin.png",
-      "status": "generated"
+      "status": "skipped"
     },
     {
       "file": "ui/soul_gem.png",
-      "status": "generated"
+      "status": "skipped"
     },
     {
       "file": "ui/locked_icon.png",
-      "status": "generated"
+      "status": "skipped"
     },
     {
       "file": "ui/auto_badge.png",
-      "status": "generated"
+      "status": "skipped"
     }
   ],
   "backgrounds": [
     {
       "file": "backgrounds/header_bg.png",
-      "status": "generated"
+      "status": "skipped"
     },
     {
       "file": "backgrounds/dungeon_bg.png",
-      "status": "generated"
+      "status": "skipped"
     },
     {
       "file": "backgrounds/prestige_bg.png",
-      "status": "generated"
+      "status": "skipped"
     }
   ]
 }

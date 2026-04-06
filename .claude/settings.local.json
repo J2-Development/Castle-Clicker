@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git init:*)",
+      "Bash(git remote:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git branch:*)",
+      "Bash(git push:*)",
+      "Bash(git pull:*)",
+      "Bash(tar -tzf castle-clicker-src.tar.gz)",
+      "Bash(npm create:*)",
+      "Bash(npm install:*)",
+      "Bash(npx vite:*)",
+      "Bash(node --check generate-assets.mjs)",
+      "Bash(node:*)",
+      "Bash(npm run:*)",
+      "Bash(grep -E \"\\\\.jsx?$|\\\\.json$\")",
+      "Bash(unzip -o gothicbyte.zip -d gothicbyte_temp)",
+      "Bash(unzip -o enchanted_land.zip -d enchanted_temp)"
+    ]
+  }
+}

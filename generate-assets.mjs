@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Castle Capitalist — AI Asset Generator (Google Gemini)
+ * Castle Clicker — AI Asset Generator (Google Gemini)
  *
  * Generates all game art assets using Google Gemini's image generation.
  * Run:  npm run generate-assets
@@ -131,15 +131,15 @@ const ASSETS = {
   companions: [
     {
       filename: "squire_finn.png",
-      prompt: `Young human squire boy with messy brown hair, holding a lit torch casting warm amber (#e8a023) light on his face, eager determined expression, simple leather armor with a torch emblem buckle, ${ART_STYLE_PORTRAIT}`,
+      prompt: `Young human squire in polished but battle-dented iron pauldrons over worn leather armor, messy brown hair falling over forehead, strong determined eyes lit by the warm amber (#e8a023) glow of a torch he grips tightly, iron torch-emblem buckle on his chest plate, chainmail visible at collar, scuffed gauntlets, World of Warcraft Hearthstone card art style, ${ART_STYLE_PORTRAIT}`,
     },
     {
       filename: "rogue_nyx.png",
-      prompt: `Sly elven rogue woman with short dark hair and pointed ears, green (#6dba4a) hooded cloak, mischievous smirk, twin daggers crossed at collar, shadowy green-tinted lighting, ${ART_STYLE_PORTRAIT}`,
+      prompt: `Elven rogue woman with sharp angular features, pointed ears poking through short dark tousled hair, wearing a deep forest green (#6dba4a) leather hood and studded leather armor with tarnished brass clasps, twin steel daggers in crossed leather sheaths at her collar, mischievous confident smirk, one eyebrow raised, shadowy green-tinted ambient light, World of Warcraft Hearthstone card art style, full bleed square image filling entire canvas edge to edge, no border no frame no badge shape no card frame, ${ART_STYLE_PORTRAIT}`,
     },
     {
       filename: "fungi_sage.png",
-      prompt: `Ancient mushroom-person sage, humanoid made of bark and fungus with glowing pink-magenta (#c74f8e) mushroom cap as hat, wise old eyes peering out, bioluminescent spores drifting upward, ${ART_STYLE_PORTRAIT}`,
+      prompt: `Wise ancient mushroom-person sage with a humanoid face of cracked bark and soft moss, a large glowing pink-magenta (#c74f8e) mushroom cap growing as a natural headpiece, gentle luminous eyes peering out from under the cap, wearing layered robes woven from roots and lichen with tiny mushrooms sprouting from the shoulders, bioluminescent pink spores drifting gently upward, warm and wise not scary, World of Warcraft Hearthstone card art style, ${ART_STYLE_PORTRAIT}`,
     },
     {
       filename: "bone_collector.png",
@@ -167,7 +167,7 @@ const ASSETS = {
     },
     {
       filename: "void_priest_zara.png",
-      prompt: `Ethereal void priestess with pale lavender skin, white glowing eyes with no pupils, flowing indigo (#6366f1) robes and hair that dissolves into cosmic stardust at the edges, serene otherworldly, ${ART_STYLE_PORTRAIT}`,
+      prompt: `Bust portrait of a void priestess with pale lavender skin and strong facial features, white glowing eyes without pupils, dark indigo (#6366f1) hair with stardust particles, wearing heavy ornate purple plate and cloth ceremonial armor with silver void rune engravings on the pauldrons and collar, a silver crescent moon amulet, serene powerful expression, dark dungeon stone wall background fills entire image behind her, World of Warcraft game character portrait screenshot style, square image with background filling all corners completely, ${ART_STYLE_PORTRAIT}`,
     },
   ],
 
@@ -199,7 +199,7 @@ const ASSETS = {
     },
     {
       filename: "dungeon_bg.png",
-      prompt: `Dark dungeon chamber with wet stone walls, moss growing in mortar cracks, iron torch sconces with dying flames, puddles reflecting warm firelight, atmospheric perspective fading to cool shadow in the distance, portrait orientation tall format, ${ART_STYLE_BG}`,
+      prompt: `Interior of a dark medieval dungeon chamber viewed from inside, tall portrait orientation mobile phone wallpaper format. Stone brick walls with mounted iron torches casting warm amber firelight. A small campfire burning in the center-foreground with logs and embers. Scattered old bones and a cracked skull on the stone floor. A rusty dagger and broken sword lying among rubble. Iron chains hanging from the ceiling. Cobwebs in upper corners. A pair of small green goblin eyes glowing from a shadowy alcove. Dark moody atmosphere, depth perspective receding into shadow, warm firelight vs cool blue-purple shadow contrast. ${ART_STYLE_BG}`,
     },
     {
       filename: "prestige_bg.png",
@@ -267,7 +267,7 @@ async function generateImage(genAI, asset, subfolder) {
 
 async function main() {
   console.log("═══════════════════════════════════════════════════");
-  console.log("  Castle Capitalist — AI Asset Generator (Gemini)");
+  console.log("  Castle Clicker — AI Asset Generator (Gemini)");
   console.log("═══════════════════════════════════════════════════\n");
 
   const genAI = new GoogleGenerativeAI(API_KEY);
