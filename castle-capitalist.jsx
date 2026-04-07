@@ -252,7 +252,7 @@ const OFFLINE_EFFICIENCY = 0.25;
 const OFFLINE_CAP = 8 * 60 * 60 * 1000;
 
 // Save key for localStorage / AsyncStorage
-const SAVE_KEY = "castle_clicker_v7"; // bumped: profession evolution
+const SAVE_KEY = "castle_clicker_v8"; // bumped: equipment system
 
 // ═══ SPECIALTY MATERIALS ═══
 /* ═══════════════════════════════════════════════════════════════
@@ -421,6 +421,28 @@ const LOOT_TABLE = [
   { id:"blade_forgotten_king",name:"Blade of the Forgotten King",rarity:"legendary", description:"0.5% chance for 50x gold on completion", effects:[{ type:"critGold",       target:"all", value:0.005}]},
 ];
 
+const LOOT_BY_ID = {};
+for (const item of LOOT_TABLE) LOOT_BY_ID[item.id] = item;
+
+// ═══ EQUIPMENT SLOTS ═══
+const SLOT_UNLOCKS = [
+  { slot: 4, type: "prestige",  req: 5,   label: "Earn 5 Soul Gems" },
+  { slot: 5, type: "mastery",   req: 2,   label: "Journeyman in any profession" },
+  { slot: 6, type: "prestige",  req: 25,  label: "Earn 25 Soul Gems" },
+  { slot: 7, type: "mastery3",  req: 3,   label: "Expert in 3 professions" },
+];
+
+const getUnlockedSlotCount = (tGems, pUpgrades, mSlots) => {
+  let count = 4;
+  if (tGems >= 5) count++;
+  if (pUpgrades.some(t => t >= 2)) count++;
+  if (tGems >= 25) count++;
+  if (pUpgrades.filter(t => t >= 3).length >= 3) count++;
+  return Math.min(12, count + mSlots);
+};
+
+const getEquippedCount = (equipped, itemId) =>
+  equipped.filter(id => id === itemId).length;
 
 // ═══ MATH UTILS ═══
 /* ═══════════════════════════════════════════════════════════════
@@ -565,22 +587,24 @@ const rollLootDrop = (ventureIndex, skillLevel, dropRateMult = 1, xpMult = 1) =>
 const getRarityStyle = (rarity) => RARITY_TIERS[rarity] || RARITY_TIERS.common;
 
 /** Aggregate all loot bonuses from inventory for a given venture. */
-const getLootBonuses = (inv, ventureIndex) => {
+const getLootBonuses = (equippedArr, ventureIndex, unlockedSlots) => {
   let goldMult = 0, speedBonus = 0, dropRateBonus = 0, xpBonus = 0;
   let critChance = 0, instantChance = 0, chainChance = 0;
-  for (const item of LOOT_TABLE) {
-    const qty = inv[item.id] || 0;
-    if (qty === 0) continue;
+  for (let s = 0; s < unlockedSlots; s++) {
+    const itemId = equippedArr[s];
+    if (!itemId) continue;
+    const item = LOOT_BY_ID[itemId];
+    if (!item) continue;
     for (const e of item.effects) {
       if (e.target !== "all" && e.target !== ventureIndex) continue;
       switch (e.type) {
-        case "goldMultiplier":  goldMult += e.value * qty; break;
-        case "speedBoost":      speedBonus += e.value * qty; break;
-        case "dropRateBoost":   dropRateBonus += e.value * qty; break;
-        case "xpBoost":         xpBonus += e.value * qty; break;
-        case "critGold":        critChance += e.value * qty; break;
-        case "instantComplete": instantChance += e.value * qty; break;
-        case "chainRun":        chainChance += e.value * qty; break;
+        case "goldMultiplier":  goldMult += e.value; break;
+        case "speedBoost":      speedBonus += e.value; break;
+        case "dropRateBoost":   dropRateBonus += e.value; break;
+        case "xpBoost":         xpBonus += e.value; break;
+        case "critGold":        critChance += e.value; break;
+        case "instantComplete": instantChance += e.value; break;
+        case "chainRun":        chainChance += e.value; break;
       }
     }
   }
@@ -629,6 +653,12 @@ export default function CastleCapitalist() {
   const [materials, setMaterials] = useState({});
   const [profUpgrades, setProfUpgrades] = useState(Array(10).fill(0));
   const [profTransforms, setProfTransforms] = useState(Array(10).fill(null));
+  const [equipped, setEquipped] = useState(Array(12).fill(null));
+  const [mtxSlots, setMtxSlots] = useState(0);
+  const [showWatchInfo, setShowWatchInfo] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [brightness, setBrightness] = useState(() => parseFloat(localStorage.getItem('cc-brightness') || '1'));
+  const [theme, setTheme] = useState(() => localStorage.getItem('cc-theme') || 'dark');
 
   const lastTick = useRef(Date.now());
   const animRef = useRef(null);
@@ -640,6 +670,7 @@ export default function CastleCapitalist() {
   const materialsRef = useRef(materials);
   const profUpgradesRef = useRef(profUpgrades);
   const profTransformsRef = useRef(profTransforms);
+  const equippedRef = useRef(equipped);
   const pendingDropsRef = useRef([]);
   const pendingMatsRef = useRef([]);
   const particleContainerRef = useRef(null);
@@ -654,6 +685,7 @@ export default function CastleCapitalist() {
   materialsRef.current = materials;
   profUpgradesRef.current = profUpgrades;
   profTransformsRef.current = profTransforms;
+  equippedRef.current = equipped;
 
   const prestigeMultiplier = 1 + totalGems * PRESTIGE_GEM_BONUS;
 
@@ -701,9 +733,12 @@ export default function CastleCapitalist() {
   }, [spawnParticle]);
 
   // ═══ SAVE / LOAD ═══
+  useEffect(() => { localStorage.setItem('cc-brightness', brightness); }, [brightness]);
+  useEffect(() => { localStorage.setItem('cc-theme', theme); }, [theme]);
+
   useEffect(() => {
     try {
-      const raw = localStorage.getItem(SAVE_KEY) || localStorage.getItem("castle_clicker_v6") || localStorage.getItem("castle_clicker_v5");
+      const raw = localStorage.getItem(SAVE_KEY) || localStorage.getItem("castle_clicker_v7") || localStorage.getItem("castle_clicker_v6") || localStorage.getItem("castle_clicker_v5");
       if (!raw) return;
       const save = JSON.parse(raw);
 
@@ -717,6 +752,8 @@ export default function CastleCapitalist() {
       if (save.materials) setMaterials(save.materials);
       if (save.profUpgrades) setProfUpgrades(save.profUpgrades);
       if (save.profTransforms) setProfTransforms(save.profTransforms);
+      if (save.equipped) setEquipped(save.equipped);
+      if (save.mtxSlots != null) setMtxSlots(save.mtxSlots);
 
       // Offline earnings
       if (save.lastSave && save.ventures) {
@@ -726,10 +763,12 @@ export default function CastleCapitalist() {
           const pm = 1 + (save.totalGems || 0) * PRESTIGE_GEM_BONUS;
           const savedUpg = save.profUpgrades || Array(10).fill(0);
           const savedTrans = save.profTransforms || Array(10).fill(null);
-          const savedInv = save.inventory || {};
+          const savedEquipped = save.equipped || Array(12).fill(null);
+          const savedMtxSlots = save.mtxSlots || 0;
+          const savedUnlockedSlots = getUnlockedSlotCount(save.totalGems || 0, savedUpg, savedMtxSlots);
           save.ventures.forEach((vs, i) => {
             if (vs.hasCompanion && vs.owned > 0) {
-              const loot = getLootBonuses(savedInv, i);
+              const loot = getLootBonuses(savedEquipped, i, savedUnlockedSlots);
               const rev = getRevenue(VENTURES[i], vs.owned, pm, savedUpg[i] || 0, savedTrans[i] || null, loot.goldMult);
               const ct = getEffectiveCycleTime(VENTURES[i], savedUpg[i] || 0, savedTrans[i] || null, loot.speedMult);
               const cycles = Math.floor(elapsed / ct);
@@ -759,12 +798,14 @@ export default function CastleCapitalist() {
           materials: materialsRef.current,
           profUpgrades: profUpgradesRef.current,
           profTransforms: profTransformsRef.current,
+          equipped: equippedRef.current,
+          mtxSlots,
           lastSave: Date.now(),
         }));
       } catch (e) {}
     }, 5000);
     return () => clearInterval(interval);
-  }, [totalGems, lifetimeGold]);
+  }, [totalGems, lifetimeGold, mtxSlots]);
 
   // ═══ GAME LOOP ═══
   const earnedRef = useRef(0);
@@ -782,7 +823,8 @@ export default function CastleCapitalist() {
       pendingMatsRef.current = [];
       pendingCompletionsRef.current = [];
       earnedRef.current = 0;
-      const inv = inventoryRef.current;
+      const eq = equippedRef.current;
+      const eqSlots = getUnlockedSlotCount(totalGems, profUpgradesRef.current, mtxSlots);
       const chainTriggers = [];
       const next = prev.map((vs, i) => {
         if (vs.owned === 0 || (!vs.running && !vs.hasCompanion)) return vs;
@@ -790,7 +832,7 @@ export default function CastleCapitalist() {
         let newProgress = vs.progress + dt;
         const upgTier = profUpgradesRef.current[i] || 0;
         const tPath = profTransformsRef.current[i] || null;
-        const loot = getLootBonuses(inv, i);
+        const loot = getLootBonuses(eq, i, eqSlots);
         const cycleTime = getEffectiveCycleTime(VENTURES[i], upgTier, tPath, loot.speedMult);
         const inWatch = isProfInWatch(i, currentWatch);
 
@@ -921,7 +963,7 @@ export default function CastleCapitalist() {
     }
 
     animRef.current = requestAnimationFrame(tick);
-  }, [prestigeMultiplier, emitGoldParticles, emitGoldText]);
+  }, [prestigeMultiplier, totalGems, mtxSlots, emitGoldParticles, emitGoldText]);
 
   useEffect(() => {
     animRef.current = requestAnimationFrame(tick);
@@ -1050,6 +1092,7 @@ export default function CastleCapitalist() {
   const handleHardReset = () => {
     if (!confirm("Hard reset everything? This erases ALL progress including Soul Gems.")) return;
     localStorage.removeItem(SAVE_KEY);
+    localStorage.removeItem("castle_clicker_v7");
     localStorage.removeItem("castle_clicker_v6");
     localStorage.removeItem("castle_clicker_v5");
     setGold(4);
@@ -1063,17 +1106,47 @@ export default function CastleCapitalist() {
     setMaterials({});
     setProfUpgrades(Array(10).fill(0));
     setProfTransforms(Array(10).fill(null));
+    setEquipped(Array(12).fill(null));
+    setMtxSlots(0);
   };
 
   // ═══ DERIVED VALUES ═══
+  const unlockedSlots = getUnlockedSlotCount(totalGems, profUpgrades, mtxSlots);
+
+  const handleEquip = (itemId, slotIndex) => {
+    if (slotIndex >= unlockedSlots) return;
+    const totalOwned = inventory[itemId] || 0;
+    const alreadyEquipped = getEquippedCount(equipped, itemId);
+    if (alreadyEquipped >= totalOwned) return;
+    setEquipped(prev => { const next = [...prev]; next[slotIndex] = itemId; return next; });
+  };
+
+  const handleUnequip = (slotIndex) => {
+    setEquipped(prev => { const next = [...prev]; next[slotIndex] = null; return next; });
+  };
+
+  const handleQuickEquip = (itemId) => {
+    const slot = equipped.findIndex((id, i) => id === null && i < unlockedSlots);
+    if (slot === -1) return;
+    handleEquip(itemId, slot);
+  };
+
+  const handlePurchaseMtxSlot = () => {
+    if (mtxSlots >= 4) return;
+    setMtxSlots(prev => Math.min(4, prev + 1));
+  };
 
   // ═══ RENDER ═══
   return (
-    <div className="cc">
+    <div className={`cc ${theme === 'light' ? 'cc-light' : ''}`}>
       <style>{STYLES}</style>
+      <div className="cc-brightness" style={brightness !== 1 ? { filter: `brightness(${brightness})` } : undefined}>
 
       {/* ── HEADER ── */}
       <div className="hd">
+        <button className="settings-cog" onClick={() => setShowSettings(true)}>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M6.5.5h3l.4 2 .6.3 1.8-1 2.1 2.1-1 1.8.3.6 2 .4v3l-2 .4-.3.6 1 1.8-2.1 2.1-1.8-1-.6.3-.4 2h-3l-.4-2-.6-.3-1.8 1-2.1-2.1 1-1.8-.3-.6-2-.4v-3l2-.4.3-.6-1-1.8L4.6 1.9l1.8 1 .6-.3.4-2zM8 5.5a2.5 2.5 0 100 5 2.5 2.5 0 000-5z"/></svg>
+        </button>
         <div className="hd-brand">
           <div className="hd-title-wrap">
             <span className="hd-title-castle">CASTLE</span>
@@ -1085,12 +1158,17 @@ export default function CastleCapitalist() {
             <GoldCoinIcon size={18} />
             <span className="hd-amount">{formatNumber(gold)}</span>
           </div>
-          <span className="hd-watch">{WATCHES[getCurrentWatch()].icon} {WATCHES[getCurrentWatch()].name}</span>
+          <span className="hd-watch">
+            {WATCHES[getCurrentWatch()].icon} {WATCHES[getCurrentWatch()].name}
+            <button className="watch-info-btn" onClick={() => setShowWatchInfo(true)}>?</button>
+          </span>
           <span className="hd-gems" onClick={() => setTab("prestige")}>
             <SoulGemIcon /> {prestigeGems} ({prestigeMultiplier.toFixed(2)}x)
           </span>
         </div>
       </div>
+
+      </div>{/* end cc-brightness */}
 
       {/* ── BOTTOM NAV ── */}
       <div className="bnav">
@@ -1136,7 +1214,7 @@ export default function CastleCapitalist() {
             const canAfford = gold >= cost;
             const upgTier = profUpgrades[i] || 0;
             const tPath = profTransforms[i] || null;
-            const loot = getLootBonuses(inventory, i);
+            const loot = getLootBonuses(equipped, i, unlockedSlots);
             const effCycle = getEffectiveCycleTime(v, upgTier, tPath, loot.speedMult);
             const pct = unlocked ? Math.min(100, (vs.progress / effCycle) * 100) : 0;
             const remaining = unlocked && vs.running ? Math.max(0, effCycle - vs.progress) : effCycle;
@@ -1149,7 +1227,7 @@ export default function CastleCapitalist() {
             const IconComponent = VENTURE_ICONS[i];
 
             return (
-              <div key={v.id} data-venture={i} className={`vrow ${!unlocked ? 'vrow-locked' : ''} ${!unlocked && canAfford ? 'vrow-afford' : ''} ${unlocked && canAfford ? 'vrow-can-buy' : ''}`}
+              <div key={v.id} data-venture={i} className={`vrow ${!unlocked ? 'vrow-locked' : ''} ${!unlocked && canAfford ? 'vrow-afford' : ''} ${unlocked && canAfford ? 'vrow-can-buy' : ''} ${inWatch ? 'vrow-watch' : ''}`}
                 style={{
                   background: !unlocked
                     ? `linear-gradient(135deg, ${v.colorDark}12, ${v.color}08)`
@@ -1282,8 +1360,61 @@ export default function CastleCapitalist() {
               <div style={{height:16}}/>
             </>
           )}
+          {/* ── EQUIPMENT BAR ── */}
+          <div className="eq-panel">
+            <div className="eq-hdr">Equipment <span className="eq-count">{equipped.filter(Boolean).length}/{unlockedSlots} slots</span></div>
+            <div className="eq-grid">
+              {Array.from({length: 12}, (_, i) => {
+                const isUnlocked = i < unlockedSlots;
+                const isMtxZone = i >= 8;
+                const itemId = equipped[i];
+                const item = itemId ? LOOT_BY_ID[itemId] : null;
+                const style = item ? getRarityStyle(item.rarity) : null;
+
+                if (!isUnlocked && isMtxZone) {
+                  return (
+                    <div key={i} className="eq-slot eq-slot-mtx" onClick={handlePurchaseMtxSlot} title="Purchase to unlock">
+                      <svg viewBox="0 0 40 40" width={16} height={16}><polygon points="20,4 26,16 38,18 29,27 31,38 20,32 9,38 11,27 2,18 14,16" fill="#7aa2f7" opacity=".5"/></svg>
+                      <span className="eq-slot-label">Purchase</span>
+                    </div>
+                  );
+                }
+                if (!isUnlocked) {
+                  const unlock = SLOT_UNLOCKS.find(u => u.slot === i);
+                  return (
+                    <div key={i} className="eq-slot eq-slot-locked" title={unlock?.label}>
+                      <svg viewBox="0 0 40 40" width={18} height={18}>
+                        <rect x="10" y="20" width="20" height="16" rx="3" fill="#7982a9" stroke="#4a5070" strokeWidth="0.8"/>
+                        <path d="M14 20 L14 14 Q14 8, 20 8 Q26 8, 26 14 L26 20" fill="none" stroke="#7982a9" strokeWidth="3" strokeLinecap="round"/>
+                        <circle cx="20" cy="28" r="2.5" fill="#0d0f14"/>
+                        <rect x="19" y="28" width="2" height="4" rx="0.5" fill="#0d0f14"/>
+                      </svg>
+                      <span className="eq-slot-label">{unlock?.label}</span>
+                    </div>
+                  );
+                }
+                if (!item) {
+                  return (
+                    <div key={i} className="eq-slot eq-slot-empty">
+                      <span className="eq-slot-plus">+</span>
+                    </div>
+                  );
+                }
+                return (
+                  <div key={i} className="eq-slot eq-slot-filled"
+                    style={{ borderColor: style.color + '80', boxShadow: style.glow }}
+                    onClick={() => handleUnequip(i)}
+                    title={`${item.name} — ${item.description}\nClick to unequip`}>
+                    <span className="eq-slot-name" style={{ color: style.color }}>{item.name}</span>
+                    <span className="eq-slot-rarity" style={{ color: style.color }}>{style.label}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
           <div className="inv-hdr">Dungeon Loot</div>
-          <p className="inv-sub">Items found from completing professions. Equip them in the Specialty Bar soon.</p>
+          <p className="inv-sub">Equip items to activate their effects.</p>
           {Object.keys(inventory).length === 0 ? (
             <div className="inv-empty">No loot yet. Complete skills to find items!</div>
           ) : (
@@ -1309,6 +1440,20 @@ export default function CastleCapitalist() {
                         {style.label}
                       </div>
                       <div className="inv-item-desc">{item.description}</div>
+                      {(() => {
+                        const eqCount = getEquippedCount(equipped, item.id);
+                        const available = (inventory[item.id] || 0) - eqCount;
+                        const hasEmptySlot = equipped.slice(0, unlockedSlots).some(id => id === null);
+                        return (
+                          <div className="inv-item-actions">
+                            {eqCount > 0 && <span className="inv-item-equipped">{eqCount} equipped</span>}
+                            {available > 0 && hasEmptySlot && (
+                              <button className="inv-equip-btn" onClick={() => handleQuickEquip(item.id)}>Equip</button>
+                            )}
+                            {available <= 0 && eqCount > 0 && <span className="inv-item-all-eq">All equipped</span>}
+                          </div>
+                        );
+                      })()}
                     </div>
                   );
                 })}
@@ -1492,6 +1637,78 @@ export default function CastleCapitalist() {
         </div>
       )}
 
+      {/* ── WATCH INFO MODAL ── */}
+      {showWatchInfo && (
+        <div className="watch-modal-overlay" onClick={() => setShowWatchInfo(false)}>
+          <div className="watch-modal" onClick={e => e.stopPropagation()}>
+            <div className="watch-modal-header">
+              <span className="watch-modal-title">Dungeon Clock</span>
+              <button className="watch-modal-close" onClick={() => setShowWatchInfo(false)}>X</button>
+            </div>
+            <p className="watch-modal-desc">
+              The dungeon runs on a day/night cycle based on your local time.
+              Each profession has a preferred watch — during that watch they earn
+              <span className="watch-highlight"> +25% revenue</span> and
+              <span className="watch-highlight"> +50% material drops</span>.
+            </p>
+            <div className="watch-modal-grid">
+              {WATCHES.map((w, wi) => {
+                const active = getCurrentWatch() === wi;
+                const profs = VENTURES.filter((_, vi) => PROF_WATCH[vi] === wi);
+                return (
+                  <div key={w.name} className={`watch-modal-card ${active ? 'watch-modal-card-active' : ''}`}>
+                    <div className="watch-modal-card-head">
+                      <span>{w.icon} {w.name}</span>
+                      <span className="watch-modal-hours">{w.hours[0]}:00 - {w.hours[w.hours.length-1]}:59</span>
+                    </div>
+                    {active && <span className="watch-modal-now">ACTIVE NOW</span>}
+                    <div className="watch-modal-profs">
+                      {profs.map(p => (
+                        <span key={p.id} className="watch-modal-prof" style={{color: p.color}}>{p.name}</span>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── SETTINGS MODAL ── */}
+      {showSettings && (
+        <div className="watch-modal-overlay" onClick={() => setShowSettings(false)}>
+          <div className="watch-modal" onClick={e => e.stopPropagation()}>
+            <div className="watch-modal-header">
+              <span className="watch-modal-title">Settings</span>
+              <button className="watch-modal-close" onClick={() => setShowSettings(false)}>X</button>
+            </div>
+
+            <div className="settings-section">
+              <label className="settings-label">Theme</label>
+              <div className="settings-theme-row">
+                {["dark", "light"].map(t => (
+                  <button key={t} className={`settings-theme-btn ${theme === t ? 'settings-theme-active' : ''}`}
+                    onClick={() => setTheme(t)}>
+                    {t === "dark" ? "Dark" : "Light"}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="settings-section">
+              <label className="settings-label">Brightness</label>
+              <div className="settings-slider-row">
+                <input type="range" min="0.5" max="1.5" step="0.05" value={brightness}
+                  className="settings-slider"
+                  onChange={e => setBrightness(parseFloat(e.target.value))} />
+                <span className="settings-slider-val">{Math.round(brightness * 100)}%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── FOOTER ── */}
       <div className="ft">
         <span className="ft-text">Castle Clicker v0.3</span>
@@ -1546,25 +1763,89 @@ const STYLES = `
 .hd-title-castle { font-family:'GothicByte',serif; font-size:26px; letter-spacing:14px; color:#94a3b8; text-shadow:0 1px 3px rgba(0,0,0,.6); }
 .hd-title-clicker { font-family:'Cinzel',serif; font-size:44px; font-weight:900; letter-spacing:4px; color:#fbbf24; text-shadow: 0 1px 0 #b45309, 0 2px 0 #92400e, 0 3px 0 #78350f, 0 4px 0 #5c2d0a, 0 5px 10px rgba(0,0,0,.6), 0 8px 20px rgba(0,0,0,.4); margin-top:-4px; }
 .hd-stats { display:flex; justify-content:space-between; align-items:center; }
-.hd-watch { font-family:'Fira Code',monospace; font-size:10px; color:var(--txd); padding:3px 8px; border-radius:10px; background:rgba(255,255,255,.05); border:1px solid var(--bd); }
+.hd-watch { font-family:'Fira Code',monospace; font-size:10px; color:var(--txd); padding:3px 8px; border-radius:10px; background:rgba(255,255,255,.05); border:1px solid var(--bd); display:inline-flex; align-items:center; gap:5px; }
+.watch-info-btn { width:16px; height:16px; border-radius:50%; border:1px solid rgba(255,255,255,.4); background:rgba(255,255,255,.15); color:#fff; font-size:10px; font-family:'Inter',sans-serif; font-style:normal; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; padding:0 0 1px 0; line-height:1; transition:all .2s; }
+.watch-info-btn:hover { background:rgba(255,255,255,.3); color:#fff; border-color:var(--gold); }
+
+/* Watch Info Modal */
+.watch-modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.7); z-index:100; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(3px); animation:fadeIn .15s ease; }
+.watch-modal { background:linear-gradient(180deg,#1a1f30,#111520); border:1px solid var(--bd2); border-radius:12px; padding:20px; max-width:380px; width:90%; box-shadow:0 8px 32px rgba(0,0,0,.6); }
+.watch-modal-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+.watch-modal-title { font-family:'Cinzel',serif; font-size:16px; color:var(--tx); }
+.watch-modal-close { background:none; border:1px solid var(--bd); color:var(--txd); width:24px; height:24px; border-radius:6px; cursor:pointer; font-size:12px; display:flex; align-items:center; justify-content:center; transition:all .2s; }
+.watch-modal-close:hover { border-color:#c0392b; color:#c0392b; }
+.watch-modal-desc { font-size:12px; color:var(--txd); line-height:1.5; margin:0 0 14px; }
+.watch-highlight { color:var(--gold); font-weight:600; }
+.watch-modal-grid { display:flex; flex-direction:column; gap:8px; }
+.watch-modal-card { background:rgba(255,255,255,.03); border:1px solid var(--bd); border-radius:8px; padding:10px 12px; }
+.watch-modal-card-active { border-color:var(--gold); box-shadow:0 0 8px rgba(240,176,0,.15); }
+.watch-modal-card-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; font-size:13px; color:var(--tx); font-family:'Cinzel',serif; }
+.watch-modal-hours { font-family:'Fira Code',monospace; font-size:10px; color:var(--txm); }
+.watch-modal-now { font-size:9px; font-weight:700; color:var(--gold); letter-spacing:1px; margin-bottom:4px; display:inline-block; }
+.watch-modal-profs { display:flex; flex-wrap:wrap; gap:4px 8px; }
+.watch-modal-prof { font-size:11px; }
+@keyframes fadeIn { from{opacity:0} to{opacity:1} }
+
+/* Settings cog */
+.settings-cog { position:absolute; left:12px; top:50%; transform:translateY(-50%); background:none; border:none; color:#9a9a9a; cursor:pointer; padding:4px; transition:all .3s; z-index:21; }
+.settings-cog:hover { color:#fff; transform:translateY(-50%) rotate(45deg); }
+
+/* Settings modal extras */
+.settings-section { margin-bottom:16px; }
+.settings-label { display:block; font-family:'Cinzel',serif; font-size:12px; color:var(--tx); margin-bottom:8px; letter-spacing:.5px; }
+.settings-theme-row { display:flex; gap:8px; }
+.settings-theme-btn { flex:1; padding:8px; font-family:'Cinzel',serif; font-size:12px; font-weight:700; background:rgba(255,255,255,.05); border:1px solid var(--bd); color:var(--txd); border-radius:8px; cursor:pointer; transition:all .2s; }
+.settings-theme-btn:hover { border-color:var(--bd2); color:var(--tx); }
+.settings-theme-active { background:linear-gradient(180deg,#ffcfa8,#ff9e64) !important; color:#1a1b26 !important; border-color:#1a1b26 !important; }
+.settings-slider-row { display:flex; align-items:center; gap:12px; }
+.settings-slider { flex:1; -webkit-appearance:none; appearance:none; height:6px; border-radius:3px; background:rgba(255,255,255,.1); outline:none; }
+.settings-slider::-webkit-slider-thumb { -webkit-appearance:none; appearance:none; width:18px; height:18px; border-radius:50%; background:linear-gradient(180deg,#ffcfa8,#ff9e64); border:2px solid #1a1b26; cursor:pointer; }
+.settings-slider::-moz-range-thumb { width:18px; height:18px; border-radius:50%; background:linear-gradient(180deg,#ffcfa8,#ff9e64); border:2px solid #1a1b26; cursor:pointer; }
+.settings-slider-val { font-family:'Fira Code',monospace; font-size:12px; color:var(--tx); min-width:40px; text-align:right; }
+
+/* Light theme */
+.cc-light {
+  --bg: #e8e4de; --bg2: #ddd8d0;
+  --sf: #d0cbc2; --sf2: #c8c2b8;
+  --bd: #b8b0a4; --bd2: #a09888;
+  --gd: #cc7a3f; --gdl: #e89050; --gdd: #aa6020;
+  --tx: #2a2520; --txd: #6a6058; --txb: #1a1510;
+  --accent: #4a6aaa;
+  color: var(--tx);
+  background: var(--bg);
+}
+.cc-light .hd { background:linear-gradient(180deg,#d0cbc2,#c4beb4); border-bottom-color:#a09888; box-shadow:0 4px 16px rgba(0,0,0,.12); }
+.cc-light .bnav { background:linear-gradient(180deg,#2a2520,#1a1510); }
+.cc-light .watch-modal { background:linear-gradient(180deg,#ddd8d0,#d0cbc2); }
+.cc-light .watch-modal-card { background:rgba(0,0,0,.04); }
+.cc-light .bar-out { background:#c4beb4; }
+.cc-light .qty { background:linear-gradient(180deg,#c8c2b8,#b8b0a4); color:#2a2520; border-color:#a09888; }
+.cc-light .qty:hover { border-color:#8a8070; }
+.cc-light .settings-theme-btn { background:rgba(0,0,0,.06); border-color:#a09888; color:#6a6058; }
+.cc-light .settings-slider { background:rgba(0,0,0,.12); }
+.cc-light .watch-info-btn { border-color:rgba(0,0,0,.3); background:rgba(0,0,0,.1); color:#2a2520; }
+.cc-light .settings-cog { color:#6a6058; }
+.cc-light .settings-cog:hover { color:#2a2520; }
 .hd-gold-box { display:flex; align-items:baseline; gap:6px; }
 .hd-amount { font-family:'Cinzel',serif; font-size:24px; font-weight:900; color:var(--gdl); text-shadow:0 2px 8px rgba(251,191,36,.3); }
 .hd-gems { font-family:'Fira Code',monospace; font-size:11px; color:var(--gm); padding:4px 10px; border-radius:12px; background:rgba(192,132,252,.12); border:1px solid rgba(192,132,252,.25); cursor:pointer; display:flex; align-items:center; gap:4px; transition:all .2s; }
 .hd-gems:active { background:rgba(192,132,252,.2); }
 
 /* Bottom Navigation */
-.bnav { position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:480px; display:flex; background:linear-gradient(180deg,#24283b,#1a1b26); border-top:1px solid var(--bd2); z-index:30; padding:4px 0; padding-bottom:max(4px, env(safe-area-inset-bottom)); box-shadow:0 -4px 20px rgba(0,0,0,.4); }
+.bnav { position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:480px; display:flex; background:linear-gradient(180deg,#1a1a1a,#0e0e0e); border-top:2px solid #f0b000; z-index:30; padding:4px 0; padding-bottom:max(4px, env(safe-area-inset-bottom)); box-shadow:0 -4px 24px rgba(0,0,0,.6),0 -1px 12px rgba(240,176,0,.1); }
 .bnav::before { content:''; position:absolute; top:-3px; left:0; right:0; height:3px; background:linear-gradient(90deg,transparent,rgba(255,158,100,.25),rgba(122,162,247,.2),transparent); }
-.bnav-btn { flex:1; display:flex; flex-direction:column; align-items:center; gap:2px; padding:8px 0 6px; background:none; border:none; cursor:pointer; color:var(--txd); transition:color .2s; -webkit-tap-highlight-color:transparent; }
+.bnav-btn { flex:1; display:flex; flex-direction:column; align-items:center; gap:2px; padding:8px 0 6px; background:none; border:none; cursor:pointer; color:#9a9a9a; transition:color .2s; -webkit-tap-highlight-color:transparent; }
 .bnav-btn:active { transform:scale(.95); }
-.bnav-icon { font-size:18px; line-height:1; }
-.bnav-label { font-family:'Cinzel',serif; font-size:9px; font-weight:700; letter-spacing:.5px; }
+.bnav-icon { font-size:20px; line-height:1; }
+.bnav-label { font-family:'Cinzel',serif; font-size:9px; font-weight:700; letter-spacing:.5px; text-shadow:0 1px 2px rgba(0,0,0,.4); }
 .bnav-on { color:inherit; }
-.bnav-on .bnav-icon { filter:drop-shadow(0 0 6px currentColor); }
+.bnav-on .bnav-icon { filter:drop-shadow(0 0 8px currentColor); }
+.bnav-on .bnav-label { text-shadow:0 0 8px currentColor; }
 
 /* Buy Quantity */
 .qty-row { display:flex; gap:6px; padding:8px 12px; justify-content:flex-end; background:var(--bg2); }
-.qty { padding:8px 16px; font-family:'Fira Code',monospace; font-size:12px; font-weight:700; background:linear-gradient(180deg,var(--sf2),var(--sf)); color:var(--txd); border:2px solid #0a0f1a; border-radius:8px; cursor:pointer; transition:all .15s; min-height:36px; -webkit-tap-highlight-color:transparent; box-shadow:0 2px 4px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.06); text-shadow:0 1px 2px rgba(0,0,0,.5); }
+.qty { padding:8px 16px; font-family:'Fira Code',monospace; font-size:12px; font-weight:700; background:linear-gradient(180deg,#222,#151515); color:#c0c0c0; border:2px solid #444; border-radius:8px; cursor:pointer; transition:all .15s; min-height:36px; -webkit-tap-highlight-color:transparent; box-shadow:0 2px 4px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.08); text-shadow:0 1px 2px rgba(0,0,0,.5); }
+.qty:hover { border-color:#666; color:#e0e0e0; }
 .qty:active { transform:scale(.95); }
 .qty-on { background:linear-gradient(180deg,#ffcfa8,#ff9e64) !important; color:#1a1b26 !important; border-color:#1a1b26 !important; box-shadow:0 2px 12px rgba(255,158,100,.4),inset 0 1px 0 rgba(255,255,255,.3) !important; text-shadow:none !important; }
 
@@ -1575,6 +1856,10 @@ const STYLES = `
 .vrow-locked { opacity:.55; backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); background:rgba(36,40,59,.4) !important; border-color:rgba(51,56,77,.3) !important; border-left-color:rgba(51,56,77,.4) !important; }
 .vrow-afford { opacity:1; backdrop-filter:none; -webkit-backdrop-filter:none; border-color:rgba(52,211,153,.8) !important; border-left-color:rgba(52,211,153,1) !important; animation:row-glow 1.5s ease-in-out infinite; }
 .vrow-can-buy { border-color:rgba(251,191,36,.5) !important; box-shadow:0 2px 8px rgba(0,0,0,.2),inset 0 1px 0 rgba(255,255,255,.03),0 0 12px rgba(251,191,36,.15); }
+.vrow-watch { border-color:rgba(255,140,0,.6) !important; box-shadow:0 0 6px rgba(255,100,0,.3),0 0 14px rgba(255,60,0,.15),inset 0 0 12px rgba(255,80,0,.05); animation:fire-border 2s ease-in-out infinite; }
+.vrow-watch::before { content:''; position:absolute; inset:-1px; border-radius:8px; padding:1px; background:linear-gradient(90deg,rgba(255,60,0,.5),rgba(255,180,0,.7),rgba(255,80,0,.5),rgba(255,200,50,.6),rgba(255,60,0,.5)); background-size:300% 100%; animation:fire-shimmer 3s linear infinite; -webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0); -webkit-mask-composite:xor; mask-composite:exclude; pointer-events:none; z-index:2; }
+@keyframes fire-border { 0%,100% { box-shadow:0 0 6px rgba(255,100,0,.3),0 0 14px rgba(255,60,0,.15),inset 0 0 12px rgba(255,80,0,.05); } 50% { box-shadow:0 0 10px rgba(255,100,0,.45),0 0 22px rgba(255,60,0,.25),inset 0 0 16px rgba(255,80,0,.08); } }
+@keyframes fire-shimmer { 0% { background-position:0% 50%; } 100% { background-position:300% 50%; } }
 @keyframes row-glow { 0%,100% { box-shadow:0 0 8px rgba(52,211,153,.3), 0 0 2px rgba(52,211,153,.5); border-color:rgba(52,211,153,.5); } 50% { box-shadow:0 0 20px rgba(52,211,153,.5), 0 0 8px rgba(52,211,153,.7); border-color:rgba(52,211,153,1); } }
 
 /* Icon Badge */
@@ -1726,6 +2011,29 @@ const STYLES = `
 .inv-item-qty { font-family:'Fira Code',monospace; font-size:11px; color:var(--txd); }
 .inv-item-rarity { font-family:'Fira Code',monospace; font-size:9px; text-transform:uppercase; letter-spacing:1px; margin:2px 0; }
 .inv-item-desc { font-size:10px; color:var(--txd); font-style:italic; }
+.inv-item-actions { display:flex; align-items:center; justify-content:space-between; margin-top:6px; }
+.inv-equip-btn { font-family:'Cinzel',serif; font-size:10px; font-weight:700; padding:4px 12px; border-radius:6px; border:1px solid var(--accent,#7aa2f7); color:var(--accent,#7aa2f7); background:rgba(122,162,247,.1); cursor:pointer; transition:all .2s; }
+.inv-equip-btn:hover { background:rgba(122,162,247,.25); color:#fff; }
+.inv-item-equipped { font-family:'Fira Code',monospace; font-size:9px; color:var(--gn,#9ece6a); }
+.inv-item-all-eq { font-family:'Fira Code',monospace; font-size:9px; color:var(--txd); font-style:italic; }
+
+/* ── Equipment Panel ── */
+.eq-panel { padding:12px 12px 8px; }
+.eq-hdr { text-align:center; font-family:'Cinzel',serif; font-size:14px; color:var(--txb,#c0caf5); margin-bottom:8px; letter-spacing:1px; }
+.eq-count { font-family:'Fira Code',monospace; font-size:11px; color:var(--txd,#565f89); margin-left:6px; }
+.eq-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-bottom:12px; }
+.eq-slot { background:var(--sf,#1a1b26); border:1px solid var(--bd,#292e42); border-radius:8px; aspect-ratio:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:4px; cursor:pointer; transition:all .2s; overflow:hidden; }
+.eq-slot-empty { border-style:dashed; border-color:var(--bd2,#3b4261); }
+.eq-slot-empty:hover { border-color:var(--accent,#7aa2f7); background:rgba(122,162,247,.08); }
+.eq-slot-plus { font-size:20px; color:var(--bd2,#3b4261); font-weight:300; }
+.eq-slot-filled { border-width:2px; }
+.eq-slot-filled:hover { filter:brightness(1.15); }
+.eq-slot-name { font-family:'Cinzel',serif; font-size:9px; font-weight:700; text-align:center; line-height:1.2; overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+.eq-slot-rarity { font-family:'Fira Code',monospace; font-size:7px; text-transform:uppercase; letter-spacing:.5px; margin-top:2px; }
+.eq-slot-locked { opacity:.4; cursor:default; background:rgba(0,0,0,.2); }
+.eq-slot-label { font-size:8px; color:var(--txd,#565f89); text-align:center; margin-top:4px; line-height:1.2; }
+.eq-slot-mtx { opacity:.5; cursor:pointer; border-style:dotted; border-color:var(--accent,#7aa2f7); }
+.eq-slot-mtx:hover { opacity:.7; border-color:#9bb8fa; }
 
 /* ── Particles ── */
 .particle-container {
