@@ -273,7 +273,7 @@ const SPECIALTY_MATERIALS = [
   { id:9, t1:{name:"Void Whisper",      color:"#6366f1"}, t2:{name:"Eldritch Ink",            color:"#4a4ad0"}, t3:{name:"Cosmic Covenant Scroll",     color:"#3030aa"} },
 ];
 
-const MAT_DROP_RATES = { t1: 0.35, t2: 0.05, t3: 0.0015 };
+const MAT_DROP_RATES = { t1: 0.015, t2: 0.0015, t3: 0.00003 };
 const MAT_LEVEL_SCALING = { t1: 0.01, t2: 0.005, t3: 0.0001 }; // bonus per 10 owned levels
 
 const rollMaterialDrop = (ventureIndex, owned, watchBonus = 1) => {
@@ -290,12 +290,12 @@ const rollMaterialDrop = (ventureIndex, owned, watchBonus = 1) => {
 
 // ═══ PROFESSION UPGRADES ═══
 const UPGRADE_TIERS = [
-  { name:"—",            t1:0,    t2:0,   t3:0, revBonus:0,    speedBonus:0    },
-  { name:"Apprentice",   t1:15,   t2:0,   t3:0, revBonus:0.25, speedBonus:0    },
-  { name:"Journeyman",   t1:50,   t2:5,   t3:0, revBonus:0.50, speedBonus:0.10 },
-  { name:"Expert",       t1:150,  t2:20,  t3:0, revBonus:1.00, speedBonus:0.20 },
-  { name:"Master",       t1:400,  t2:60,  t3:1, revBonus:2.00, speedBonus:0.30 },
-  { name:"Grandmaster",  t1:1000, t2:150, t3:3, revBonus:4.00, speedBonus:0.40 },
+  { name:"—",            t1:0,    t2:0,   t3:0,  revBonus:0,    speedBonus:0    },
+  { name:"Apprentice",   t1:50,   t2:0,   t3:0,  revBonus:0.25, speedBonus:0    },
+  { name:"Journeyman",   t1:200,  t2:25,  t3:0,  revBonus:0.50, speedBonus:0.10 },
+  { name:"Expert",       t1:600,  t2:80,  t3:0,  revBonus:1.00, speedBonus:0.20 },
+  { name:"Master",       t1:1500, t2:250, t3:3,  revBonus:2.00, speedBonus:0.30 },
+  { name:"Grandmaster",  t1:4000, t2:700, t3:10, revBonus:4.00, speedBonus:0.40 },
 ];
 
 // ═══ PROFESSION TRANSFORMATIONS ═══
@@ -356,59 +356,69 @@ const RARITY_TIERS = {
 };
 
 const DROP_RATES = {
-  common:    0.12,
-  uncommon:  0.04,
-  rare:      0.008,
-  epic:      0.0008,
-  legendary: 0.0001,
+  common:    0.004,
+  uncommon:  0.0004,
+  rare:      0.00004,
+  epic:      0.000003,
+  legendary: 0.0000002,
 };
 const DROP_LEVEL_BONUS = 0.005; // +0.5% per skill level, multiplicative
 
 const LOOT_TABLE = [
-  // ── Common ──
-  { id:"rusty_coin_pouch",  name:"Rusty Coin Pouch",  rarity:"common", description:"+3% gold from all skills",             effect:{ type:"goldMultiplier", target:"all", value:0.03 }},
-  { id:"worn_gloves",       name:"Worn Gloves",        rarity:"common", description:"+5% speed for Torch Scavenging",       effect:{ type:"speedBoost",     target:0,     value:0.05 }},
-  { id:"cracked_gem",       name:"Cracked Gem",        rarity:"common", description:"+1% drop rates",                       effect:{ type:"dropRateBoost",  target:"all", value:0.01 }},
-  { id:"dull_blade",        name:"Dull Blade",         rarity:"common", description:"+4% gold from Skeleton Looting",       effect:{ type:"goldMultiplier", target:3,     value:0.04 }},
-  { id:"tattered_map",      name:"Tattered Map",       rarity:"common", description:"+3% speed for Goblin Pickpocketing",   effect:{ type:"speedBoost",     target:1,     value:0.03 }},
-  { id:"copper_ring",       name:"Copper Ring",        rarity:"common", description:"+2% gold from all skills",             effect:{ type:"goldMultiplier", target:"all", value:0.02 }},
-  { id:"broken_lockpick",   name:"Broken Lockpick",    rarity:"common", description:"+4% speed for Trap Disarming",         effect:{ type:"speedBoost",     target:4,     value:0.04 }},
-  { id:"minor_rune",        name:"Minor Rune",         rarity:"common", description:"+2% drop rates",                       effect:{ type:"dropRateBoost",  target:"all", value:0.02 }},
-  { id:"bone_fragment",     name:"Bone Fragment",      rarity:"common", description:"+5% gold from Skeleton Looting",       effect:{ type:"goldMultiplier", target:3,     value:0.05 }},
-  { id:"mushroom_cap",      name:"Mushroom Cap",       rarity:"common", description:"+3% gold from Mushroom Foraging",      effect:{ type:"goldMultiplier", target:2,     value:0.03 }},
-  { id:"candle_stub",       name:"Candle Stub",        rarity:"common", description:"+4% speed for Torch Scavenging",       effect:{ type:"speedBoost",     target:0,     value:0.04 }},
-  { id:"frayed_rope",       name:"Frayed Rope",        rarity:"common", description:"+3% speed for all skills",             effect:{ type:"speedBoost",     target:"all", value:0.03 }},
+  // ── Common ── (16 items)
+  // Global
+  { id:"rusty_coin_pouch",  name:"Rusty Coin Pouch",  rarity:"common", description:"+3% gold from all professions",           effects:[{ type:"goldMultiplier", target:"all", value:0.03 }]},
+  { id:"copper_ring",       name:"Copper Ring",        rarity:"common", description:"+2% gold from all professions",           effects:[{ type:"goldMultiplier", target:"all", value:0.02 }]},
+  { id:"frayed_rope",       name:"Frayed Rope",        rarity:"common", description:"+3% speed for all professions",           effects:[{ type:"speedBoost",     target:"all", value:0.03 }]},
+  { id:"cracked_gem",       name:"Cracked Gem",        rarity:"common", description:"+1% drop rates",                          effects:[{ type:"dropRateBoost",  target:"all", value:0.01 }]},
+  { id:"minor_rune",        name:"Minor Rune",         rarity:"common", description:"+2% drop rates",                          effects:[{ type:"dropRateBoost",  target:"all", value:0.02 }]},
+  // Targeted
+  { id:"worn_gloves",       name:"Worn Gloves",        rarity:"common", description:"+5% speed for Torch Scavenging",          effects:[{ type:"speedBoost",     target:0,     value:0.05 }]},
+  { id:"tattered_map",      name:"Tattered Map",       rarity:"common", description:"+3% speed for Goblin Pickpocketing",      effects:[{ type:"speedBoost",     target:1,     value:0.03 }]},
+  { id:"spore_poultice",    name:"Spore Poultice",     rarity:"common", description:"+3% speed for Mushroom Foraging",         effects:[{ type:"speedBoost",     target:2,     value:0.03 }]},
+  { id:"mushroom_cap",      name:"Mushroom Cap",       rarity:"common", description:"+3% gold from Mushroom Foraging",         effects:[{ type:"goldMultiplier", target:2,     value:0.03 }]},
+  { id:"dull_blade",        name:"Dull Blade",         rarity:"common", description:"+4% gold from Skeleton Looting",          effects:[{ type:"goldMultiplier", target:3,     value:0.04 }]},
+  { id:"skeleton_key",      name:"Skeleton Key",       rarity:"common", description:"+3% speed for Skeleton Looting",          effects:[{ type:"speedBoost",     target:3,     value:0.03 }]},
+  { id:"broken_lockpick",   name:"Broken Lockpick",    rarity:"common", description:"+4% speed for Trap Disarming",            effects:[{ type:"speedBoost",     target:4,     value:0.04 }]},
+  { id:"drake_whistle",     name:"Drake Whistle",      rarity:"common", description:"+4% speed for Dragon Taming",             effects:[{ type:"speedBoost",     target:6,     value:0.04 }]},
+  { id:"blueprint_scrap",   name:"Blueprint Scrap",    rarity:"common", description:"+3% speed for Dungeon Expansion",         effects:[{ type:"speedBoost",     target:7,     value:0.03 }]},
+  { id:"hellfire_ember",    name:"Hellfire Ember",      rarity:"common", description:"+3% speed for Demon Gate Siege",          effects:[{ type:"speedBoost",     target:8,     value:0.03 }]},
+  { id:"star_map",          name:"Star Map",            rarity:"common", description:"+3% speed for Elder God Pact",            effects:[{ type:"speedBoost",     target:9,     value:0.03 }]},
 
-  // ── Uncommon ──
-  { id:"goblin_lucky_charm", name:"Goblin's Lucky Charm", rarity:"uncommon", description:"+8% gold from all skills",          effect:{ type:"goldMultiplier", target:"all", value:0.08 }},
-  { id:"shadow_dagger",      name:"Shadow Dagger",        rarity:"uncommon", description:"+15% Goblin Pickpocketing gold",    effect:{ type:"goldMultiplier", target:1,     value:0.15 }},
-  { id:"torch_oil",          name:"Torch Oil Flask",      rarity:"uncommon", description:"-10% Torch Scavenging cooldown",    effect:{ type:"speedBoost",     target:0,     value:0.10 }},
-  { id:"alchemists_flask",   name:"Alchemist's Flask",    rarity:"uncommon", description:"+12% Potion Brewing gold",          effect:{ type:"goldMultiplier", target:5,     value:0.12 }},
-  { id:"silver_compass",     name:"Silver Compass",       rarity:"uncommon", description:"+6% speed for all skills",          effect:{ type:"speedBoost",     target:"all", value:0.06 }},
-  { id:"ember_stone",        name:"Ember Stone",          rarity:"uncommon", description:"+10% Demon Gate gold",              effect:{ type:"goldMultiplier", target:8,     value:0.10 }},
-  { id:"whispering_skull",   name:"Whispering Skull",     rarity:"uncommon", description:"Skill levels count +15% for drops", effect:{ type:"xpBoost",        target:"all", value:0.15 }},
-  { id:"enchanted_satchel",  name:"Enchanted Satchel",    rarity:"uncommon", description:"+5% drop rates",                    effect:{ type:"dropRateBoost",  target:"all", value:0.05 }},
-  { id:"iron_gauntlets",     name:"Iron Gauntlets",       rarity:"uncommon", description:"+8% gold from combat skills",       effect:{ type:"goldMultiplier", target:"all", value:0.08 }},
-  { id:"mystic_lens",        name:"Mystic Lens",          rarity:"uncommon", description:"+10% Dungeon Expansion gold",       effect:{ type:"goldMultiplier", target:7,     value:0.10 }},
+  // ── Uncommon ── (12 items)
+  // Global
+  { id:"goblin_lucky_charm", name:"Goblin's Lucky Charm", rarity:"uncommon", description:"+8% gold from all professions",        effects:[{ type:"goldMultiplier", target:"all", value:0.08 }]},
+  { id:"silver_compass",     name:"Silver Compass",       rarity:"uncommon", description:"+6% speed for all professions",        effects:[{ type:"speedBoost",     target:"all", value:0.06 }]},
+  { id:"whispering_skull",   name:"Whispering Skull",     rarity:"uncommon", description:"Skill levels count +15% for drops",    effects:[{ type:"xpBoost",        target:"all", value:0.15 }]},
+  { id:"enchanted_satchel",  name:"Enchanted Satchel",    rarity:"uncommon", description:"+5% drop rates",                       effects:[{ type:"dropRateBoost",  target:"all", value:0.05 }]},
+  // Targeted
+  { id:"shadow_dagger",      name:"Shadow Dagger",        rarity:"uncommon", description:"+15% Goblin Pickpocketing gold",       effects:[{ type:"goldMultiplier", target:1,     value:0.15 }]},
+  { id:"torch_oil",          name:"Torch Oil Flask",      rarity:"uncommon", description:"-10% Torch Scavenging cooldown",       effects:[{ type:"speedBoost",     target:0,     value:0.10 }]},
+  { id:"alchemists_flask",   name:"Alchemist's Flask",    rarity:"uncommon", description:"+12% Potion Brewing gold",             effects:[{ type:"goldMultiplier", target:5,     value:0.12 }]},
+  { id:"bubbling_retort",    name:"Bubbling Retort",      rarity:"uncommon", description:"+8% speed for Potion Brewing",         effects:[{ type:"speedBoost",     target:5,     value:0.08 }]},
+  { id:"wyvern_fang",        name:"Wyvern Fang",          rarity:"uncommon", description:"+12% Dragon Taming gold",              effects:[{ type:"goldMultiplier", target:6,     value:0.12 }]},
+  { id:"mystic_lens",        name:"Mystic Lens",          rarity:"uncommon", description:"+10% Dungeon Expansion gold",          effects:[{ type:"goldMultiplier", target:7,     value:0.10 }]},
+  { id:"ember_stone",        name:"Ember Stone",          rarity:"uncommon", description:"+10% Demon Gate Siege gold",           effects:[{ type:"goldMultiplier", target:8,     value:0.10 }]},
+  { id:"eldritch_sigil",     name:"Eldritch Sigil",       rarity:"uncommon", description:"+10% Elder God Pact gold",             effects:[{ type:"goldMultiplier", target:9,     value:0.10 }]},
 
-  // ── Rare ──
-  { id:"shadow_step_boots",  name:"Shadow Step Boots",    rarity:"rare", description:"3% chance to instant-complete next run",   effect:{ type:"instantComplete", target:"all", value:0.03 }},
-  { id:"alchemist_stone",    name:"Alchemist Stone",      rarity:"rare", description:"2x Potion Brewing gold",                  effect:{ type:"goldMultiplier",  target:5,     value:1.00 }},
-  { id:"bone_whistle",       name:"Bone Whistle",         rarity:"rare", description:"Skeleton levels count double for drops",   effect:{ type:"xpBoost",         target:3,     value:1.00 }},
-  { id:"dragon_scale_shield",name:"Dragon Scale Shield",  rarity:"rare", description:"+20% Dragon Taming gold, +10% speed",     effect:{ type:"goldMultiplier",  target:6,     value:0.20 }},
-  { id:"void_shard",         name:"Void Shard",           rarity:"rare", description:"+15% all drop rates",                     effect:{ type:"dropRateBoost",   target:"all", value:0.15 }},
-  { id:"runic_hammer",       name:"Runic Hammer",         rarity:"rare", description:"+25% Trap Disarming gold",                effect:{ type:"goldMultiplier",  target:4,     value:0.25 }},
+  // ── Rare ── (6 items)
+  { id:"shadow_step_boots",  name:"Shadow Step Boots",    rarity:"rare", description:"3% chance for a bonus cycle on completion",    effects:[{ type:"instantComplete", target:"all", value:0.03 }]},
+  { id:"alchemist_stone",    name:"Alchemist Stone",      rarity:"rare", description:"2x Potion Brewing gold",                      effects:[{ type:"goldMultiplier",  target:5,     value:1.00 }]},
+  { id:"bone_whistle",       name:"Bone Whistle",         rarity:"rare", description:"Skeleton levels count double for drops",       effects:[{ type:"xpBoost",         target:3,     value:1.00 }]},
+  { id:"dragon_scale_shield",name:"Dragon Scale Shield",  rarity:"rare", description:"+20% Dragon Taming gold, +10% speed",         effects:[{ type:"goldMultiplier", target:6, value:0.20 }, { type:"speedBoost", target:6, value:0.10 }]},
+  { id:"void_shard",         name:"Void Shard",           rarity:"rare", description:"+15% all drop rates",                         effects:[{ type:"dropRateBoost",   target:"all", value:0.15 }]},
+  { id:"runic_hammer",       name:"Runic Hammer",         rarity:"rare", description:"+25% Trap Disarming gold",                    effects:[{ type:"goldMultiplier",  target:4,     value:0.25 }]},
 
-  // ── Epic ──
-  { id:"chain_lightning",    name:"Chain Lightning Scroll", rarity:"epic", description:"6% chance to auto-trigger adjacent skill",  effect:{ type:"chainRun",       target:"all", value:0.06 }},
-  { id:"phoenix_feather",    name:"Phoenix Feather",        rarity:"epic", description:"3% chance to reset ALL skill timers",       effect:{ type:"instantComplete",target:"all", value:0.03 }},
-  { id:"greater_void_shard", name:"Greater Void Shard",     rarity:"epic", description:"+50% all drop rates",                      effect:{ type:"dropRateBoost",  target:"all", value:0.50 }},
-  { id:"warlords_signet",    name:"Warlord's Signet",       rarity:"epic", description:"+20% gold all, +10% speed all",            effect:{ type:"goldMultiplier", target:"all", value:0.20 }},
+  // ── Epic ── (4 items)
+  { id:"chain_lightning",    name:"Chain Lightning Scroll", rarity:"epic", description:"6% chance to auto-trigger adjacent profession", effects:[{ type:"chainRun",        target:"all", value:0.06 }]},
+  { id:"phoenix_feather",    name:"Phoenix Feather",        rarity:"epic", description:"3% chance for a bonus cycle on all professions",effects:[{ type:"instantComplete", target:"all", value:0.03 }]},
+  { id:"greater_void_shard", name:"Greater Void Shard",     rarity:"epic", description:"+50% all drop rates",                          effects:[{ type:"dropRateBoost",   target:"all", value:0.50 }]},
+  { id:"warlords_signet",    name:"Warlord's Signet",       rarity:"epic", description:"+20% gold all, +10% speed all",                effects:[{ type:"goldMultiplier", target:"all", value:0.20 }, { type:"speedBoost", target:"all", value:0.10 }]},
 
-  // ── Legendary ──
-  { id:"crown_dungeon_lord", name:"Crown of the Dungeon Lord", rarity:"legendary", description:"+30% all gold, +20% all speed",          effect:{ type:"goldMultiplier", target:"all", value:0.30 }},
-  { id:"elder_gods_eye",     name:"Elder God's Eye",           rarity:"legendary", description:"All drop rates doubled",                  effect:{ type:"dropRateBoost",  target:"all", value:1.00 }},
-  { id:"blade_forgotten_king",name:"Blade of the Forgotten King",rarity:"legendary",description:"0.5% chance for 50x gold on completion", effect:{ type:"critGold",       target:"all", value:0.005}},
+  // ── Legendary ── (3 items)
+  { id:"crown_dungeon_lord",  name:"Crown of the Dungeon Lord",  rarity:"legendary", description:"+30% all gold, +20% all speed",          effects:[{ type:"goldMultiplier", target:"all", value:0.30 }, { type:"speedBoost", target:"all", value:0.20 }]},
+  { id:"elder_gods_eye",      name:"Elder God's Eye",            rarity:"legendary", description:"All drop rates doubled",                  effects:[{ type:"dropRateBoost",  target:"all", value:1.00 }]},
+  { id:"blade_forgotten_king",name:"Blade of the Forgotten King",rarity:"legendary", description:"0.5% chance for 50x gold on completion", effects:[{ type:"critGold",       target:"all", value:0.005}]},
 ];
 
 
@@ -453,16 +463,16 @@ const getBulkCost = (baseCost, owned, qty) => {
 /**
  * Revenue per cycle for a venture at given count and prestige multiplier.
  */
-const getRevenue = (venture, count, prestigeMultiplier, upgradeTier = 0, transformPath = null) => {
+const getRevenue = (venture, count, prestigeMultiplier, upgradeTier = 0, transformPath = null, lootGoldMult = 1) => {
   const upgradeBonus = 1 + UPGRADE_TIERS[upgradeTier].revBonus;
   const transformBonus = transformPath ? TRANSFORM_TREES[venture.id][transformPath].revMult : 1;
-  return venture.baseRevenue * count * getMilestoneMultiplier(count) * prestigeMultiplier * upgradeBonus * transformBonus;
+  return venture.baseRevenue * count * getMilestoneMultiplier(count) * prestigeMultiplier * upgradeBonus * transformBonus * lootGoldMult;
 };
 
-const getEffectiveCycleTime = (venture, upgradeTier = 0, transformPath = null) => {
+const getEffectiveCycleTime = (venture, upgradeTier = 0, transformPath = null, lootSpeedMult = 1) => {
   const speedReduction = UPGRADE_TIERS[upgradeTier].speedBonus;
   const transformSpeed = transformPath ? TRANSFORM_TREES[venture.id][transformPath].speedMult : 1;
-  return Math.max(100, venture.baseTime * (1 - speedReduction) / transformSpeed);
+  return Math.max(100, venture.baseTime * (1 - speedReduction) / transformSpeed / lootSpeedMult);
 };
 
 /**
@@ -540,11 +550,11 @@ const formatTime = (ms) => {
  * Roll for a loot drop on venture cycle completion.
  * Checks from legendary down to common — only one drop per roll.
  */
-const rollLootDrop = (ventureIndex, skillLevel) => {
-  const levelBonus = 1 + skillLevel * DROP_LEVEL_BONUS;
+const rollLootDrop = (ventureIndex, skillLevel, dropRateMult = 1, xpMult = 1) => {
+  const levelBonus = 1 + (skillLevel * xpMult) * DROP_LEVEL_BONUS;
   const tiers = ["legendary", "epic", "rare", "uncommon", "common"];
   for (const tier of tiers) {
-    if (Math.random() < DROP_RATES[tier] * levelBonus) {
+    if (Math.random() < DROP_RATES[tier] * levelBonus * dropRateMult) {
       const tierItems = LOOT_TABLE.filter(item => item.rarity === tier);
       return tierItems[Math.floor(Math.random() * tierItems.length)];
     }
@@ -553,6 +563,37 @@ const rollLootDrop = (ventureIndex, skillLevel) => {
 };
 
 const getRarityStyle = (rarity) => RARITY_TIERS[rarity] || RARITY_TIERS.common;
+
+/** Aggregate all loot bonuses from inventory for a given venture. */
+const getLootBonuses = (inv, ventureIndex) => {
+  let goldMult = 0, speedBonus = 0, dropRateBonus = 0, xpBonus = 0;
+  let critChance = 0, instantChance = 0, chainChance = 0;
+  for (const item of LOOT_TABLE) {
+    const qty = inv[item.id] || 0;
+    if (qty === 0) continue;
+    for (const e of item.effects) {
+      if (e.target !== "all" && e.target !== ventureIndex) continue;
+      switch (e.type) {
+        case "goldMultiplier":  goldMult += e.value * qty; break;
+        case "speedBoost":      speedBonus += e.value * qty; break;
+        case "dropRateBoost":   dropRateBonus += e.value * qty; break;
+        case "xpBoost":         xpBonus += e.value * qty; break;
+        case "critGold":        critChance += e.value * qty; break;
+        case "instantComplete": instantChance += e.value * qty; break;
+        case "chainRun":        chainChance += e.value * qty; break;
+      }
+    }
+  }
+  return {
+    goldMult: 1 + goldMult,
+    speedMult: 1 + speedBonus,
+    dropRateMult: 1 + dropRateBonus,
+    xpMult: 1 + xpBonus,
+    critChance,
+    instantChance,
+    chainChance,
+  };
+};
 
 
 // ═══ MAIN GAME ═══
@@ -685,10 +726,12 @@ export default function CastleCapitalist() {
           const pm = 1 + (save.totalGems || 0) * PRESTIGE_GEM_BONUS;
           const savedUpg = save.profUpgrades || Array(10).fill(0);
           const savedTrans = save.profTransforms || Array(10).fill(null);
+          const savedInv = save.inventory || {};
           save.ventures.forEach((vs, i) => {
             if (vs.hasCompanion && vs.owned > 0) {
-              const rev = getRevenue(VENTURES[i], vs.owned, pm, savedUpg[i] || 0, savedTrans[i] || null);
-              const ct = getEffectiveCycleTime(VENTURES[i], savedUpg[i] || 0, savedTrans[i] || null);
+              const loot = getLootBonuses(savedInv, i);
+              const rev = getRevenue(VENTURES[i], vs.owned, pm, savedUpg[i] || 0, savedTrans[i] || null, loot.goldMult);
+              const ct = getEffectiveCycleTime(VENTURES[i], savedUpg[i] || 0, savedTrans[i] || null, loot.speedMult);
               const cycles = Math.floor(elapsed / ct);
               offlineGold += rev * cycles * OFFLINE_EFFICIENCY;
             }
@@ -724,40 +767,78 @@ export default function CastleCapitalist() {
   }, [totalGems, lifetimeGold]);
 
   // ═══ GAME LOOP ═══
+  const earnedRef = useRef(0);
+
   const tick = useCallback(() => {
     const now = Date.now();
     const dt = now - lastTick.current;
     lastTick.current = now;
 
-    pendingDropsRef.current = [];
-    pendingMatsRef.current = [];
-    pendingCompletionsRef.current = [];
     const currentWatch = getCurrentWatch();
 
     setVentures(prev => {
-      let earned = 0;
+      // Reset accumulators each invocation so StrictMode double-calls don't duplicate
+      pendingDropsRef.current = [];
+      pendingMatsRef.current = [];
+      pendingCompletionsRef.current = [];
+      earnedRef.current = 0;
+      const inv = inventoryRef.current;
+      const chainTriggers = [];
       const next = prev.map((vs, i) => {
         if (vs.owned === 0 || (!vs.running && !vs.hasCompanion)) return vs;
 
         let newProgress = vs.progress + dt;
         const upgTier = profUpgradesRef.current[i] || 0;
         const tPath = profTransformsRef.current[i] || null;
-        const cycleTime = getEffectiveCycleTime(VENTURES[i], upgTier, tPath);
+        const loot = getLootBonuses(inv, i);
+        const cycleTime = getEffectiveCycleTime(VENTURES[i], upgTier, tPath, loot.speedMult);
         const inWatch = isProfInWatch(i, currentWatch);
 
         if (newProgress >= cycleTime) {
           const cycles = Math.floor(newProgress / cycleTime);
-          const rev = getRevenue(VENTURES[i], vs.owned, prestigeMultiplier, upgTier, tPath) * cycles * (inWatch ? 1.25 : 1);
-          earned += rev;
+          const baseRev = getRevenue(VENTURES[i], vs.owned, prestigeMultiplier, upgTier, tPath, loot.goldMult);
+          let rev = baseRev * cycles * (inWatch ? 1.25 : 1);
+
+          // Crit gold — per cycle, chance for 50x on that cycle
+          if (loot.critChance > 0) {
+            for (let c = 0; c < cycles; c++) {
+              if (Math.random() < loot.critChance) rev += baseRev * 49 * (inWatch ? 1.25 : 1);
+            }
+          }
+
+          // Instant complete — bonus cycle of revenue + drops
+          if (loot.instantChance > 0) {
+            for (let c = 0; c < cycles; c++) {
+              if (Math.random() < loot.instantChance) {
+                rev += baseRev * (inWatch ? 1.25 : 1);
+                const drop = rollLootDrop(i, vs.owned, loot.dropRateMult, loot.xpMult);
+                if (drop) pendingDropsRef.current.push(drop);
+                const matDrop = rollMaterialDrop(i, vs.owned, (inWatch ? 1.5 : 1) * loot.dropRateMult);
+                if (matDrop) pendingMatsRef.current.push({ ventureId: i, drops: matDrop });
+              }
+            }
+          }
+
+          earnedRef.current += rev;
           pendingCompletionsRef.current.push({ ventureIndex: i, revenue: rev, color: VENTURES[i].color });
 
           // Loot rolls — one per completed cycle
           for (let c = 0; c < cycles; c++) {
-            const drop = rollLootDrop(i, vs.owned);
+            const drop = rollLootDrop(i, vs.owned, loot.dropRateMult, loot.xpMult);
             if (drop) pendingDropsRef.current.push(drop);
             // Material drops
-            const matDrop = rollMaterialDrop(i, vs.owned, inWatch ? 1.5 : 1);
+            const matDrop = rollMaterialDrop(i, vs.owned, (inWatch ? 1.5 : 1) * loot.dropRateMult);
             if (matDrop) pendingMatsRef.current.push({ ventureId: i, drops: matDrop });
+          }
+
+          // Chain run — queue adjacent profession triggers
+          if (loot.chainChance > 0) {
+            for (let c = 0; c < cycles; c++) {
+              if (Math.random() < loot.chainChance) {
+                const adj = Math.random() < 0.5 ? Math.max(0, i - 1) : Math.min(9, i + 1);
+                chainTriggers.push(adj);
+              }
+            }
           }
 
           if (vs.hasCompanion) {
@@ -768,12 +849,22 @@ export default function CastleCapitalist() {
         return { ...vs, progress: newProgress };
       });
 
-      if (earned > 0) {
-        setGold(g => g + earned);
-        setLifetimeGold(l => l + earned);
+      // Apply chain triggers — start idle adjacent professions
+      for (const adj of chainTriggers) {
+        if (next[adj].owned > 0 && !next[adj].running && !next[adj].hasCompanion) {
+          next[adj] = { ...next[adj], running: true, progress: 0 };
+        }
       }
+
       return next;
     });
+
+    // Gold update OUTSIDE the ventures updater — prevents double-counting in StrictMode
+    if (earnedRef.current > 0) {
+      const earned = earnedRef.current;
+      setGold(g => g + earned);
+      setLifetimeGold(l => l + earned);
+    }
 
     // Process loot drops after state update
     if (pendingDropsRef.current.length > 0) {
@@ -1045,9 +1136,12 @@ export default function CastleCapitalist() {
             const canAfford = gold >= cost;
             const upgTier = profUpgrades[i] || 0;
             const tPath = profTransforms[i] || null;
-            const effCycle = getEffectiveCycleTime(v, upgTier, tPath);
+            const loot = getLootBonuses(inventory, i);
+            const effCycle = getEffectiveCycleTime(v, upgTier, tPath, loot.speedMult);
             const pct = unlocked ? Math.min(100, (vs.progress / effCycle) * 100) : 0;
             const remaining = unlocked && vs.running ? Math.max(0, effCycle - vs.progress) : effCycle;
+            const inWatch = unlocked && isProfInWatch(i, getCurrentWatch());
+            const revPerCycle = unlocked ? getRevenue(v, vs.owned, prestigeMultiplier, upgTier, tPath, loot.goldMult) * (inWatch ? 1.25 : 1) : 0;
 
             // Hide far-away ventures
             if (!unlocked && gold < v.unlockCost * 0.05 && i > 2) return null;
@@ -1083,7 +1177,7 @@ export default function CastleCapitalist() {
                   <div className="vname">
                     {v.name}
                     {vs.hasCompanion && <span className="auto-tag">AUTO</span>}
-                    {unlocked && isProfInWatch(i, getCurrentWatch()) && <span className="watch-tag">{WATCHES[getCurrentWatch()].icon}</span>}
+                    {inWatch && <span className="watch-tag">{WATCHES[getCurrentWatch()].icon}</span>}
                   </div>
                   <div className="bar-out">
                     <div className="bar-in"
@@ -1094,9 +1188,11 @@ export default function CastleCapitalist() {
                     />
                     <span className="bar-time">{formatTime(remaining)}</span>
                   </div>
-                  <div className="vms">
-                    next: <span className="vms-n">{getNextMilestone(vs.owned)}</span>
-                  </div>
+                  {unlocked && (
+                    <div className="vms">
+                      <GoldCoinIcon size={10} /> <span className="vms-n">{formatNumber(revPerCycle)}</span> / fill
+                    </div>
+                  )}
                   {unlocked && materials[i] && (materials[i].t1 > 0 || materials[i].t2 > 0 || materials[i].t3 > 0) && (
                     <div className="vmat-row">
                       {materials[i].t1 > 0 && <span className="vmat" style={{color: SPECIALTY_MATERIALS[i].t1.color}}>{materials[i].t1} {SPECIALTY_MATERIALS[i].t1.name}</span>}
