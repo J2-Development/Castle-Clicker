@@ -1230,9 +1230,9 @@ export default function CastleCapitalist() {
               <div key={v.id} data-venture={i} className={`vrow ${!unlocked ? 'vrow-locked' : ''} ${!unlocked && canAfford ? 'vrow-afford' : ''} ${unlocked && canAfford ? 'vrow-can-buy' : ''} ${inWatch ? 'vrow-watch' : ''}`}
                 style={{
                   background: !unlocked
-                    ? `linear-gradient(135deg, ${v.colorDark}12, ${v.color}08)`
-                    : `linear-gradient(135deg, ${v.colorDark}30, ${v.color}18)`,
-                  borderColor: v.color + '35',
+                    ? theme === 'light' ? `linear-gradient(135deg, ${v.colorDark}30, ${v.color}20)` : `linear-gradient(135deg, ${v.colorDark}12, ${v.color}08)`
+                    : theme === 'light' ? `linear-gradient(135deg, ${v.colorDark}60, ${v.color}35)` : `linear-gradient(135deg, ${v.colorDark}30, ${v.color}18)`,
+                  borderColor: v.color + (theme === 'light' ? '55' : '35'),
                   borderLeftColor: v.color,
                 }}
               >
@@ -1240,8 +1240,8 @@ export default function CastleCapitalist() {
                 <div className="badge-wrap" onClick={(e) => unlocked && handleStartVenture(i, e)}>
                   <div className="badge"
                     style={{
-                      background: `linear-gradient(135deg, ${v.color}33, ${v.colorDark}55)`,
-                      borderColor: v.color + '88',
+                      background: theme === 'light' ? `linear-gradient(135deg, ${v.color}55, ${v.colorDark}70)` : `linear-gradient(135deg, ${v.color}33, ${v.colorDark}55)`,
+                      borderColor: v.color + (theme === 'light' ? 'aa' : '88'),
                       overflow: 'hidden',
                     }}
                   >
@@ -1805,27 +1805,43 @@ const STYLES = `
 
 /* Light theme */
 .cc-light {
-  --bg: #e8e4de; --bg2: #ddd8d0;
-  --sf: #d0cbc2; --sf2: #c8c2b8;
-  --bd: #b8b0a4; --bd2: #a09888;
-  --gd: #cc7a3f; --gdl: #e89050; --gdd: #aa6020;
-  --tx: #2a2520; --txd: #6a6058; --txb: #1a1510;
-  --accent: #4a6aaa;
+  --bg: #d4dae6; --bg2: #c8ceda;
+  --sf: #bec6d4; --sf2: #b4bcc8;
+  --bd: #98a0b4; --bd2: #828a9e;
+  --gd: #cc7a3f; --gdl: #b86a30; --gdd: #aa6020;
+  --gn: #3a8a3a; --rd: #c44058;
+  --tx: #1a1e2e; --txd: #505870; --txb: #0e1220;
+  --accent: #3a5ca0;
   color: var(--tx);
   background: var(--bg);
 }
-.cc-light .hd { background:linear-gradient(180deg,#d0cbc2,#c4beb4); border-bottom-color:#a09888; box-shadow:0 4px 16px rgba(0,0,0,.12); }
-.cc-light .bnav { background:linear-gradient(180deg,#2a2520,#1a1510); }
-.cc-light .watch-modal { background:linear-gradient(180deg,#ddd8d0,#d0cbc2); }
+.cc-light .hd { background:linear-gradient(180deg,#2a3048,#1e2438); border-bottom-color:#3a4260; box-shadow:0 4px 16px rgba(0,0,0,.25); }
+.cc-light .hd-title-castle { color:#94a3b8; }
+.cc-light .hd-title-clicker { color:#fbbf24; }
+.cc-light .hd-amount { color:#ffcfa8; }
+.cc-light .hd-watch { color:#94a3b8; background:rgba(255,255,255,.08); border-color:rgba(255,255,255,.12); }
+.cc-light .hd-gems { color:#bb9af7; }
+.cc-light .bnav { background:linear-gradient(180deg,#2a3048,#1e2438); }
+.cc-light .watch-modal { background:linear-gradient(180deg,#c8ceda,#bec6d4); }
 .cc-light .watch-modal-card { background:rgba(0,0,0,.04); }
-.cc-light .bar-out { background:#c4beb4; }
-.cc-light .qty { background:linear-gradient(180deg,#c8c2b8,#b8b0a4); color:#2a2520; border-color:#a09888; }
-.cc-light .qty:hover { border-color:#8a8070; }
-.cc-light .settings-theme-btn { background:rgba(0,0,0,.06); border-color:#a09888; color:#6a6058; }
+.cc-light .bar-out { background:#b8bfce; }
+.cc-light .qty { background:linear-gradient(180deg,#b4bcc8,#a4acba); color:#1a1e2e; border-color:#828a9e; }
+.cc-light .qty:hover { border-color:#6a7288; }
+.cc-light .settings-theme-btn { background:rgba(0,0,0,.06); border-color:#8e96a8; color:#505870; }
 .cc-light .settings-slider { background:rgba(0,0,0,.12); }
-.cc-light .watch-info-btn { border-color:rgba(0,0,0,.3); background:rgba(0,0,0,.1); color:#2a2520; }
-.cc-light .settings-cog { color:#6a6058; }
-.cc-light .settings-cog:hover { color:#2a2520; }
+.cc-light .watch-info-btn { border-color:rgba(255,255,255,.3); background:rgba(255,255,255,.1); color:#c0caf5; }
+.cc-light .settings-cog { color:#c0caf5; }
+.cc-light .settings-cog:hover { color:#e0e4f5; }
+.cc-light .cc-content::before { opacity:0.04; animation:none; }
+.cc-light .cc-content { background:var(--bg); }
+.cc-light .qty-row { background:var(--bg); }
+.cc-light .vrow { box-shadow:0 1px 4px rgba(0,0,0,.1); border-width:1px; border-left-width:4px; }
+.cc-light .vrow-locked { opacity:1; backdrop-filter:none; -webkit-backdrop-filter:none; }
+.cc-light .vrow-locked .vname, .cc-light .vrow-locked .badge-ct, .cc-light .vrow-locked .bar-time { opacity:.5; }
+.cc-light .vrow-locked .badge { opacity:.4; }
+.cc-light .bar-out { background:#a8b0c0; border-color:#939bac; }
+.cc-light .bar-in::after { background:repeating-linear-gradient(-45deg,transparent,transparent 4px,rgba(0,0,0,.06) 4px,rgba(0,0,0,.06) 8px); }
+.cc-light .bar-time { text-shadow:0 1px 3px rgba(0,0,0,.4); }
 .hd-gold-box { display:flex; align-items:baseline; gap:6px; }
 .hd-amount { font-family:'Cinzel',serif; font-size:24px; font-weight:900; color:var(--gdl); text-shadow:0 2px 8px rgba(251,191,36,.3); }
 .hd-gems { font-family:'Fira Code',monospace; font-size:11px; color:var(--gm); padding:4px 10px; border-radius:12px; background:rgba(192,132,252,.12); border:1px solid rgba(192,132,252,.25); cursor:pointer; display:flex; align-items:center; gap:4px; transition:all .2s; }
