@@ -190,16 +190,17 @@ const VENTURES = [
 // Revenue multiplied at ownership thresholds (sawtooth spikes)
 // Spaced out, earned not given — big spikes are rare dopamine hits
 const MILESTONES = [
+  { at:10,   mult:1.5 }, // early bump — quick dopamine hit
   { at:25,   mult:2 },
   { at:50,   mult:2 },
-  { at:100,  mult:2 },
-  { at:200,  mult:2 },
-  { at:300,  mult:2 },
-  { at:500,  mult:3 },   // first big spike — reward for commitment
-  { at:750,  mult:2 },
+  { at:100,  mult:3 },   // triple digits feel huge
+  { at:200,  mult:2 },   // breather
+  { at:300,  mult:3 },   // reward commitment
+  { at:500,  mult:3 },
+  { at:750,  mult:2 },   // breather
   { at:1000, mult:3 },
   { at:1500, mult:2 },
-  { at:2000, mult:2 },
+  { at:2000, mult:4 },   // late-game spike
   { at:3000, mult:3 },
   { at:5000, mult:3 },
 ];
@@ -242,7 +243,7 @@ const COMPANION_DESCS = [
 const PRESTIGE_BASE = 1e10;       // lifetime gold needed for first gem
 
 // Cost scaling
-const COST_EXPONENT = 1.15;       // each unit costs 15% more — steeper scaling
+const COST_EXPONENT = 1.07;       // each unit costs 7% more — matches AdVenture Capitalist standard
 
 // Offline earnings multiplier (1.0 = full, 0.25 = quarter)
 const OFFLINE_EFFICIENCY = 0.25;
@@ -411,7 +412,7 @@ const TRANSFORM_TREES = [
          b:{ name:"Void Tunneling",         color:"#2a0845", colorDark:"#1a0030", revMult:1,   speedMult:2,   passive:"Dimensional Shortcut", passiveDesc:"All profession cycle times reduced 3% globally",                     cost:{t3:2, cross:{ventureId:9, tier:"t2", qty:3}} } },
   { id:8, a:{ name:"Demon Pact Brokering",  color:"#cc3300", colorDark:"#881a00", revMult:3,   speedMult:1,   passive:"Infernal Contract",    passiveDesc:"+15% revenue from ALL professions, but Demon cycle time doubled",    cost:{t3:2, cross:{ventureId:9, tier:"t2", qty:3}} },
          b:{ name:"Hellfire Conquest",      color:"#ffee00", colorDark:"#bbaa00", revMult:1,   speedMult:2,   passive:"Scorched Earth",       passiveDesc:"10% chance per cycle to grant 2x materials from all profs for 60s",  cost:{t3:2, cross:{ventureId:6, tier:"t2", qty:3}} } },
-  { id:9, a:{ name:"Cosmic Ascension",     color:"#ffffff", colorDark:"#aaaaaa", revMult:5,   speedMult:1,   passive:"Transcendence",        passiveDesc:"Soul Gems give +5% instead of +3%",                                 cost:{t3:3, crossAll:{tier:"t2", qty:2}} },
+  { id:9, a:{ name:"Cosmic Ascension",     color:"#ffffff", colorDark:"#aaaaaa", revMult:5,   speedMult:1,   passive:"Transcendence",        passiveDesc:"+50% Soul Gems earned on prestige",                                 cost:{t3:3, crossAll:{tier:"t2", qty:2}} },
          b:{ name:"Eldritch Dominion",      color:"#2a1a4a", colorDark:"#1a0a30", revMult:1,   speedMult:3,   passive:"The Deep",             passiveDesc:"Unlocks Abyss auto-clear +5 floors per run",                        cost:{t3:3, crossAll:{tier:"t3", qty:1}} } },
 ];
 
@@ -592,17 +593,17 @@ const getEffectiveCycleTime = (venture, upgradeTier = 0, transformPath = null, l
 
 /**
  * Maximum units buyable with current gold.
+ * Closed-form: max = floor(log_r[g(r-1)/(b·r^k) + 1])
+ * +1 check compensates for Math.floor in getUnitCost
  */
 const getMaxBuyable = (baseCost, owned, gold) => {
-  let max = 0;
-  let cost = 0;
-  let o = owned;
-  while (cost + getUnitCost(baseCost, o) <= gold) {
-    cost += getUnitCost(baseCost, o);
-    o++;
-    max++;
-  }
-  return max;
+  const r = COST_EXPONENT;
+  const bRk = baseCost * Math.pow(r, owned);
+  let n = Math.floor(Math.log(gold * (r - 1) / bRk + 1) / Math.log(r));
+  if (n < 0) return 0;
+  // Floor rounding in getUnitCost can allow one more — check
+  if (getBulkCost(baseCost, owned, n + 1) <= gold) n++;
+  return n;
 };
 
 /**
@@ -815,7 +816,6 @@ export default function CastleCapitalist() {
   const [prestSub, setPrestSub] = useState('ascend');
   const [milestoneToast, setMilestoneToast] = useState(null);
   const [brightness, setBrightness] = useState(() => parseFloat(localStorage.getItem('cc-brightness') || '1'));
-  const [theme, setTheme] = useState(() => localStorage.getItem('cc-theme') || 'dark');
 
   const lastTick = useRef(Date.now());
   const animRef = useRef(null);
@@ -901,7 +901,6 @@ export default function CastleCapitalist() {
 
   // ═══ SAVE / LOAD ═══
   useEffect(() => { localStorage.setItem('cc-brightness', brightness); }, [brightness]);
-  useEffect(() => { localStorage.setItem('cc-theme', theme); }, [theme]);
 
   useEffect(() => {
     let hasSave = false;
@@ -1552,7 +1551,7 @@ export default function CastleCapitalist() {
   }
 
   return (
-    <div className={`cc ${theme === 'light' ? 'cc-light' : ''}`}>
+    <div className="cc">
       <style>{STYLES}</style>
 
       {/* ── TUTORIAL OVERLAY ── */}
@@ -1699,9 +1698,9 @@ export default function CastleCapitalist() {
               <div key={v.id} data-venture={i} className={`vrow ${!unlocked ? 'vrow-locked' : ''} ${!unlocked && canAfford ? 'vrow-afford' : ''} ${unlocked && canAfford ? 'vrow-can-buy' : ''} ${inWatch ? 'vrow-watch' : ''}`}
                 style={{
                   background: !unlocked
-                    ? theme === 'light' ? `linear-gradient(135deg, ${v.colorDark}30, ${v.color}20)` : `linear-gradient(135deg, ${v.colorDark}12, ${v.color}08)`
-                    : theme === 'light' ? `linear-gradient(135deg, ${v.colorDark}60, ${v.color}35)` : `linear-gradient(135deg, ${v.colorDark}30, ${v.color}18)`,
-                  borderColor: v.color + (theme === 'light' ? '55' : '35'),
+                    ? `linear-gradient(135deg, ${v.colorDark}12, ${v.color}08)`
+                    : `linear-gradient(135deg, ${v.colorDark}30, ${v.color}18)`,
+                  borderColor: v.color + '35',
                   borderLeftColor: v.color,
                 }}
               >
@@ -1709,8 +1708,8 @@ export default function CastleCapitalist() {
                 <div className="badge-wrap" onClick={(e) => unlocked && handleStartVenture(i, e)}>
                   <div className="badge"
                     style={{
-                      background: theme === 'light' ? `linear-gradient(135deg, ${v.color}55, ${v.colorDark}70)` : `linear-gradient(135deg, ${v.color}33, ${v.colorDark}55)`,
-                      borderColor: v.color + (theme === 'light' ? 'aa' : '88'),
+                      background: `linear-gradient(135deg, ${v.color}33, ${v.colorDark}55)`,
+                      borderColor: v.color + '88',
                       overflow: 'hidden',
                     }}
                   >
@@ -2335,18 +2334,6 @@ export default function CastleCapitalist() {
             </div>
 
             <div className="settings-section">
-              <label className="settings-label">Theme</label>
-              <div className="settings-theme-row">
-                {["dark", "light"].map(t => (
-                  <button key={t} className={`settings-theme-btn ${theme === t ? 'settings-theme-active' : ''}`}
-                    onClick={() => setTheme(t)}>
-                    {t === "dark" ? "Dark" : "Light"}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="settings-section">
               <button className="settings-tutorial-btn" onClick={() => { setShowSettings(false); setShowTutorial(true); setTutorialStep(0); }}>
                 View Tutorial
               </button>
@@ -2457,76 +2444,13 @@ const STYLES = `
 /* Settings modal extras */
 .settings-section { margin-bottom:16px; }
 .settings-label { display:block; font-family:'Cinzel',serif; font-size:12px; color:var(--tx); margin-bottom:8px; letter-spacing:.5px; }
-.settings-theme-row { display:flex; gap:8px; }
-.settings-theme-btn { flex:1; padding:8px; font-family:'Cinzel',serif; font-size:12px; font-weight:700; background:rgba(255,255,255,.05); border:1px solid var(--bd); color:var(--txd); border-radius:8px; cursor:pointer; transition:all .2s; }
-.settings-theme-btn:hover { border-color:var(--bd2); color:var(--tx); }
-.settings-theme-active { background:linear-gradient(180deg,#ffcfa8,#ff9e64) !important; color:#1a1b26 !important; border-color:#1a1b26 !important; }
 .settings-slider-row { display:flex; align-items:center; gap:12px; }
 .settings-slider { flex:1; -webkit-appearance:none; appearance:none; height:6px; border-radius:3px; background:rgba(255,255,255,.1); outline:none; }
 .settings-slider::-webkit-slider-thumb { -webkit-appearance:none; appearance:none; width:18px; height:18px; border-radius:50%; background:linear-gradient(180deg,#ffcfa8,#ff9e64); border:2px solid #1a1b26; cursor:pointer; }
 .settings-slider::-moz-range-thumb { width:18px; height:18px; border-radius:50%; background:linear-gradient(180deg,#ffcfa8,#ff9e64); border:2px solid #1a1b26; cursor:pointer; }
 .settings-slider-val { font-family:'Fira Code',monospace; font-size:12px; color:var(--tx); min-width:40px; text-align:right; }
 
-/* Light theme */
-.cc-light {
-  --bg: #d4dae6; --bg2: #c8ceda;
-  --sf: #bec6d4; --sf2: #b4bcc8;
-  --bd: #98a0b4; --bd2: #828a9e;
-  --gd: #cc7a3f; --gdl: #b86a30; --gdd: #aa6020;
-  --gn: #3a8a3a; --rd: #c44058;
-  --tx: #1a1e2e; --txd: #505870; --txb: #0e1220;
-  --accent: #3a5ca0;
-  color: var(--tx);
-  background: var(--bg);
-}
-.cc-light .hd { background:linear-gradient(180deg,#dce2ee,#ccd4e2); border-bottom-color:#b0b8c8; box-shadow:0 4px 16px rgba(0,0,0,.1); }
-.cc-light .hd::after { background:linear-gradient(90deg,transparent,rgba(200,130,60,.3),rgba(58,92,160,.2),transparent); }
-.cc-light .hd-title-castle { color:#5a6478; }
-.cc-light .hd-title-clicker { color:#b8860b; text-shadow:0 1px 0 #8a6508,0 2px 0 #6a4e06,0 3px 6px rgba(0,0,0,.15); }
-.cc-light .hd-amount { color:#b86a30; }
-.cc-light .hd-watch { color:#505870; background:rgba(0,0,0,.05); border-color:rgba(0,0,0,.12); }
-.cc-light .hd-gems { color:#7c3aed; background:rgba(124,58,237,.08); border-color:rgba(124,58,237,.2); }
-.cc-light .bnav { background:linear-gradient(180deg,#dce2ee,#ccd4e2); border-top-color:var(--gd); box-shadow:0 -4px 16px rgba(0,0,0,.1); }
-.cc-light .bnav-btn { color:#6a7288; }
-.cc-light .bnav::before { background:linear-gradient(90deg,transparent,rgba(200,130,60,.2),rgba(58,92,160,.15),transparent); }
-.cc-light .watch-modal { background:linear-gradient(180deg,#c8ceda,#bec6d4); }
-.cc-light .watch-modal-card { background:rgba(0,0,0,.04); }
-.cc-light .bar-out { background:#b8bfce; }
-.cc-light .qty { background:linear-gradient(180deg,#b4bcc8,#a4acba); color:#1a1e2e; border-color:#828a9e; }
-.cc-light .qty:hover { border-color:#6a7288; }
-.cc-light .settings-theme-btn { background:rgba(0,0,0,.06); border-color:#8e96a8; color:#505870; }
-.cc-light .settings-slider { background:rgba(0,0,0,.12); }
-.cc-light .watch-info-btn { border-color:rgba(255,255,255,.3); background:rgba(255,255,255,.1); color:#c0caf5; }
-.cc-light .settings-cog { color:#c0caf5; }
-.cc-light .settings-cog:hover { color:#e0e4f5; }
-.cc-light .eq-slot { background:#c4b8cc; border-color:#9a8aaa; }
-.cc-light .eq-slot-empty { border-color:#9a8aaa; }
-.cc-light .eq-slot-empty:hover { border-color:var(--accent); background:rgba(58,92,160,.12); }
-.cc-light .eq-slot-locked { background:#b0bcc8; border-color:#8a96a8; }
-.cc-light .eq-slot-mtx { background:#c8c0a8; border-color:#a09060; }
-.cc-light .eq-slot-mtx:hover { background:#d4c8a8; border-color:#b8a060; }
-.cc-light .prest-stat { background:#b4bcc8; border-color:#98a0b4; }
-.cc-light .offline-banner { background:linear-gradient(135deg,#c8ceda,#bec6d4); border-color:var(--gd); }
-.cc-light .offline-title { color:var(--gd); }
-.cc-light .offline-amount { color:var(--tx); }
-.cc-light .milestone-toast { background:linear-gradient(135deg,#d4cc98,#c8c088); }
-.cc-light .prest-progress-wrap { background:#a8b0c0; border-color:#939bac; }
-.cc-light .watch-modal-title { color:var(--tx); }
-.cc-light .watch-modal-desc { color:var(--txd); }
-.cc-light .watch-modal-close { color:var(--txd); border-color:var(--bd); }
-.cc-light .watch-modal-hours { color:var(--txd); }
-.cc-light .watch-modal-now { color:#b8860b; }
-.cc-light .watch-modal-card-active { border-color:#b8860b; box-shadow:0 0 8px rgba(184,134,11,.15); }
-.cc-light .cc-content::before { opacity:0.04; animation:none; }
-.cc-light .cc-content { background:var(--bg); }
-.cc-light .qty-row { background:var(--bg); }
-.cc-light .vrow { box-shadow:0 1px 4px rgba(0,0,0,.1); border-width:1px; border-left-width:4px; }
-.cc-light .vrow-locked { opacity:1; backdrop-filter:none; -webkit-backdrop-filter:none; }
-.cc-light .vrow-locked .vname, .cc-light .vrow-locked .badge-ct, .cc-light .vrow-locked .bar-time { opacity:.5; }
-.cc-light .vrow-locked .badge { opacity:.4; }
-.cc-light .bar-out { background:#a8b0c0; border-color:#939bac; }
-.cc-light .bar-in::after { background:repeating-linear-gradient(-45deg,transparent,transparent 4px,rgba(0,0,0,.06) 4px,rgba(0,0,0,.06) 8px); }
-.cc-light .bar-time { text-shadow:0 1px 3px rgba(0,0,0,.4); }
+
 .hd-gold-box { display:flex; align-items:baseline; gap:6px; }
 .hd-amount { font-family:'Cinzel',serif; font-size:24px; font-weight:900; color:var(--gdl); text-shadow:0 2px 8px rgba(251,191,36,.3); }
 .hd-gems { font-family:'Fira Code',monospace; font-size:11px; color:var(--gm); padding:4px 10px; border-radius:12px; background:rgba(192,132,252,.12); border:1px solid rgba(192,132,252,.25); cursor:pointer; display:flex; align-items:center; gap:4px; transition:all .2s; }
@@ -2765,9 +2689,6 @@ const STYLES = `
 .ep-item-rarity { font-family:'Fira Code',monospace; font-size:9px; text-transform:uppercase; letter-spacing:.5px; display:block; }
 .ep-item-qty { font-family:'Fira Code',monospace; font-size:9px; color:var(--txd); display:block; margin-top:2px; }
 .ep-empty { text-align:center; color:var(--txd); font-size:12px; padding:30px 20px; opacity:.5; }
-.cc-light .ep-item { background:#e8e0f0; }
-.cc-light .equip-picker .watch-modal-title { color:#1a1a2e; }
-.cc-light .inv-combine-btn { background:rgba(168,85,247,.08); }
 
 /* ── Equipment Panel ── */
 .eq-panel { padding:12px 12px 8px; }
@@ -2885,8 +2806,6 @@ const STYLES = `
 /* Settings tutorial button */
 .settings-tutorial-btn { width:100%; padding:8px 0; font-family:'Cinzel',serif; font-size:12px; font-weight:700; background:transparent; border:1px solid #3a4466; color:#8090b0; border-radius:6px; cursor:pointer; transition:all .2s; }
 .settings-tutorial-btn:hover { border-color:#5a6690; color:#e2e8ff; }
-.cc-light .settings-tutorial-btn { border-color:#aab0c0; color:#5a6070; }
-.cc-light .settings-tutorial-btn:hover { border-color:#7a8090; color:#1a1a2e; }
 
 /* ── Prestige Sub-tabs ── */
 .prest-subtabs { display:flex; gap:0; margin-bottom:16px; border-radius:8px; overflow:hidden; border:1px solid var(--bd); }
@@ -2947,14 +2866,5 @@ const STYLES = `
 .event-boss { animation:boss-shake 0.08s ease-in-out infinite; user-select:none; -webkit-user-select:none; }
 @keyframes boss-shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-2px)} 75%{transform:translateX(2px)} }
 .event-active { cursor:default; }
-
-/* Light mode overrides for new features */
-.cc-light .prest-subtab { background:#ddd8e8; color:#5a6070; }
-.cc-light .prest-subtab-on { background:var(--gm); color:#fff; }
-.cc-light .skill-node { background:#e8e0f0; border-color:#c4b8cc; }
-.cc-light .skill-buyable { border-color:var(--gm); }
-.cc-light .skill-owned { background:rgba(187,154,247,.2); }
-.cc-light .ach-card { background:#e8e0f0; }
-.cc-light .event-banner { background:linear-gradient(135deg,#ddd8e8,#c8c0d0); }
 `;
 
