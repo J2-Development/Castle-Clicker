@@ -25,16 +25,16 @@ const VENTURE_FILES = [
 ];
 
 const COMPANION_FILES = [
-  "companions/squire_finn.png",
-  "companions/rogue_nyx.png",
-  "companions/fungi_sage.png",
-  "companions/bone_collector.png",
-  "companions/trapmaster_vex.png",
-  "companions/chest_warden.png",
-  "companions/dragonkeeper_ash.png",
-  "companions/lich_morrn.png",
-  "companions/demon_binder_kael.png",
-  "companions/void_priest_zara.png",
+  "companions/squire_finn_sprite.png",
+  "companions/rogue_nyx_sprite.png",
+  "companions/fungi_sage_sprite.png",
+  "companions/bone_collector_sprite.png",
+  "companions/trapmaster_vex_sprite.png",
+  "companions/chest_warden_sprite.png",
+  "companions/dragonkeeper_ash_sprite.png",
+  "companions/lich_morrn_sprite.png",
+  "companions/demon_binder_kael_sprite.png",
+  "companions/void_priest_zara_sprite.png",
 ];
 
 const UI_FILES = {

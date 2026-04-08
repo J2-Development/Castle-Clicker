@@ -182,7 +182,7 @@ const VENTURES = [
   { id:4, name:"Trap Disarming",        color:"#e85d3a", colorDark:"#a33820", baseCost:950000,       baseRevenue:650,          baseTime:20000,   unlockCost:3500000 },
   { id:5, name:"Potion Brewing",        color:"#a855f7", colorDark:"#6a2aaa", baseCost:26000000,     baseRevenue:3400,         baseTime:36000,   unlockCost:100000000 },
   { id:6, name:"Dragon Taming",         color:"#ef4444", colorDark:"#991b1b", baseCost:750000000,    baseRevenue:17500,        baseTime:60000,   unlockCost:3000000000 },
-  { id:7, name:"Dungeon Expansion",     color:"#14b8a6", colorDark:"#0d7a6e", baseCost:22000000000,  baseRevenue:88000,        baseTime:96000,   unlockCost:90000000000 },
+  { id:7, name:"Dungeon Expansion",     color:"#14b8a6", colorDark:"#0d7a6e", baseCost:22000000000,  baseRevenue:88000,        baseTime:96000,   unlockCost:35000000000 },
   { id:8, name:"Demon Gate Siege",      color:"#f97316", colorDark:"#b45210", baseCost:700000000000, baseRevenue:430000,       baseTime:150000,  unlockCost:2800000000000 },
   { id:9, name:"Elder God Pact",        color:"#6366f1", colorDark:"#4338ca", baseCost:25000000000000,baseRevenue:2100000,     baseTime:240000,  unlockCost:90000000000000 },
 ];
@@ -318,7 +318,7 @@ const TRANSFORM_TREES = [
          b:{ name:"Void Tunneling",         color:"#2a0845", colorDark:"#1a0030", revMult:1,   speedMult:2,   passive:"Dimensional Shortcut", passiveDesc:"All profession cycle times reduced 3% globally",                     cost:{t3:2, cross:{ventureId:9, tier:"t2", qty:3}} } },
   { id:8, a:{ name:"Demon Pact Brokering",  color:"#cc3300", colorDark:"#881a00", revMult:3,   speedMult:1,   passive:"Infernal Contract",    passiveDesc:"+15% revenue from ALL professions, but Demon cycle time doubled",    cost:{t3:2, cross:{ventureId:9, tier:"t2", qty:3}} },
          b:{ name:"Hellfire Conquest",      color:"#ffee00", colorDark:"#bbaa00", revMult:1,   speedMult:2,   passive:"Scorched Earth",       passiveDesc:"10% chance per cycle to grant 2x materials from all profs for 60s",  cost:{t3:2, cross:{ventureId:6, tier:"t2", qty:3}} } },
-  { id:9, a:{ name:"Cosmic Ascension",     color:"#ffffff", colorDark:"#aaaaaa", revMult:5,   speedMult:1,   passive:"Transcendence",        passiveDesc:"Soul Gems give +5% instead of +3%",                                 cost:{t3:3, crossAll:{tier:"t2", qty:5}} },
+  { id:9, a:{ name:"Cosmic Ascension",     color:"#ffffff", colorDark:"#aaaaaa", revMult:5,   speedMult:1,   passive:"Transcendence",        passiveDesc:"Soul Gems give +5% instead of +3%",                                 cost:{t3:3, crossAll:{tier:"t2", qty:2}} },
          b:{ name:"Eldritch Dominion",      color:"#2a1a4a", colorDark:"#1a0a30", revMult:1,   speedMult:3,   passive:"The Deep",             passiveDesc:"Unlocks Abyss auto-clear +5 floors per run",                        cost:{t3:3, crossAll:{tier:"t3", qty:1}} } },
 ];
 
@@ -360,65 +360,65 @@ const DROP_RATES = {
   uncommon:  0.0004,
   rare:      0.00004,
   epic:      0.000003,
-  legendary: 0.0000002,
+  legendary: 0.000001,
 };
 const DROP_LEVEL_BONUS = 0.005; // +0.5% per skill level, multiplicative
 
 const LOOT_TABLE = [
   // ── Common ── (16 items)
   // Global
-  { id:"rusty_coin_pouch",  name:"Rusty Coin Pouch",  rarity:"common", description:"+3% gold from all professions",           effects:[{ type:"goldMultiplier", target:"all", value:0.03 }]},
-  { id:"copper_ring",       name:"Copper Ring",        rarity:"common", description:"+2% gold from all professions",           effects:[{ type:"goldMultiplier", target:"all", value:0.02 }]},
-  { id:"frayed_rope",       name:"Frayed Rope",        rarity:"common", description:"+3% speed for all professions",           effects:[{ type:"speedBoost",     target:"all", value:0.03 }]},
-  { id:"cracked_gem",       name:"Cracked Gem",        rarity:"common", description:"+1% drop rates",                          effects:[{ type:"dropRateBoost",  target:"all", value:0.01 }]},
-  { id:"minor_rune",        name:"Minor Rune",         rarity:"common", description:"+2% drop rates",                          effects:[{ type:"dropRateBoost",  target:"all", value:0.02 }]},
+  { id:"rusty_coin_pouch",  name:"Rusty Coin Pouch",  rarity:"common", icon:"/assets/loot/rusty_coin_pouch.png", description:"+3% gold from all professions",           effects:[{ type:"goldMultiplier", target:"all", value:0.03 }]},
+  { id:"copper_ring",       name:"Copper Ring",        rarity:"common", icon:"/assets/loot/copper_ring.png", description:"+2% gold from all professions",           effects:[{ type:"goldMultiplier", target:"all", value:0.02 }]},
+  { id:"frayed_rope",       name:"Frayed Rope",        rarity:"common", icon:"/assets/loot/frayed_rope.png", description:"+3% speed for all professions",           effects:[{ type:"speedBoost",     target:"all", value:0.03 }]},
+  { id:"cracked_gem",       name:"Cracked Gem",        rarity:"common", icon:"/assets/loot/cracked_gem.png", description:"+1% drop rates",                          effects:[{ type:"dropRateBoost",  target:"all", value:0.01 }]},
+  { id:"minor_rune",        name:"Minor Rune",         rarity:"common", icon:"/assets/loot/minor_rune.png", description:"+2% drop rates",                          effects:[{ type:"dropRateBoost",  target:"all", value:0.02 }]},
   // Targeted
-  { id:"worn_gloves",       name:"Worn Gloves",        rarity:"common", description:"+5% speed for Torch Scavenging",          effects:[{ type:"speedBoost",     target:0,     value:0.05 }]},
-  { id:"tattered_map",      name:"Tattered Map",       rarity:"common", description:"+3% speed for Goblin Pickpocketing",      effects:[{ type:"speedBoost",     target:1,     value:0.03 }]},
-  { id:"spore_poultice",    name:"Spore Poultice",     rarity:"common", description:"+3% speed for Mushroom Foraging",         effects:[{ type:"speedBoost",     target:2,     value:0.03 }]},
-  { id:"mushroom_cap",      name:"Mushroom Cap",       rarity:"common", description:"+3% gold from Mushroom Foraging",         effects:[{ type:"goldMultiplier", target:2,     value:0.03 }]},
-  { id:"dull_blade",        name:"Dull Blade",         rarity:"common", description:"+4% gold from Skeleton Looting",          effects:[{ type:"goldMultiplier", target:3,     value:0.04 }]},
-  { id:"skeleton_key",      name:"Skeleton Key",       rarity:"common", description:"+3% speed for Skeleton Looting",          effects:[{ type:"speedBoost",     target:3,     value:0.03 }]},
-  { id:"broken_lockpick",   name:"Broken Lockpick",    rarity:"common", description:"+4% speed for Trap Disarming",            effects:[{ type:"speedBoost",     target:4,     value:0.04 }]},
-  { id:"drake_whistle",     name:"Drake Whistle",      rarity:"common", description:"+4% speed for Dragon Taming",             effects:[{ type:"speedBoost",     target:6,     value:0.04 }]},
-  { id:"blueprint_scrap",   name:"Blueprint Scrap",    rarity:"common", description:"+3% speed for Dungeon Expansion",         effects:[{ type:"speedBoost",     target:7,     value:0.03 }]},
-  { id:"hellfire_ember",    name:"Hellfire Ember",      rarity:"common", description:"+3% speed for Demon Gate Siege",          effects:[{ type:"speedBoost",     target:8,     value:0.03 }]},
-  { id:"star_map",          name:"Star Map",            rarity:"common", description:"+3% speed for Elder God Pact",            effects:[{ type:"speedBoost",     target:9,     value:0.03 }]},
+  { id:"worn_gloves",       name:"Worn Gloves",        rarity:"common", icon:"/assets/loot/worn_gloves.png", description:"+5% speed for Torch Scavenging",          effects:[{ type:"speedBoost",     target:0,     value:0.05 }]},
+  { id:"tattered_map",      name:"Tattered Map",       rarity:"common", icon:"/assets/loot/tattered_map.png", description:"+3% speed for Goblin Pickpocketing",      effects:[{ type:"speedBoost",     target:1,     value:0.03 }]},
+  { id:"spore_poultice",    name:"Spore Poultice",     rarity:"common", icon:"/assets/loot/spore_poultice.png", description:"+3% speed for Mushroom Foraging",         effects:[{ type:"speedBoost",     target:2,     value:0.03 }]},
+  { id:"mushroom_cap",      name:"Mushroom Cap",       rarity:"common", icon:"/assets/loot/mushroom_cap.png", description:"+3% gold from Mushroom Foraging",         effects:[{ type:"goldMultiplier", target:2,     value:0.03 }]},
+  { id:"dull_blade",        name:"Dull Blade",         rarity:"common", icon:"/assets/loot/dull_blade.png", description:"+4% gold from Skeleton Looting",          effects:[{ type:"goldMultiplier", target:3,     value:0.04 }]},
+  { id:"skeleton_key",      name:"Skeleton Key",       rarity:"common", icon:"/assets/loot/skeleton_key.png", description:"+3% speed for Skeleton Looting",          effects:[{ type:"speedBoost",     target:3,     value:0.03 }]},
+  { id:"broken_lockpick",   name:"Broken Lockpick",    rarity:"common", icon:"/assets/loot/broken_lockpick.png", description:"+4% speed for Trap Disarming",            effects:[{ type:"speedBoost",     target:4,     value:0.04 }]},
+  { id:"drake_whistle",     name:"Drake Whistle",      rarity:"common", icon:"/assets/loot/drake_whistle.png", description:"+4% speed for Dragon Taming",             effects:[{ type:"speedBoost",     target:6,     value:0.04 }]},
+  { id:"blueprint_scrap",   name:"Blueprint Scrap",    rarity:"common", icon:"/assets/loot/blueprint_scrap.png", description:"+3% speed for Dungeon Expansion",         effects:[{ type:"speedBoost",     target:7,     value:0.03 }]},
+  { id:"hellfire_ember",    name:"Hellfire Ember",      rarity:"common", icon:"/assets/loot/hellfire_ember.png", description:"+3% speed for Demon Gate Siege",          effects:[{ type:"speedBoost",     target:8,     value:0.03 }]},
+  { id:"star_map",          name:"Star Map",            rarity:"common", icon:"/assets/loot/star_map.png", description:"+3% speed for Elder God Pact",            effects:[{ type:"speedBoost",     target:9,     value:0.03 }]},
 
   // ── Uncommon ── (12 items)
   // Global
-  { id:"goblin_lucky_charm", name:"Goblin's Lucky Charm", rarity:"uncommon", description:"+8% gold from all professions",        effects:[{ type:"goldMultiplier", target:"all", value:0.08 }]},
-  { id:"silver_compass",     name:"Silver Compass",       rarity:"uncommon", description:"+6% speed for all professions",        effects:[{ type:"speedBoost",     target:"all", value:0.06 }]},
-  { id:"whispering_skull",   name:"Whispering Skull",     rarity:"uncommon", description:"Skill levels count +15% for drops",    effects:[{ type:"xpBoost",        target:"all", value:0.15 }]},
-  { id:"enchanted_satchel",  name:"Enchanted Satchel",    rarity:"uncommon", description:"+5% drop rates",                       effects:[{ type:"dropRateBoost",  target:"all", value:0.05 }]},
+  { id:"goblin_lucky_charm", name:"Goblin's Lucky Charm", rarity:"uncommon", icon:"/assets/loot/goblin_lucky_charm.png", description:"+8% gold from all professions",        effects:[{ type:"goldMultiplier", target:"all", value:0.08 }]},
+  { id:"silver_compass",     name:"Silver Compass",       rarity:"uncommon", icon:"/assets/loot/silver_compass.png", description:"+6% speed for all professions",        effects:[{ type:"speedBoost",     target:"all", value:0.06 }]},
+  { id:"whispering_skull",   name:"Whispering Skull",     rarity:"uncommon", icon:"/assets/loot/whispering_skull.png", description:"Skill levels count +15% for drops",    effects:[{ type:"xpBoost",        target:"all", value:0.15 }]},
+  { id:"enchanted_satchel",  name:"Enchanted Satchel",    rarity:"uncommon", icon:"/assets/loot/enchanted_satchel.png", description:"+5% drop rates",                       effects:[{ type:"dropRateBoost",  target:"all", value:0.05 }]},
   // Targeted
-  { id:"shadow_dagger",      name:"Shadow Dagger",        rarity:"uncommon", description:"+15% Goblin Pickpocketing gold",       effects:[{ type:"goldMultiplier", target:1,     value:0.15 }]},
-  { id:"torch_oil",          name:"Torch Oil Flask",      rarity:"uncommon", description:"-10% Torch Scavenging cooldown",       effects:[{ type:"speedBoost",     target:0,     value:0.10 }]},
-  { id:"alchemists_flask",   name:"Alchemist's Flask",    rarity:"uncommon", description:"+12% Potion Brewing gold",             effects:[{ type:"goldMultiplier", target:5,     value:0.12 }]},
-  { id:"bubbling_retort",    name:"Bubbling Retort",      rarity:"uncommon", description:"+8% speed for Potion Brewing",         effects:[{ type:"speedBoost",     target:5,     value:0.08 }]},
-  { id:"wyvern_fang",        name:"Wyvern Fang",          rarity:"uncommon", description:"+12% Dragon Taming gold",              effects:[{ type:"goldMultiplier", target:6,     value:0.12 }]},
-  { id:"mystic_lens",        name:"Mystic Lens",          rarity:"uncommon", description:"+10% Dungeon Expansion gold",          effects:[{ type:"goldMultiplier", target:7,     value:0.10 }]},
-  { id:"ember_stone",        name:"Ember Stone",          rarity:"uncommon", description:"+10% Demon Gate Siege gold",           effects:[{ type:"goldMultiplier", target:8,     value:0.10 }]},
-  { id:"eldritch_sigil",     name:"Eldritch Sigil",       rarity:"uncommon", description:"+10% Elder God Pact gold",             effects:[{ type:"goldMultiplier", target:9,     value:0.10 }]},
+  { id:"shadow_dagger",      name:"Shadow Dagger",        rarity:"uncommon", icon:"/assets/loot/shadow_dagger.png", description:"+15% Goblin Pickpocketing gold",       effects:[{ type:"goldMultiplier", target:1,     value:0.15 }]},
+  { id:"torch_oil",          name:"Torch Oil Flask",      rarity:"uncommon", icon:"/assets/loot/torch_oil.png", description:"-10% Torch Scavenging cooldown",       effects:[{ type:"speedBoost",     target:0,     value:0.10 }]},
+  { id:"alchemists_flask",   name:"Alchemist's Flask",    rarity:"uncommon", icon:"/assets/loot/alchemists_flask.png", description:"+12% Potion Brewing gold",             effects:[{ type:"goldMultiplier", target:5,     value:0.12 }]},
+  { id:"bubbling_retort",    name:"Bubbling Retort",      rarity:"uncommon", icon:"/assets/loot/bubbling_retort.png", description:"+8% speed for Potion Brewing",         effects:[{ type:"speedBoost",     target:5,     value:0.08 }]},
+  { id:"wyvern_fang",        name:"Wyvern Fang",          rarity:"uncommon", icon:"/assets/loot/wyvern_fang.png", description:"+12% Dragon Taming gold",              effects:[{ type:"goldMultiplier", target:6,     value:0.12 }]},
+  { id:"mystic_lens",        name:"Mystic Lens",          rarity:"uncommon", icon:"/assets/loot/mystic_lens.png", description:"+10% Dungeon Expansion gold",          effects:[{ type:"goldMultiplier", target:7,     value:0.10 }]},
+  { id:"ember_stone",        name:"Ember Stone",          rarity:"uncommon", icon:"/assets/loot/ember_stone.png", description:"+10% Demon Gate Siege gold",           effects:[{ type:"goldMultiplier", target:8,     value:0.10 }]},
+  { id:"eldritch_sigil",     name:"Eldritch Sigil",       rarity:"uncommon", icon:"/assets/loot/eldritch_sigil.png", description:"+10% Elder God Pact gold",             effects:[{ type:"goldMultiplier", target:9,     value:0.10 }]},
 
   // ── Rare ── (6 items)
-  { id:"shadow_step_boots",  name:"Shadow Step Boots",    rarity:"rare", description:"3% chance for a bonus cycle on completion",    effects:[{ type:"instantComplete", target:"all", value:0.03 }]},
-  { id:"alchemist_stone",    name:"Alchemist Stone",      rarity:"rare", description:"2x Potion Brewing gold",                      effects:[{ type:"goldMultiplier",  target:5,     value:1.00 }]},
-  { id:"bone_whistle",       name:"Bone Whistle",         rarity:"rare", description:"Skeleton levels count double for drops",       effects:[{ type:"xpBoost",         target:3,     value:1.00 }]},
-  { id:"dragon_scale_shield",name:"Dragon Scale Shield",  rarity:"rare", description:"+20% Dragon Taming gold, +10% speed",         effects:[{ type:"goldMultiplier", target:6, value:0.20 }, { type:"speedBoost", target:6, value:0.10 }]},
-  { id:"void_shard",         name:"Void Shard",           rarity:"rare", description:"+15% all drop rates",                         effects:[{ type:"dropRateBoost",   target:"all", value:0.15 }]},
-  { id:"runic_hammer",       name:"Runic Hammer",         rarity:"rare", description:"+25% Trap Disarming gold",                    effects:[{ type:"goldMultiplier",  target:4,     value:0.25 }]},
+  { id:"shadow_step_boots",  name:"Shadow Step Boots",    rarity:"rare", icon:"/assets/loot/shadow_step_boots.png", description:"3% chance for a bonus cycle on completion",    effects:[{ type:"instantComplete", target:"all", value:0.03 }]},
+  { id:"alchemist_stone",    name:"Alchemist Stone",      rarity:"rare", icon:"/assets/loot/alchemist_stone.png", description:"2x Potion Brewing gold",                      effects:[{ type:"goldMultiplier",  target:5,     value:1.00 }]},
+  { id:"bone_whistle",       name:"Bone Whistle",         rarity:"rare", icon:"/assets/loot/bone_whistle.png", description:"Skeleton levels count double for drops",       effects:[{ type:"xpBoost",         target:3,     value:1.00 }]},
+  { id:"dragon_scale_shield",name:"Dragon Scale Shield",  rarity:"rare", icon:"/assets/loot/dragon_scale_shield.png", description:"+20% Dragon Taming gold, +10% speed",         effects:[{ type:"goldMultiplier", target:6, value:0.20 }, { type:"speedBoost", target:6, value:0.10 }]},
+  { id:"void_shard",         name:"Void Shard",           rarity:"rare", icon:"/assets/loot/void_shard.png", description:"+15% all drop rates",                         effects:[{ type:"dropRateBoost",   target:"all", value:0.15 }]},
+  { id:"runic_hammer",       name:"Runic Hammer",         rarity:"rare", icon:"/assets/loot/runic_hammer.png", description:"+25% Trap Disarming gold",                    effects:[{ type:"goldMultiplier",  target:4,     value:0.25 }]},
 
   // ── Epic ── (4 items)
-  { id:"chain_lightning",    name:"Chain Lightning Scroll", rarity:"epic", description:"6% chance to auto-trigger adjacent profession", effects:[{ type:"chainRun",        target:"all", value:0.06 }]},
-  { id:"phoenix_feather",    name:"Phoenix Feather",        rarity:"epic", description:"3% chance for a bonus cycle on all professions",effects:[{ type:"instantComplete", target:"all", value:0.03 }]},
-  { id:"greater_void_shard", name:"Greater Void Shard",     rarity:"epic", description:"+50% all drop rates",                          effects:[{ type:"dropRateBoost",   target:"all", value:0.50 }]},
-  { id:"warlords_signet",    name:"Warlord's Signet",       rarity:"epic", description:"+20% gold all, +10% speed all",                effects:[{ type:"goldMultiplier", target:"all", value:0.20 }, { type:"speedBoost", target:"all", value:0.10 }]},
+  { id:"chain_lightning",    name:"Chain Lightning Scroll", rarity:"epic", icon:"/assets/loot/chain_lightning.png", description:"6% chance to auto-trigger adjacent profession", effects:[{ type:"chainRun",        target:"all", value:0.06 }]},
+  { id:"phoenix_feather",    name:"Phoenix Feather",        rarity:"epic", icon:"/assets/loot/phoenix_feather.png", description:"5% chance for a bonus cycle + 2x gold on that cycle",effects:[{ type:"instantComplete", target:"all", value:0.05 }, { type:"goldMultiplier", target:"all", value:0.15 }]},
+  { id:"greater_void_shard", name:"Greater Void Shard",     rarity:"epic", icon:"/assets/loot/greater_void_shard.png", description:"+30% all drop rates, +20% all speed",           effects:[{ type:"dropRateBoost",   target:"all", value:0.30 }, { type:"speedBoost", target:"all", value:0.20 }]},
+  { id:"warlords_signet",    name:"Warlord's Signet",       rarity:"epic", icon:"/assets/loot/warlords_signet.png", description:"+20% gold all, +10% speed all",                effects:[{ type:"goldMultiplier", target:"all", value:0.20 }, { type:"speedBoost", target:"all", value:0.10 }]},
 
   // ── Legendary ── (3 items)
-  { id:"crown_dungeon_lord",  name:"Crown of the Dungeon Lord",  rarity:"legendary", description:"+30% all gold, +20% all speed",          effects:[{ type:"goldMultiplier", target:"all", value:0.30 }, { type:"speedBoost", target:"all", value:0.20 }]},
-  { id:"elder_gods_eye",      name:"Elder God's Eye",            rarity:"legendary", description:"All drop rates doubled",                  effects:[{ type:"dropRateBoost",  target:"all", value:1.00 }]},
-  { id:"blade_forgotten_king",name:"Blade of the Forgotten King",rarity:"legendary", description:"0.5% chance for 50x gold on completion", effects:[{ type:"critGold",       target:"all", value:0.005}]},
+  { id:"crown_dungeon_lord",  name:"Crown of the Dungeon Lord",  rarity:"legendary", icon:"/assets/loot/crown_dungeon_lord.png", description:"+30% all gold, +20% all speed",          effects:[{ type:"goldMultiplier", target:"all", value:0.30 }, { type:"speedBoost", target:"all", value:0.20 }]},
+  { id:"elder_gods_eye",      name:"Elder God's Eye",            rarity:"legendary", icon:"/assets/loot/elder_gods_eye.png", description:"All drop rates doubled",                  effects:[{ type:"dropRateBoost",  target:"all", value:1.00 }]},
+  { id:"blade_forgotten_king",name:"Blade of the Forgotten King",rarity:"legendary", icon:"/assets/loot/blade_forgotten_king.png", description:"0.5% chance for 50x gold on completion", effects:[{ type:"critGold",       target:"all", value:0.005}]},
 ];
 
 const LOOT_BY_ID = {};
@@ -657,6 +657,9 @@ export default function CastleCapitalist() {
   const [mtxSlots, setMtxSlots] = useState(0);
   const [showWatchInfo, setShowWatchInfo] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [equipPickerSlot, setEquipPickerSlot] = useState(null); // slot index or null
+  const [offlineEarnings, setOfflineEarnings] = useState(null);
+  const [milestoneToast, setMilestoneToast] = useState(null);
   const [brightness, setBrightness] = useState(() => parseFloat(localStorage.getItem('cc-brightness') || '1'));
   const [theme, setTheme] = useState(() => localStorage.getItem('cc-theme') || 'dark');
 
@@ -766,18 +769,21 @@ export default function CastleCapitalist() {
           const savedEquipped = save.equipped || Array(12).fill(null);
           const savedMtxSlots = save.mtxSlots || 0;
           const savedUnlockedSlots = getUnlockedSlotCount(save.totalGems || 0, savedUpg, savedMtxSlots);
+          const savedWatch = getCurrentWatch();
           save.ventures.forEach((vs, i) => {
             if (vs.hasCompanion && vs.owned > 0) {
               const loot = getLootBonuses(savedEquipped, i, savedUnlockedSlots);
               const rev = getRevenue(VENTURES[i], vs.owned, pm, savedUpg[i] || 0, savedTrans[i] || null, loot.goldMult);
               const ct = getEffectiveCycleTime(VENTURES[i], savedUpg[i] || 0, savedTrans[i] || null, loot.speedMult);
               const cycles = Math.floor(elapsed / ct);
-              offlineGold += rev * cycles * OFFLINE_EFFICIENCY;
+              const inWatch = isProfInWatch(i, savedWatch);
+              offlineGold += rev * cycles * (inWatch ? 1.25 : 1) * OFFLINE_EFFICIENCY;
             }
           });
           if (offlineGold > 0) {
             setGold(g => g + offlineGold);
             setLifetimeGold(l => l + offlineGold);
+            setOfflineEarnings(offlineGold);
           }
         }
       }
@@ -978,6 +984,14 @@ export default function CastleCapitalist() {
     return () => { clearTimeout(fade); clearTimeout(remove); };
   }, [lootToast?.item?.id]);
 
+  // Milestone toast auto-dismiss
+  useEffect(() => {
+    if (!milestoneToast) return;
+    const fade = setTimeout(() => setMilestoneToast(t => t ? { ...t, fadeOut: true } : null), 2500);
+    const remove = setTimeout(() => setMilestoneToast(null), 3200);
+    return () => { clearTimeout(fade); clearTimeout(remove); };
+  }, [milestoneToast?.name, milestoneToast?.at]);
+
   // ═══ ACTIONS ═══
   const handleBuyVenture = (idx) => {
     const v = VENTURES[idx];
@@ -986,7 +1000,15 @@ export default function CastleCapitalist() {
     const cost = getBulkCost(v.baseCost, vs.owned, qty);
     if (gold < cost) return;
     setGold(g => g - cost);
+    const oldOwned = vs.owned;
+    const newOwned = vs.owned + qty;
     setVentures(prev => prev.map((s, i) => i === idx ? { ...s, owned: s.owned + qty } : s));
+    // Check if a milestone was crossed
+    const crossed = MILESTONES.filter(m => oldOwned < m.at && newOwned >= m.at);
+    if (crossed.length > 0) {
+      const highest = crossed[crossed.length - 1];
+      setMilestoneToast({ name: v.name, at: highest.at, mult: highest.mult, fadeOut: false });
+    }
   };
 
   const handleStartVenture = (idx, e) => {
@@ -1134,6 +1156,32 @@ export default function CastleCapitalist() {
   const handlePurchaseMtxSlot = () => {
     if (mtxSlots >= 4) return;
     setMtxSlots(prev => Math.min(4, prev + 1));
+  };
+
+  // ═══ ITEM COMBINING ═══
+  const COMBINE_COST = 10; // 10 of same rarity → 1 random of next rarity
+  const RARITY_ORDER = ["common", "uncommon", "rare", "epic", "legendary"];
+
+  const handleCombineItem = (itemId) => {
+    const item = LOOT_BY_ID[itemId];
+    if (!item) return;
+    const owned = (inventory[itemId] || 0) - getEquippedCount(equipped, itemId);
+    if (owned < COMBINE_COST) return;
+    const rarityIdx = RARITY_ORDER.indexOf(item.rarity);
+    if (rarityIdx < 0 || rarityIdx >= RARITY_ORDER.length - 1) return; // can't combine legendaries
+    const nextRarity = RARITY_ORDER[rarityIdx + 1];
+    const candidates = LOOT_TABLE.filter(i => i.rarity === nextRarity);
+    if (candidates.length === 0) return;
+    const result = candidates[Math.floor(Math.random() * candidates.length)];
+    setInventory(prev => {
+      const next = { ...prev };
+      next[itemId] = (next[itemId] || 0) - COMBINE_COST;
+      if (next[itemId] <= 0) delete next[itemId];
+      next[result.id] = (next[result.id] || 0) + 1;
+      return next;
+    });
+    setLootToast({ item: result, fused: true });
+    setTimeout(() => setLootToast(null), 3000);
   };
 
   // ═══ RENDER ═══
@@ -1302,19 +1350,21 @@ export default function CastleCapitalist() {
             const cost = COMPANION_COSTS[i];
             const canAfford = gold >= cost && !vs.hasCompanion && vs.owned > 0;
             return (
-              <div key={v.id} className="comp-row">
+              <div key={v.id} className="comp-row"
+                style={{ borderLeftColor: v.color }}>
                 <div className="comp-info">
                   <div className="comp-icon"
                     style={{
                       background: `linear-gradient(135deg, ${v.color}33, ${v.colorDark}55)`,
-                      borderColor: v.color + '66',
+                      borderColor: v.color + '88',
                     }}
                   >
-                    <CompanionPortrait index={i} color={v.color} size={32} />
+                    <CompanionPortrait index={i} color={v.color} size={52} />
                   </div>
                   <div>
-                    <div className="comp-name">{COMPANION_NAMES[i]}</div>
+                    <div className="comp-name" style={{ color: v.color }}>{COMPANION_NAMES[i]}</div>
                     <div className="comp-desc">{COMPANION_DESCS[i]}</div>
+                    <div className="comp-prof">{v.name}</div>
                   </div>
                 </div>
                 {vs.hasCompanion ? (
@@ -1374,28 +1424,32 @@ export default function CastleCapitalist() {
                 if (!isUnlocked && isMtxZone) {
                   return (
                     <div key={i} className="eq-slot eq-slot-mtx" onClick={handlePurchaseMtxSlot} title="Purchase to unlock">
-                      <svg viewBox="0 0 40 40" width={16} height={16}><polygon points="20,4 26,16 38,18 29,27 31,38 20,32 9,38 11,27 2,18 14,16" fill="#7aa2f7" opacity=".5"/></svg>
+                      <svg viewBox="0 0 40 40" width={16} height={16}><polygon points="20,4 26,16 38,18 29,27 31,38 20,32 9,38 11,27 2,18 14,16" fill="#c0a040" opacity=".8"/></svg>
                       <span className="eq-slot-label">Purchase</span>
                     </div>
                   );
                 }
                 if (!isUnlocked) {
                   const unlock = SLOT_UNLOCKS.find(u => u.slot === i);
+                  let progressLabel = unlock?.label;
+                  if (unlock?.type === "prestige") progressLabel = `${unlock.label} (Have: ${totalGems})`;
+                  else if (unlock?.type === "mastery") progressLabel = `${unlock.label} (Have: ${profUpgrades.filter(t => t >= 2).length > 0 ? 'Yes' : 'No'})`;
+                  else if (unlock?.type === "mastery3") progressLabel = `${unlock.label} (${profUpgrades.filter(t => t >= 3).length}/3)`;
                   return (
-                    <div key={i} className="eq-slot eq-slot-locked" title={unlock?.label}>
+                    <div key={i} className="eq-slot eq-slot-locked" title={progressLabel}>
                       <svg viewBox="0 0 40 40" width={18} height={18}>
                         <rect x="10" y="20" width="20" height="16" rx="3" fill="#7982a9" stroke="#4a5070" strokeWidth="0.8"/>
                         <path d="M14 20 L14 14 Q14 8, 20 8 Q26 8, 26 14 L26 20" fill="none" stroke="#7982a9" strokeWidth="3" strokeLinecap="round"/>
                         <circle cx="20" cy="28" r="2.5" fill="#0d0f14"/>
                         <rect x="19" y="28" width="2" height="4" rx="0.5" fill="#0d0f14"/>
                       </svg>
-                      <span className="eq-slot-label">{unlock?.label}</span>
+                      <span className="eq-slot-label">{progressLabel}</span>
                     </div>
                   );
                 }
                 if (!item) {
                   return (
-                    <div key={i} className="eq-slot eq-slot-empty">
+                    <div key={i} className="eq-slot eq-slot-empty" onClick={() => setEquipPickerSlot(i)}>
                       <span className="eq-slot-plus">+</span>
                     </div>
                   );
@@ -1405,6 +1459,7 @@ export default function CastleCapitalist() {
                     style={{ borderColor: style.color + '80', boxShadow: style.glow }}
                     onClick={() => handleUnequip(i)}
                     title={`${item.name} — ${item.description}\nClick to unequip`}>
+                    {item.icon && <img src={item.icon} alt={item.name} className="eq-slot-icon" style={{ imageRendering: 'pixelated' }} />}
                     <span className="eq-slot-name" style={{ color: style.color }}>{item.name}</span>
                     <span className="eq-slot-rarity" style={{ color: style.color }}>{style.label}</span>
                   </div>
@@ -1431,6 +1486,7 @@ export default function CastleCapitalist() {
                     <div key={item.id} className="inv-item"
                       style={{ borderColor: style.color + '60', boxShadow: style.glow }}>
                       <div className="inv-item-hdr">
+                        {item.icon && <img src={item.icon} alt="" className="inv-item-icon" style={{ imageRendering: 'pixelated' }} />}
                         <span className="inv-item-name" style={{ color: style.color }}>
                           {item.name}
                         </span>
@@ -1444,6 +1500,8 @@ export default function CastleCapitalist() {
                         const eqCount = getEquippedCount(equipped, item.id);
                         const available = (inventory[item.id] || 0) - eqCount;
                         const hasEmptySlot = equipped.slice(0, unlockedSlots).some(id => id === null);
+                        const rarityIdx = RARITY_ORDER.indexOf(item.rarity);
+                        const canCombine = rarityIdx >= 0 && rarityIdx < RARITY_ORDER.length - 1 && available >= COMBINE_COST;
                         return (
                           <div className="inv-item-actions">
                             {eqCount > 0 && <span className="inv-item-equipped">{eqCount} equipped</span>}
@@ -1451,6 +1509,15 @@ export default function CastleCapitalist() {
                               <button className="inv-equip-btn" onClick={() => handleQuickEquip(item.id)}>Equip</button>
                             )}
                             {available <= 0 && eqCount > 0 && <span className="inv-item-all-eq">All equipped</span>}
+                            {canCombine && (
+                              <button className="inv-combine-btn" onClick={() => handleCombineItem(item.id)}
+                                title={`Combine ${COMBINE_COST} into 1 ${RARITY_ORDER[rarityIdx + 1]}`}>
+                                Forge {COMBINE_COST} &rarr; 1 {RARITY_TIERS[RARITY_ORDER[rarityIdx + 1]].label}
+                              </button>
+                            )}
+                            {rarityIdx >= 0 && rarityIdx < RARITY_ORDER.length - 1 && available > 0 && available < COMBINE_COST && (
+                              <span className="inv-combine-progress">{available}/{COMBINE_COST} to forge</span>
+                            )}
                           </div>
                         );
                       })()}
@@ -1613,18 +1680,53 @@ export default function CastleCapitalist() {
           <button className="prest-btn" disabled={pendingGems <= 0} onClick={handlePrestige}>
             {pendingGems > 0 ? `⚡ ASCEND (+${pendingGems} Gems)` : "Gather more gold to ascend"}
           </button>
-          <p className="prest-hint">
-            Next gem at: <GoldCoinIcon />{formatNumber(Math.pow(prestigeGems + totalGems + 1, 2) * PRESTIGE_BASE)} lifetime gold
-          </p>
+          {(() => {
+            const nextGemThreshold = Math.pow(prestigeGems + totalGems + 1, 2) * PRESTIGE_BASE;
+            const progress = Math.min(1, lifetimeGold / nextGemThreshold);
+            return (
+              <>
+                <div className="prest-progress-wrap">
+                  <div className="prest-progress-bar" style={{ width: `${(progress * 100).toFixed(1)}%` }} />
+                  <span className="prest-progress-text">{(progress * 100).toFixed(1)}%</span>
+                </div>
+                <p className="prest-hint">
+                  Next gem at: <GoldCoinIcon />{formatNumber(nextGemThreshold)} lifetime gold
+                  ({formatNumber(lifetimeGold)} / {formatNumber(nextGemThreshold)})
+                </p>
+              </>
+            );
+          })()}
         </div>
       )}
 
       </div>
 
+      {/* ── OFFLINE EARNINGS BANNER ── */}
+      {offlineEarnings && (
+        <div className="offline-banner" onClick={() => setOfflineEarnings(null)}>
+          <div className="offline-title">Welcome Back</div>
+          <div className="offline-amount">
+            Your companions earned <GoldCoinIcon size={14} /> <strong>{formatNumber(offlineEarnings)}</strong> while you were away
+          </div>
+          <div className="offline-dismiss">tap to dismiss</div>
+        </div>
+      )}
+
+      {/* ── MILESTONE TOAST ── */}
+      {milestoneToast && (
+        <div className={`milestone-toast ${milestoneToast.fadeOut ? 'loot-toast-out' : ''}`}>
+          <span className="milestone-toast-title">Milestone Reached</span>
+          <span className="milestone-toast-name">{milestoneToast.name}</span>
+          <span className="milestone-toast-desc">{milestoneToast.mult}x revenue at {milestoneToast.at} owned</span>
+        </div>
+      )}
+
       {/* ── LOOT TOAST ── */}
       {lootToast && (
         <div className={`loot-toast ${lootToast.fadeOut ? 'loot-toast-out' : ''}`}
           style={{ borderColor: getRarityStyle(lootToast.item.rarity).color }}>
+          {lootToast.item.icon && <img src={lootToast.item.icon} alt="" className="loot-toast-icon" style={{ imageRendering: 'pixelated' }} />}
+          {lootToast.fused && <span className="loot-toast-fused">Forged!</span>}
           <span className="loot-toast-rarity"
             style={{ color: getRarityStyle(lootToast.item.rarity).color }}>
             {getRarityStyle(lootToast.item.rarity).label}
@@ -1634,6 +1736,54 @@ export default function CastleCapitalist() {
             {lootToast.item.name}
           </span>
           <span className="loot-toast-desc">{lootToast.item.description}</span>
+        </div>
+      )}
+
+      {/* ── EQUIP PICKER MODAL ── */}
+      {equipPickerSlot !== null && (
+        <div className="watch-modal-overlay" onClick={() => setEquipPickerSlot(null)}>
+          <div className="watch-modal equip-picker" onClick={e => e.stopPropagation()}>
+            <div className="watch-modal-header">
+              <span className="watch-modal-title">Equip to Slot {equipPickerSlot + 1}</span>
+              <button className="watch-modal-close" onClick={() => setEquipPickerSlot(null)}>X</button>
+            </div>
+            {(() => {
+              const available = LOOT_TABLE.filter(item => {
+                const owned = inventory[item.id] || 0;
+                const eqCount = getEquippedCount(equipped, item.id);
+                return owned - eqCount > 0;
+              }).sort((a, b) => {
+                const order = ["legendary", "epic", "rare", "uncommon", "common"];
+                return order.indexOf(a.rarity) - order.indexOf(b.rarity);
+              });
+              if (available.length === 0) {
+                return <div className="ep-empty">No items available to equip. Find loot by completing professions!</div>;
+              }
+              return (
+                <div className="ep-list">
+                  {available.map(item => {
+                    const style = getRarityStyle(item.rarity);
+                    const owned = inventory[item.id] || 0;
+                    const eqCount = getEquippedCount(equipped, item.id);
+                    return (
+                      <div key={item.id} className="ep-item" style={{ borderColor: style.color, boxShadow: style.glow }}
+                        onClick={() => { handleEquip(item.id, equipPickerSlot); setEquipPickerSlot(null); }}>
+                        {item.icon && <img src={item.icon} alt="" className="ep-item-icon" style={{ imageRendering: 'pixelated' }} />}
+                        <div className="ep-item-info">
+                          <span className="ep-item-name" style={{ color: style.color }}>{item.name}</span>
+                          <span className="ep-item-desc">{item.description}</span>
+                        </div>
+                        <div className="ep-item-meta">
+                          <span className="ep-item-rarity" style={{ color: style.color }}>{style.label}</span>
+                          <span className="ep-item-qty">x{owned - eqCount}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+          </div>
         </div>
       )}
 
@@ -1742,6 +1892,7 @@ const STYLES = `
   --gn: #9ece6a; --rd: #f7768e;
   --tx: #c0caf5; --txd: #7982a9; --txb: #e0e4f5;
   --accent: #7aa2f7;
+  --gold: #fbbf24; --txm: #7a8ba9;
   --mod-skills: #e0af68; --mod-allies: #bb9af7; --mod-loot: #f7768e; --mod-upgrades: #7dcfff; --mod-ascend: #cfc9c2;
   font-family: 'Almendra', serif;
   background: var(--bg); color: var(--tx);
@@ -1753,7 +1904,7 @@ const STYLES = `
 .cc-content { position:relative; flex:1; min-height:0; }
 .cc-content::before { content:''; position:fixed; top:0; left:50%; transform:translateX(-50%); width:100%; max-width:480px; height:100vh; height:100dvh; background:url('/assets/backgrounds/dungeon_bg.png') center/cover no-repeat; z-index:0; pointer-events:none; opacity:0.15; animation:bg-flicker 4s ease-in-out infinite; }
 @keyframes bg-flicker { 0%,100%{opacity:0.15;} 30%{opacity:0.18;} 50%{opacity:0.13;} 70%{opacity:0.17;} 85%{opacity:0.14;} }
-.cc * { position: relative; z-index: 1; box-sizing: border-box; }
+.cc * { position: relative; box-sizing: border-box; }
 
 /* Header */
 .hd { background: linear-gradient(180deg,#24283b,#1a1b26); border-bottom: 1px solid var(--bd2); padding: 10px 16px 10px; position: sticky; top: 0; z-index: 20; box-shadow: 0 4px 24px rgba(0,0,0,.5); }
@@ -1766,6 +1917,13 @@ const STYLES = `
 .hd-watch { font-family:'Fira Code',monospace; font-size:10px; color:var(--txd); padding:3px 8px; border-radius:10px; background:rgba(255,255,255,.05); border:1px solid var(--bd); display:inline-flex; align-items:center; gap:5px; }
 .watch-info-btn { width:16px; height:16px; border-radius:50%; border:1px solid rgba(255,255,255,.4); background:rgba(255,255,255,.15); color:#fff; font-size:10px; font-family:'Inter',sans-serif; font-style:normal; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; padding:0 0 1px 0; line-height:1; transition:all .2s; }
 .watch-info-btn:hover { background:rgba(255,255,255,.3); color:#fff; border-color:var(--gold); }
+
+@media (max-width:400px) {
+  .hd-amount { font-size:18px; }
+  .hd-title-clicker { font-size:34px; }
+  .hd-watch { font-size:8px; padding:2px 6px; }
+  .hd-stats { gap:4px; }
+}
 
 /* Watch Info Modal */
 .watch-modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.7); z-index:100; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(3px); animation:fadeIn .15s ease; }
@@ -1783,7 +1941,7 @@ const STYLES = `
 .watch-modal-hours { font-family:'Fira Code',monospace; font-size:10px; color:var(--txm); }
 .watch-modal-now { font-size:9px; font-weight:700; color:var(--gold); letter-spacing:1px; margin-bottom:4px; display:inline-block; }
 .watch-modal-profs { display:flex; flex-wrap:wrap; gap:4px 8px; }
-.watch-modal-prof { font-size:11px; }
+.watch-modal-prof { font-size:11px; color:var(--tx); }
 @keyframes fadeIn { from{opacity:0} to{opacity:1} }
 
 /* Settings cog */
@@ -1815,13 +1973,16 @@ const STYLES = `
   color: var(--tx);
   background: var(--bg);
 }
-.cc-light .hd { background:linear-gradient(180deg,#2a3048,#1e2438); border-bottom-color:#3a4260; box-shadow:0 4px 16px rgba(0,0,0,.25); }
-.cc-light .hd-title-castle { color:#94a3b8; }
-.cc-light .hd-title-clicker { color:#fbbf24; }
-.cc-light .hd-amount { color:#ffcfa8; }
-.cc-light .hd-watch { color:#94a3b8; background:rgba(255,255,255,.08); border-color:rgba(255,255,255,.12); }
-.cc-light .hd-gems { color:#bb9af7; }
-.cc-light .bnav { background:linear-gradient(180deg,#2a3048,#1e2438); }
+.cc-light .hd { background:linear-gradient(180deg,#dce2ee,#ccd4e2); border-bottom-color:#b0b8c8; box-shadow:0 4px 16px rgba(0,0,0,.1); }
+.cc-light .hd::after { background:linear-gradient(90deg,transparent,rgba(200,130,60,.3),rgba(58,92,160,.2),transparent); }
+.cc-light .hd-title-castle { color:#5a6478; }
+.cc-light .hd-title-clicker { color:#b8860b; text-shadow:0 1px 0 #8a6508,0 2px 0 #6a4e06,0 3px 6px rgba(0,0,0,.15); }
+.cc-light .hd-amount { color:#b86a30; }
+.cc-light .hd-watch { color:#505870; background:rgba(0,0,0,.05); border-color:rgba(0,0,0,.12); }
+.cc-light .hd-gems { color:#7c3aed; background:rgba(124,58,237,.08); border-color:rgba(124,58,237,.2); }
+.cc-light .bnav { background:linear-gradient(180deg,#dce2ee,#ccd4e2); border-top-color:var(--gd); box-shadow:0 -4px 16px rgba(0,0,0,.1); }
+.cc-light .bnav-btn { color:#6a7288; }
+.cc-light .bnav::before { background:linear-gradient(90deg,transparent,rgba(200,130,60,.2),rgba(58,92,160,.15),transparent); }
 .cc-light .watch-modal { background:linear-gradient(180deg,#c8ceda,#bec6d4); }
 .cc-light .watch-modal-card { background:rgba(0,0,0,.04); }
 .cc-light .bar-out { background:#b8bfce; }
@@ -1832,6 +1993,24 @@ const STYLES = `
 .cc-light .watch-info-btn { border-color:rgba(255,255,255,.3); background:rgba(255,255,255,.1); color:#c0caf5; }
 .cc-light .settings-cog { color:#c0caf5; }
 .cc-light .settings-cog:hover { color:#e0e4f5; }
+.cc-light .eq-slot { background:#c4b8cc; border-color:#9a8aaa; }
+.cc-light .eq-slot-empty { border-color:#9a8aaa; }
+.cc-light .eq-slot-empty:hover { border-color:var(--accent); background:rgba(58,92,160,.12); }
+.cc-light .eq-slot-locked { background:#b0bcc8; border-color:#8a96a8; }
+.cc-light .eq-slot-mtx { background:#c8c0a8; border-color:#a09060; }
+.cc-light .eq-slot-mtx:hover { background:#d4c8a8; border-color:#b8a060; }
+.cc-light .prest-stat { background:#b4bcc8; border-color:#98a0b4; }
+.cc-light .offline-banner { background:linear-gradient(135deg,#c8ceda,#bec6d4); border-color:var(--gd); }
+.cc-light .offline-title { color:var(--gd); }
+.cc-light .offline-amount { color:var(--tx); }
+.cc-light .milestone-toast { background:linear-gradient(135deg,#d4cc98,#c8c088); }
+.cc-light .prest-progress-wrap { background:#a8b0c0; border-color:#939bac; }
+.cc-light .watch-modal-title { color:var(--tx); }
+.cc-light .watch-modal-desc { color:var(--txd); }
+.cc-light .watch-modal-close { color:var(--txd); border-color:var(--bd); }
+.cc-light .watch-modal-hours { color:var(--txd); }
+.cc-light .watch-modal-now { color:#b8860b; }
+.cc-light .watch-modal-card-active { border-color:#b8860b; box-shadow:0 0 8px rgba(184,134,11,.15); }
 .cc-light .cc-content::before { opacity:0.04; animation:none; }
 .cc-light .cc-content { background:var(--bg); }
 .cc-light .qty-row { background:var(--bg); }
@@ -1848,7 +2027,7 @@ const STYLES = `
 .hd-gems:active { background:rgba(192,132,252,.2); }
 
 /* Bottom Navigation */
-.bnav { position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:480px; display:flex; background:linear-gradient(180deg,#1a1a1a,#0e0e0e); border-top:2px solid #f0b000; z-index:30; padding:4px 0; padding-bottom:max(4px, env(safe-area-inset-bottom)); box-shadow:0 -4px 24px rgba(0,0,0,.6),0 -1px 12px rgba(240,176,0,.1); }
+.bnav { position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:480px; display:flex; background:linear-gradient(180deg,#1a1a1a,#0e0e0e); border-top:2px solid var(--gd); z-index:30; padding:4px 0; padding-bottom:max(4px, env(safe-area-inset-bottom)); box-shadow:0 -4px 24px rgba(0,0,0,.6),0 -1px 12px rgba(255,158,100,.1); }
 .bnav::before { content:''; position:absolute; top:-3px; left:0; right:0; height:3px; background:linear-gradient(90deg,transparent,rgba(255,158,100,.25),rgba(122,162,247,.2),transparent); }
 .bnav-btn { flex:1; display:flex; flex-direction:column; align-items:center; gap:2px; padding:8px 0 6px; background:none; border:none; cursor:pointer; color:#9a9a9a; transition:color .2s; -webkit-tap-highlight-color:transparent; }
 .bnav-btn:active { transform:scale(.95); }
@@ -1856,7 +2035,7 @@ const STYLES = `
 .bnav-label { font-family:'Cinzel',serif; font-size:9px; font-weight:700; letter-spacing:.5px; text-shadow:0 1px 2px rgba(0,0,0,.4); }
 .bnav-on { color:inherit; }
 .bnav-on .bnav-icon { filter:drop-shadow(0 0 8px currentColor); }
-.bnav-on .bnav-label { text-shadow:0 0 8px currentColor; }
+.bnav-on .bnav-label { text-shadow:0 0 8px currentColor; font-weight:900; border-bottom:2px solid currentColor; padding-bottom:1px; }
 
 /* Buy Quantity */
 .qty-row { display:flex; gap:6px; padding:8px 12px; justify-content:flex-end; background:var(--bg2); }
@@ -1866,7 +2045,7 @@ const STYLES = `
 .qty-on { background:linear-gradient(180deg,#ffcfa8,#ff9e64) !important; color:#1a1b26 !important; border-color:#1a1b26 !important; box-shadow:0 2px 12px rgba(255,158,100,.4),inset 0 1px 0 rgba(255,255,255,.3) !important; text-shadow:none !important; }
 
 /* Venture List */
-.vent-list { padding:4px 8px 20px; }
+.vent-list { padding:12px 8px 20px; }
 .vrow { display:flex; align-items:center; gap:6px; padding:8px 6px 8px 10px; margin-bottom:4px; background:linear-gradient(135deg,var(--sf),var(--sf2)); border:1px solid var(--bd); border-left:4px solid var(--bd); border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,.2),inset 0 1px 0 rgba(255,255,255,.03); transition:all .3s; }
 .vrow:hover { border-color:var(--bd2); }
 .vrow-locked { opacity:.55; backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); background:rgba(36,40,59,.4) !important; border-color:rgba(51,56,77,.3) !important; border-left-color:rgba(51,56,77,.4) !important; }
@@ -1893,7 +2072,7 @@ const STYLES = `
 /* Progress Bar */
 .bar-out { height:14px; background:#1a1b26; border-radius:7px; overflow:hidden; border:1px solid var(--bd); box-shadow:inset 0 2px 4px rgba(0,0,0,.4); margin-bottom:3px; position:relative; }
 .bar-in { height:100%; border-radius:6px; position:relative; overflow:hidden; }
-.bar-in::after { content:''; position:absolute; inset:0; background:repeating-linear-gradient(-45deg,transparent,transparent 4px,rgba(255,255,255,.08) 4px,rgba(255,255,255,.08) 8px); animation:stripe .8s linear infinite; }
+.bar-in::after { content:''; position:absolute; inset:0; background:repeating-linear-gradient(-45deg,transparent,transparent 4px,rgba(255,255,255,.08) 4px,rgba(255,255,255,.08) 8px); background-size:16px 100%; animation:stripe 1.2s linear infinite; }
 @keyframes stripe { 0%{background-position:0 0} 100%{background-position:16px 0} }
 .bar-time { position:absolute; right:6px; top:50%; transform:translateY(-50%); font-family:'Fira Code',monospace; font-size:9px; font-weight:600; color:var(--txb); text-shadow:0 1px 3px rgba(0,0,0,.8); z-index:2; }
 
@@ -1924,9 +2103,10 @@ const STYLES = `
 .comp-list { padding:12px 12px 20px; }
 .comp-hdr { text-align:center; font-family:'Cinzel',serif; font-size:14px; color:var(--txd); margin-bottom:4px; letter-spacing:1px; }
 .comp-sub { text-align:center; font-size:11px; color:var(--txd); margin:0 0 16px; opacity:.7; }
-.comp-row { display:flex; justify-content:space-between; align-items:center; padding:10px 12px; margin-bottom:4px; background:var(--sf); border:1px solid var(--bd); border-radius:8px; }
-.comp-info { display:flex; align-items:center; gap:10px; }
-.comp-icon { width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; border:2px solid; box-shadow:0 2px 6px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.1); }
+.comp-row { display:flex; justify-content:space-between; align-items:center; padding:10px 12px; margin-bottom:6px; background:var(--sf); border:1px solid var(--bd); border-left:4px solid var(--bd); border-radius:8px; }
+.comp-info { display:flex; align-items:center; gap:12px; }
+.comp-icon { width:56px; height:56px; border-radius:50%; display:flex; align-items:center; justify-content:center; border:2px solid; box-shadow:0 2px 8px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.1); overflow:hidden; flex-shrink:0; }
+.comp-prof { font-family:'Fira Code',monospace; font-size:9px; color:var(--txd); margin-top:1px; }
 .comp-name { font-family:'Cinzel',serif; font-size:12px; font-weight:700; color:var(--txb); }
 .comp-desc { font-size:10px; color:var(--txd); font-style:italic; }
 .comp-hired { font-family:'Fira Code',monospace; font-size:11px; color:var(--gn); font-weight:700; }
@@ -1982,12 +2162,21 @@ const STYLES = `
 .prest-btn { padding:14px 36px; font-family:'Cinzel',serif; font-size:15px; font-weight:900; background:linear-gradient(135deg,var(--gm),var(--gmd)); color:#fff; border:2px solid rgba(255,255,255,.15); border-radius:10px; cursor:pointer; letter-spacing:1px; box-shadow:0 4px 20px rgba(124,58,237,.3); transition:all .2s; }
 .prest-btn:hover:not(:disabled) { box-shadow:0 4px 30px rgba(124,58,237,.5); transform:translateY(-1px); }
 .prest-btn:disabled { opacity:.35; cursor:default; }
-.prest-hint { font-family:'Fira Code',monospace; font-size:10px; color:var(--txd); margin-top:16px; display:flex; align-items:center; justify-content:center; gap:3px; }
+.prest-progress-wrap { position:relative; height:14px; background:#1a1b26; border-radius:7px; overflow:hidden; border:1px solid var(--bd); margin-top:16px; margin-bottom:8px; }
+.prest-progress-bar { height:100%; background:linear-gradient(90deg,var(--gmd),var(--gm)); border-radius:6px; transition:width .5s ease; }
+.prest-progress-text { position:absolute; right:8px; top:50%; transform:translateY(-50%); font-family:'Fira Code',monospace; font-size:9px; color:var(--txb); text-shadow:0 1px 3px rgba(0,0,0,.8); z-index:2; }
+.prest-hint { font-family:'Fira Code',monospace; font-size:10px; color:var(--txd); margin-top:8px; display:flex; align-items:center; justify-content:center; gap:3px; flex-wrap:wrap; }
 
 /* Footer */
 .ft { display:flex; justify-content:space-between; align-items:center; padding:8px 16px; border-top:1px solid var(--bd); background:var(--bg2); }
 .ft-text { font-family:'Fira Code',monospace; font-size:9px; color:var(--txd); }
 .ft-reset { font-family:'Fira Code',monospace; font-size:9px; color:var(--rd); background:none; border:1px solid rgba(239,68,68,.2); border-radius:4px; padding:6px 14px; cursor:pointer; min-height:36px; }
+
+/* Focus & Accessibility */
+.cc button:focus-visible, .cc .eq-slot:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+.watch-info-btn { min-width:28px; min-height:28px; }
+.watch-modal-close { min-width:32px; min-height:32px; }
+.settings-cog { min-width:32px; min-height:32px; display:flex; align-items:center; justify-content:center; }
 
 /* Scrollbar */
 .cc ::-webkit-scrollbar { width:4px; }
@@ -1999,9 +2188,23 @@ const STYLES = `
 .loot-toast-out { animation:toast-out .7s ease-in forwards; }
 @keyframes toast-in { from { opacity:0; transform:translateX(-50%) translateY(-20px); } to { opacity:1; transform:translateX(-50%) translateY(0); } }
 @keyframes toast-out { from { opacity:1; } to { opacity:0; transform:translateX(-50%) translateY(-20px); } }
+.loot-toast-icon { width:40px; height:40px; margin-bottom:4px; }
 .loot-toast-rarity { font-family:'Fira Code',monospace; font-size:9px; text-transform:uppercase; letter-spacing:1.5px; display:block; margin-bottom:2px; }
 .loot-toast-name { font-family:'Cinzel',serif; font-size:14px; font-weight:700; display:block; }
 .loot-toast-desc { font-size:10px; color:var(--txd); margin-top:4px; display:block; }
+
+/* Offline Earnings Banner */
+.offline-banner { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:linear-gradient(135deg,#1a1f30,#111520); border:2px solid var(--gd); border-radius:14px; padding:24px 32px; z-index:60; text-align:center; min-width:260px; max-width:360px; animation:toast-in .4s ease-out; box-shadow:0 8px 40px rgba(0,0,0,.7),0 0 20px rgba(255,158,100,.15); cursor:pointer; }
+.offline-title { font-family:'Cinzel',serif; font-size:18px; font-weight:900; color:var(--gd); letter-spacing:2px; margin-bottom:10px; }
+.offline-amount { font-size:13px; color:var(--tx); line-height:1.6; display:flex; align-items:center; justify-content:center; gap:4px; flex-wrap:wrap; }
+.offline-amount strong { color:var(--gdl); font-size:16px; }
+.offline-dismiss { font-family:'Fira Code',monospace; font-size:9px; color:var(--txd); margin-top:12px; opacity:.5; }
+
+/* Milestone Toast */
+.milestone-toast { position:fixed; top:140px; left:50%; transform:translateX(-50%); background:linear-gradient(135deg,#2a2000,#1a1500); border:2px solid var(--gold); border-radius:10px; padding:10px 20px; z-index:50; text-align:center; min-width:220px; max-width:360px; animation:toast-in .3s ease-out; box-shadow:0 4px 20px rgba(0,0,0,.6),0 0 12px rgba(251,191,36,.15); }
+.milestone-toast-title { font-family:'Fira Code',monospace; font-size:9px; text-transform:uppercase; letter-spacing:1.5px; display:block; margin-bottom:2px; color:var(--gold); }
+.milestone-toast-name { font-family:'Cinzel',serif; font-size:14px; font-weight:700; display:block; color:var(--txb); }
+.milestone-toast-desc { font-size:10px; color:var(--txd); margin-top:4px; display:block; }
 
 /* Inventory Tab */
 .inv-panel { padding:12px 12px 20px; }
@@ -2022,8 +2225,9 @@ const STYLES = `
 .inv-empty { text-align:center; color:var(--txd); font-size:12px; padding:40px 20px; opacity:.5; }
 .inv-grid { display:flex; flex-direction:column; gap:6px; }
 .inv-item { background:var(--sf); border:1px solid var(--bd); border-radius:8px; padding:10px 12px; transition:border-color .2s; }
-.inv-item-hdr { display:flex; justify-content:space-between; align-items:baseline; }
-.inv-item-name { font-family:'Cinzel',serif; font-size:12px; font-weight:700; }
+.inv-item-icon { width:32px; height:32px; flex-shrink:0; margin-right:8px; }
+.inv-item-hdr { display:flex; align-items:center; }
+.inv-item-name { font-family:'Cinzel',serif; font-size:12px; font-weight:700; flex:1; }
 .inv-item-qty { font-family:'Fira Code',monospace; font-size:11px; color:var(--txd); }
 .inv-item-rarity { font-family:'Fira Code',monospace; font-size:9px; text-transform:uppercase; letter-spacing:1px; margin:2px 0; }
 .inv-item-desc { font-size:10px; color:var(--txd); font-style:italic; }
@@ -2032,24 +2236,50 @@ const STYLES = `
 .inv-equip-btn:hover { background:rgba(122,162,247,.25); color:#fff; }
 .inv-item-equipped { font-family:'Fira Code',monospace; font-size:9px; color:var(--gn,#9ece6a); }
 .inv-item-all-eq { font-family:'Fira Code',monospace; font-size:9px; color:var(--txd); font-style:italic; }
+.inv-combine-btn { font-family:'Cinzel',serif; font-size:10px; font-weight:700; padding:4px 12px; border-radius:6px; border:1px solid #a855f7; color:#a855f7; background:rgba(168,85,247,.1); cursor:pointer; transition:all .2s; }
+.inv-combine-btn:hover { background:rgba(168,85,247,.25); color:#e9d5ff; border-color:#c084fc; }
+.inv-combine-progress { font-family:'Fira Code',monospace; font-size:9px; color:var(--txd); font-style:italic; }
+.loot-toast-fused { font-family:'Fira Code',monospace; font-size:9px; text-transform:uppercase; letter-spacing:1.5px; display:block; margin-bottom:2px; color:#a855f7; }
+
+/* ── Equip Picker Modal ── */
+.equip-picker { max-width:420px; max-height:70vh; display:flex; flex-direction:column; }
+.equip-picker .watch-modal-title { color:#e2e8ff; font-size:18px; }
+.ep-list { overflow-y:auto; display:flex; flex-direction:column; gap:6px; padding:4px 0; max-height:50vh; scrollbar-width:thin; }
+.ep-list::-webkit-scrollbar { width:3px; }
+.ep-list::-webkit-scrollbar-thumb { background:var(--bd); border-radius:2px; }
+.ep-item { display:flex; align-items:center; gap:10px; padding:10px 12px; background:var(--sf,#1a1b26); border:2px solid; border-radius:8px; cursor:pointer; transition:all .2s; }
+.ep-item:hover { filter:brightness(1.2); transform:scale(1.01); }
+.ep-item-icon { width:32px; height:32px; flex-shrink:0; }
+.ep-item-info { flex:1; min-width:0; }
+.ep-item-name { font-family:'Cinzel',serif; font-size:12px; font-weight:700; display:block; }
+.ep-item-desc { font-size:10px; color:var(--txd); display:block; margin-top:2px; }
+.ep-item-meta { text-align:right; flex-shrink:0; }
+.ep-item-rarity { font-family:'Fira Code',monospace; font-size:9px; text-transform:uppercase; letter-spacing:.5px; display:block; }
+.ep-item-qty { font-family:'Fira Code',monospace; font-size:9px; color:var(--txd); display:block; margin-top:2px; }
+.ep-empty { text-align:center; color:var(--txd); font-size:12px; padding:30px 20px; opacity:.5; }
+.cc-light .ep-item { background:#e8e0f0; }
+.cc-light .equip-picker .watch-modal-title { color:#1a1a2e; }
+.cc-light .inv-combine-btn { background:rgba(168,85,247,.08); }
 
 /* ── Equipment Panel ── */
 .eq-panel { padding:12px 12px 8px; }
 .eq-hdr { text-align:center; font-family:'Cinzel',serif; font-size:14px; color:var(--txb,#c0caf5); margin-bottom:8px; letter-spacing:1px; }
 .eq-count { font-family:'Fira Code',monospace; font-size:11px; color:var(--txd,#565f89); margin-left:6px; }
 .eq-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-bottom:12px; }
-.eq-slot { background:var(--sf,#1a1b26); border:1px solid var(--bd,#292e42); border-radius:8px; aspect-ratio:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:4px; cursor:pointer; transition:all .2s; overflow:hidden; }
-.eq-slot-empty { border-style:dashed; border-color:var(--bd2,#3b4261); }
-.eq-slot-empty:hover { border-color:var(--accent,#7aa2f7); background:rgba(122,162,247,.08); }
+.eq-slot { background:#3a2d42; border:2px solid #7a6b8a; border-radius:8px; aspect-ratio:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:4px; cursor:pointer; transition:all .2s; overflow:hidden; }
+.eq-slot-empty { border-style:dashed; border-color:#7a6b8a; }
+.eq-slot-empty:hover { border-color:var(--accent,#7aa2f7); background:rgba(122,162,247,.12); }
 .eq-slot-plus { font-size:20px; color:var(--bd2,#3b4261); font-weight:300; }
 .eq-slot-filled { border-width:2px; }
 .eq-slot-filled:hover { filter:brightness(1.15); }
+.eq-slot-icon { width:28px; height:28px; flex-shrink:0; }
 .eq-slot-name { font-family:'Cinzel',serif; font-size:9px; font-weight:700; text-align:center; line-height:1.2; overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
 .eq-slot-rarity { font-family:'Fira Code',monospace; font-size:7px; text-transform:uppercase; letter-spacing:.5px; margin-top:2px; }
-.eq-slot-locked { opacity:.4; cursor:default; background:rgba(0,0,0,.2); }
+.eq-slot-locked { opacity:.5; cursor:default; background:#1e2a32; border-color:#4a6070; }
 .eq-slot-label { font-size:8px; color:var(--txd,#565f89); text-align:center; margin-top:4px; line-height:1.2; }
-.eq-slot-mtx { opacity:.5; cursor:pointer; border-style:dotted; border-color:var(--accent,#7aa2f7); }
-.eq-slot-mtx:hover { opacity:.7; border-color:#9bb8fa; }
+.eq-slot-mtx { opacity:.7; cursor:pointer; border-style:dotted; background:#2a2418; border-color:#8a7030; }
+.eq-slot-mtx:hover { opacity:.9; border-color:#c0a040; background:#342e1e; }
+.eq-slot-mtx .eq-slot-label { color:#c0a040; }
 
 /* ── Particles ── */
 .particle-container {
