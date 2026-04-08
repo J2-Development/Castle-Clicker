@@ -172,19 +172,18 @@ const VENTURE_ICONS = [
 
 const VENTURES = [
   //                                                          cost         revenue/cycle    cycle(ms)   unlock
-  // Pacing targets (active play, no companions, no prestige):
-  //   Tier 2: ~2-3 min | Tier 3: ~8-10 min | Tier 4: ~25-35 min | Tier 5: ~1-2 hr
-  //   Tier 6: ~3-5 hr  | Tier 7+: overnight / prestige territory
+  // Revenue scales ~8-12x per tier so new ventures are always worth buying (Kongregate principle).
+  // Milestones then pull players back to stack old ventures — creating oscillating decisions.
   { id:0, name:"Torch Scavenging",     color:"#e8a023", colorDark:"#a06810", baseCost:4,             baseRevenue:1,            baseTime:1000,    unlockCost:0 },
-  { id:1, name:"Goblin Pickpocketing",  color:"#6dba4a", colorDark:"#3d7a22", baseCost:60,           baseRevenue:4,            baseTime:3000,    unlockCost:200 },
-  { id:2, name:"Mushroom Foraging",     color:"#c74f8e", colorDark:"#8a2a5e", baseCost:1400,         baseRevenue:22,           baseTime:6000,    unlockCost:5000 },
-  { id:3, name:"Skeleton Looting",      color:"#8bb8d0", colorDark:"#4a7a94", baseCost:36000,        baseRevenue:200,          baseTime:10000,   unlockCost:130000 },
-  { id:4, name:"Trap Disarming",        color:"#e85d3a", colorDark:"#a33820", baseCost:950000,       baseRevenue:650,          baseTime:20000,   unlockCost:3500000 },
-  { id:5, name:"Potion Brewing",        color:"#a855f7", colorDark:"#6a2aaa", baseCost:26000000,     baseRevenue:3400,         baseTime:36000,   unlockCost:100000000 },
-  { id:6, name:"Dragon Taming",         color:"#ef4444", colorDark:"#991b1b", baseCost:750000000,    baseRevenue:17500,        baseTime:60000,   unlockCost:3000000000 },
-  { id:7, name:"Dungeon Expansion",     color:"#14b8a6", colorDark:"#0d7a6e", baseCost:22000000000,  baseRevenue:88000,        baseTime:96000,   unlockCost:35000000000 },
-  { id:8, name:"Demon Gate Siege",      color:"#f97316", colorDark:"#b45210", baseCost:700000000000, baseRevenue:430000,       baseTime:150000,  unlockCost:2800000000000 },
-  { id:9, name:"Elder God Pact",        color:"#6366f1", colorDark:"#4338ca", baseCost:25000000000000,baseRevenue:2100000,     baseTime:240000,  unlockCost:90000000000000 },
+  { id:1, name:"Goblin Pickpocketing",  color:"#6dba4a", colorDark:"#3d7a22", baseCost:60,           baseRevenue:20,           baseTime:3000,    unlockCost:200 },
+  { id:2, name:"Mushroom Foraging",     color:"#c74f8e", colorDark:"#8a2a5e", baseCost:1400,         baseRevenue:400,          baseTime:6000,    unlockCost:5000 },
+  { id:3, name:"Skeleton Looting",      color:"#8bb8d0", colorDark:"#4a7a94", baseCost:36000,        baseRevenue:7000,         baseTime:10000,   unlockCost:130000 },
+  { id:4, name:"Trap Disarming",        color:"#e85d3a", colorDark:"#a33820", baseCost:950000,       baseRevenue:160000,       baseTime:20000,   unlockCost:3500000 },
+  { id:5, name:"Potion Brewing",        color:"#a855f7", colorDark:"#6a2aaa", baseCost:26000000,     baseRevenue:3000000,      baseTime:36000,   unlockCost:100000000 },
+  { id:6, name:"Dragon Taming",         color:"#ef4444", colorDark:"#991b1b", baseCost:750000000,    baseRevenue:60000000,     baseTime:60000,   unlockCost:1500000000 },
+  { id:7, name:"Dungeon Expansion",     color:"#14b8a6", colorDark:"#0d7a6e", baseCost:22000000000,  baseRevenue:1200000000,   baseTime:96000,   unlockCost:15000000000 },
+  { id:8, name:"Demon Gate Siege",      color:"#f97316", colorDark:"#b45210", baseCost:700000000000, baseRevenue:24000000000,  baseTime:150000,  unlockCost:500000000000 },
+  { id:9, name:"Elder God Pact",        color:"#6366f1", colorDark:"#4338ca", baseCost:25000000000000,baseRevenue:500000000000,baseTime:240000,  unlockCost:15000000000000 },
 ];
 
 // Revenue multiplied at ownership thresholds (sawtooth spikes)
@@ -240,7 +239,7 @@ const COMPANION_DESCS = [
 ];
 
 // Prestige config
-const PRESTIGE_BASE = 1e10;       // lifetime gold needed for first gem
+const PRESTIGE_BASE = 1e12;       // lifetime gold needed for first gem (scaled with revenue rebalance)
 
 // Cost scaling
 const COST_EXPONENT = 1.07;       // each unit costs 7% more — matches AdVenture Capitalist standard
