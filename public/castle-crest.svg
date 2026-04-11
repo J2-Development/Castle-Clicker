@@ -1,0 +1,109 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#2a1a10"/>
+      <stop offset="100%" stop-color="#0f0805"/>
+    </linearGradient>
+    <linearGradient id="shield" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#6b4524"/>
+      <stop offset="50%" stop-color="#4a2d15"/>
+      <stop offset="100%" stop-color="#2a1808"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffe28a"/>
+      <stop offset="50%" stop-color="#d4a24c"/>
+      <stop offset="100%" stop-color="#8a5a1c"/>
+    </linearGradient>
+    <linearGradient id="stone" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#8a6a48"/>
+      <stop offset="100%" stop-color="#4a3420"/>
+    </linearGradient>
+    <radialGradient id="flame" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0%" stop-color="#fff3b0"/>
+      <stop offset="40%" stop-color="#ff9a2e"/>
+      <stop offset="100%" stop-color="#c24a10" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Background rounded square -->
+  <rect width="512" height="512" rx="96" fill="url(#bg)"/>
+
+  <!-- Outer shield glow -->
+  <path d="M256 60
+           L430 110
+           L430 260
+           Q430 380 256 452
+           Q82 380 82 260
+           L82 110 Z"
+        fill="url(#shield)"
+        stroke="url(#gold)"
+        stroke-width="10"/>
+
+  <!-- Inner shield border -->
+  <path d="M256 90
+           L405 132
+           L405 258
+           Q405 362 256 425
+           Q107 362 107 258
+           L107 132 Z"
+        fill="none"
+        stroke="url(#gold)"
+        stroke-width="3"
+        opacity="0.6"/>
+
+  <!-- Castle silhouette -->
+  <g fill="url(#stone)" stroke="#2a1808" stroke-width="2">
+    <!-- Base wall -->
+    <rect x="146" y="248" width="220" height="96"/>
+    <!-- Left tower -->
+    <rect x="130" y="200" width="52" height="144"/>
+    <!-- Right tower -->
+    <rect x="330" y="200" width="52" height="144"/>
+    <!-- Center keep -->
+    <rect x="216" y="180" width="80" height="164"/>
+  </g>
+
+  <!-- Crenellations -->
+  <g fill="url(#stone)" stroke="#2a1808" stroke-width="2">
+    <rect x="130" y="188" width="14" height="16"/>
+    <rect x="150" y="188" width="14" height="16"/>
+    <rect x="168" y="188" width="14" height="16"/>
+    <rect x="330" y="188" width="14" height="16"/>
+    <rect x="350" y="188" width="14" height="16"/>
+    <rect x="368" y="188" width="14" height="16"/>
+    <rect x="216" y="168" width="16" height="16"/>
+    <rect x="240" y="168" width="16" height="16"/>
+    <rect x="264" y="168" width="16" height="16"/>
+    <rect x="280" y="168" width="16" height="16"/>
+  </g>
+
+  <!-- Center keep peak flag pole -->
+  <rect x="254" y="130" width="4" height="40" fill="#2a1808"/>
+  <path d="M258 132 L292 140 L258 156 Z" fill="url(#gold)"/>
+
+  <!-- Gate (arched) -->
+  <path d="M238 344 L238 300 Q238 278 256 278 Q274 278 274 300 L274 344 Z"
+        fill="#1a0c04" stroke="url(#gold)" stroke-width="2"/>
+  <line x1="256" y1="282" x2="256" y2="344" stroke="#6b4524" stroke-width="2"/>
+
+  <!-- Window slits -->
+  <rect x="150" y="230" width="6" height="18" fill="#1a0c04"/>
+  <rect x="356" y="230" width="6" height="18" fill="#1a0c04"/>
+  <rect x="230" y="210" width="6" height="18" fill="#1a0c04"/>
+  <rect x="276" y="210" width="6" height="18" fill="#1a0c04"/>
+
+  <!-- Torches (left & right of gate) -->
+  <g>
+    <!-- Left torch -->
+    <rect x="200" y="310" width="4" height="34" fill="#3a2410"/>
+    <circle cx="202" cy="306" r="14" fill="url(#flame)"/>
+    <!-- Right torch -->
+    <rect x="308" y="310" width="4" height="34" fill="#3a2410"/>
+    <circle cx="310" cy="306" r="14" fill="url(#flame)"/>
+  </g>
+
+  <!-- Gold coin banner at bottom -->
+  <circle cx="256" cy="392" r="22" fill="url(#gold)" stroke="#2a1808" stroke-width="3"/>
+  <text x="256" y="404" font-family="serif" font-size="30" font-weight="bold"
+        text-anchor="middle" fill="#2a1808">C</text>
+</svg>

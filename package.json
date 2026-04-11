@@ -5,9 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "npm run generate-pwa-assets && vite build",
     "preview": "vite preview",
-    "generate-assets": "node generate-assets.mjs"
+    "generate-assets": "node generate-assets.mjs",
+    "generate-pwa-assets": "pwa-assets-generator"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
@@ -15,7 +16,9 @@
     "react-dom": "^19.1.0"
   },
   "devDependencies": {
+    "@vite-pwa/assets-generator": "^1.0.2",
     "@vitejs/plugin-react": "^4.4.1",
-    "vite": "^6.3.1"
+    "vite": "^6.3.1",
+    "vite-plugin-pwa": "^1.2.0"
   }
 }
