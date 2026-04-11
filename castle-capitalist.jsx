@@ -444,13 +444,15 @@ const rollMaterialDrop = (ventureIndex, owned, watchBonus = 1) => {
 // synergyBonus is a percent bonus applied to ALL higher-tier professions.
 // Direction is old → new: pushing Torch to Apprentice buffs every profession above it.
 // Stacks additively across sources. Capped naturally by there only being 5 tiers.
+// dropBonus is a drop-rate multiplier applied to loot AND material rolls on this
+// profession only — tying the tier loop to the material loop so upgrades compound.
 const UPGRADE_TIERS = [
-  { name:"—",            t1:0,    t2:0,   t3:0,  revBonus:0,       speedBonus:0,    synergyBonus:0    },
-  { name:"Apprentice",   t1:50,   t2:0,   t3:0,  revBonus:4.00,    speedBonus:0.05, synergyBonus:0.25 }, // ×5 rev, +25% synergy to higher
-  { name:"Journeyman",   t1:200,  t2:25,  t3:0,  revBonus:19.00,   speedBonus:0.15, synergyBonus:0.75 }, // ×20 rev, +75% synergy
-  { name:"Expert",       t1:600,  t2:80,  t3:0,  revBonus:99.00,   speedBonus:0.25, synergyBonus:2.00 }, // ×100 rev, +200% synergy
-  { name:"Master",       t1:1500, t2:250, t3:3,  revBonus:499.00,  speedBonus:0.35, synergyBonus:5.00 }, // ×500 rev, +500% synergy
-  { name:"Grandmaster",  t1:4000, t2:700, t3:10, revBonus:2499.00, speedBonus:0.45, synergyBonus:15.00 }, // ×2500 rev, +1500% synergy — capstone
+  { name:"—",            t1:0,    t2:0,   t3:0,  revBonus:0,       speedBonus:0,    synergyBonus:0,    dropBonus:0    },
+  { name:"Apprentice",   t1:50,   t2:0,   t3:0,  revBonus:4.00,    speedBonus:0.05, synergyBonus:0.25, dropBonus:0.10 }, // ×5 rev, +25% synergy, +10% drops
+  { name:"Journeyman",   t1:200,  t2:25,  t3:0,  revBonus:19.00,   speedBonus:0.15, synergyBonus:0.75, dropBonus:0.25 }, // ×20 rev, +75% synergy, +25% drops
+  { name:"Expert",       t1:600,  t2:80,  t3:0,  revBonus:99.00,   speedBonus:0.25, synergyBonus:2.00, dropBonus:0.50 }, // ×100 rev, +200% synergy, +50% drops
+  { name:"Master",       t1:1500, t2:250, t3:3,  revBonus:499.00,  speedBonus:0.35, synergyBonus:5.00, dropBonus:1.00 }, // ×500 rev, +500% synergy, +100% drops
+  { name:"Grandmaster",  t1:4000, t2:700, t3:10, revBonus:2499.00, speedBonus:0.45, synergyBonus:15.00, dropBonus:2.00 }, // ×2500 rev, +1500% synergy, +200% drops
 ];
 
 // Badge colors for profession upgrade tiers. Shown on profession rows once upgraded.
@@ -1279,8 +1281,9 @@ export default function CastleCapitalist() {
         const upgTier = profUpgradesRef.current[i] || 0;
         const tPath = profTransformsRef.current[i] || null;
         const loot = getLootBonuses(eq, i);
+        const tierDropMult = 1 + UPGRADE_TIERS[upgTier].dropBonus;
         const totalSpeedMult = loot.speedMult * (1 + sk.speedMult) * evtSpeed;
-        const totalDropMult = loot.dropRateMult * (1 + sk.dropRate) * evtDrop;
+        const totalDropMult = loot.dropRateMult * (1 + sk.dropRate) * evtDrop * tierDropMult;
         const totalMatMult = (1 + sk.matDrop) * evtMat;
         const cycleTime = getEffectiveCycleTime(VENTURES[i], upgTier, tPath, totalSpeedMult);
         let newProgress = vs.progress + dt;
@@ -2170,6 +2173,11 @@ export default function CastleCapitalist() {
                     <div className="up-card-bonuses">
                       <span className="up-bonus">+{Math.round(current.revBonus * 100)}% rev</span>
                       {current.speedBonus > 0 && <span className="up-bonus">-{Math.round(current.speedBonus * 100)}% time</span>}
+                      {current.dropBonus > 0 && (
+                        <span className="up-bonus up-bonus-drop" title="Boost to loot and material drop rates on this profession">
+                          +{Math.round(current.dropBonus * 100)}% drops
+                        </span>
+                      )}
                       {current.synergyBonus > 0 && i < VENTURES.length - 1 && (
                         <span className="up-bonus up-bonus-syn" title={`Adds to every higher-tier profession (${VENTURES.length - 1 - i} of them)`}>
                           +{Math.round(current.synergyBonus * 100)}% synergy &rarr; higher
@@ -2230,6 +2238,11 @@ export default function CastleCapitalist() {
                         <span className="up-next-gain">×{(1 + next.revBonus).toFixed(0)} rev</span>
                         {next.speedBonus > current.speedBonus && (
                           <span className="up-next-gain">-{Math.round((next.speedBonus - current.speedBonus) * 100)}% time</span>
+                        )}
+                        {next.dropBonus > current.dropBonus && (
+                          <span className="up-next-gain up-next-gain-drop">
+                            +{Math.round((next.dropBonus - current.dropBonus) * 100)}% drops
+                          </span>
                         )}
                         {next.synergyBonus > current.synergyBonus && i < VENTURES.length - 1 && (
                           <span className="up-next-gain up-next-gain-syn">
@@ -2577,7 +2590,7 @@ export default function CastleCapitalist() {
                 <div className="first-app-reward">
                   <div className="first-app-reward-icon" style={{color: v.color}}>&#9733;</div>
                   <div className="first-app-reward-text">
-                    <strong>{v.name}</strong> now earns <strong style={{color:'var(--gd)'}}>×5 gold</strong> and runs <strong style={{color:'var(--accent)'}}>5% faster</strong>.
+                    <strong>{v.name}</strong> now earns <strong style={{color:'var(--gd)'}}>×5 gold</strong>, runs <strong style={{color:'var(--accent)'}}>5% faster</strong>, and rolls <strong style={{color:'#f7768e'}}>+10% drops</strong>.
                   </div>
                 </div>
                 {higherCount > 0 && (
@@ -2871,9 +2884,11 @@ const STYLES = `
 .up-card-bonuses { display:flex; gap:8px; margin-bottom:6px; }
 .up-bonus { font-family:'Fira Code',monospace; font-size:9px; color:var(--gn); padding:1px 6px; border-radius:3px; background:rgba(158,206,106,.1); }
 .up-bonus-syn { color:var(--accent); background:rgba(122,162,247,.12); }
+.up-bonus-drop { color:#f7768e; background:rgba(247,118,142,.1); }
 .up-next-gains { display:flex; flex-wrap:wrap; gap:4px; margin:4px 0 6px; }
 .up-next-gain { font-family:'Fira Code',monospace; font-size:9px; color:var(--gd); padding:1px 5px; border-radius:3px; background:rgba(224,175,104,.1); }
 .up-next-gain-syn { color:var(--accent); background:rgba(122,162,247,.12); }
+.up-next-gain-drop { color:#f7768e; background:rgba(247,118,142,.1); }
 .up-card-next { }
 .up-next-label { font-family:'Fira Code',monospace; font-size:10px; color:var(--txd); margin-bottom:4px; }
 .up-next-label strong { color:var(--txb); }
