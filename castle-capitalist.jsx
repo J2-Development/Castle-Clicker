@@ -192,12 +192,17 @@ const MILESTONES = [
   { at:10,   mult:1.5 }, // early bump — quick dopamine hit
   { at:25,   mult:2 },
   { at:50,   mult:2 },
-  { at:100,  mult:3 },   // triple digits feel huge
-  { at:200,  mult:2 },   // breather
-  { at:300,  mult:3 },   // reward commitment
-  { at:500,  mult:3 },
-  { at:750,  mult:2 },   // breather
-  { at:1000, mult:3 },
+  { at:100,  mult:2 },   // triple digits feel huge (softened to make room for 150)
+  { at:150,  mult:1.5 }, // continuous mid-game reward
+  { at:200,  mult:2 },
+  { at:250,  mult:1.5 }, // continuous mid-game reward
+  { at:300,  mult:2 },   // softened from 3×
+  { at:400,  mult:1.5 }, // continuous mid-game reward
+  { at:500,  mult:2 },   // softened from 3×
+  { at:600,  mult:1.5 }, // continuous mid-game reward
+  { at:750,  mult:2 },
+  { at:850,  mult:1.5 }, // continuous mid-game reward
+  { at:1000, mult:2 },   // softened from 3×
   { at:1500, mult:2 },
   { at:2000, mult:4 },   // late-game spike
   { at:3000, mult:3 },
@@ -239,7 +244,14 @@ const COMPANION_DESCS = [
 ];
 
 // Prestige config
-const PRESTIGE_BASE = 1e12;       // lifetime gold needed for first gem (scaled with revenue rebalance)
+// First prestige gem is now earned at 1B lifetime gold — reachable in a couple hours
+// of play rather than weeks. Previous value (1e12) was tuned for an obsolete economy
+// and put first prestige functionally out of reach for mid-game players.
+const PRESTIGE_BASE = 1e9;
+// Every Soul Gem earned gives +2% gold permanently (uncapped). This is the "angels"
+// model from AdVenture Capitalist: prestige currency should have inherent power so
+// the very first prestige delivers a visible, felt reward before any skill spending.
+const GEM_GOLD_BONUS = 0.02;
 
 // Cost scaling
 const COST_EXPONENT = 1.07;       // each unit costs 7% more — matches AdVenture Capitalist standard
@@ -259,7 +271,7 @@ const SKILL_TREE = [
   { id:"st_gold1",     tier:1, cost:1, name:"Gilded Touch",       desc:"+10% all gold",                    effect:{ type:"goldMult", value:0.10 } },
   { id:"st_speed1",    tier:1, cost:1, name:"Swift Hands",        desc:"+10% all speed",                   effect:{ type:"speedMult", value:0.10 } },
   { id:"st_drops1",    tier:1, cost:1, name:"Lucky Find",         desc:"+10% drop rates",                  effect:{ type:"dropRate", value:0.10 } },
-  { id:"st_startgold", tier:1, cost:1, name:"Inherited Wealth",   desc:"Start with 500g after ascend",     effect:{ type:"startGold", value:500 } },
+  { id:"st_startgold", tier:1, cost:1, name:"Inherited Wealth",   desc:"Start with 5,000g after ascend",   effect:{ type:"startGold", value:5000 } },
   // Tier 2 — 3 gems spent to unlock
   { id:"st_gold2",     tier:2, cost:2, name:"Midas Blessing",     desc:"+25% all gold",                    effect:{ type:"goldMult", value:0.25 } },
   { id:"st_speed2",    tier:2, cost:2, name:"Haste Enchantment",  desc:"+20% all speed",                   effect:{ type:"speedMult", value:0.20 } },
@@ -275,7 +287,7 @@ const SKILL_TREE = [
   { id:"st_gold4",     tier:4, cost:4, name:"Philosopher's Stone", desc:"2x all gold",                     effect:{ type:"goldMult", value:1.00 } },
   { id:"st_autobuy2",  tier:4, cost:4, name:"Master Recruiter",   desc:"Auto-unlock first 5 professions",  effect:{ type:"autoBuy", value:5 } },
   { id:"st_companion", tier:4, cost:5, name:"Bound Souls",        desc:"Keep first 2 companions on ascend",effect:{ type:"keepCompanions", value:2 } },
-  { id:"st_startgold2",tier:4, cost:4, name:"Royal Treasury",     desc:"Start with 50,000g after ascend",  effect:{ type:"startGold", value:50000 } },
+  { id:"st_startgold2",tier:4, cost:4, name:"Royal Treasury",     desc:"Start with 500,000g after ascend", effect:{ type:"startGold", value:500000 } },
   { id:"st_prestige",  tier:4, cost:5, name:"Ascendant Power",    desc:"+50% gems earned on ascend",       effect:{ type:"gemBonus", value:0.50 } },
 ];
 const SKILL_TIER_REQS = { 1:0, 2:3, 3:8, 4:15 };
@@ -333,6 +345,50 @@ const ACHIEVEMENTS = [
   { id:"ach_click1k", name:"Carpal Tunnel",      desc:"Manually start 1,000 cycles",           check: s => s.manualClicks >= 1000 },
   { id:"ach_event5",  name:"Event Hunter",       desc:"Activate 5 dungeon events",             check: s => s.eventsActivated >= 5 },
   { id:"ach_event20", name:"Thrill Seeker",      desc:"Activate 20 dungeon events",            check: s => s.eventsActivated >= 20 },
+
+  // ── HARD / ENDGAME ──
+  // Gold milestones (extreme)
+  { id:"ach_gold5",         name:"Pocket Pharaoh",      desc:"Earn 100 trillion lifetime gold",                    check: s => s.lifetimeGold >= 1e14 },
+  { id:"ach_gold6",         name:"Digital Godhood",     desc:"Earn 1 quadrillion lifetime gold",                   check: s => s.lifetimeGold >= 1e15 },
+  // Gold-at-once
+  { id:"ach_hoard_1b",      name:"Midas Touch",         desc:"Hold 1 billion gold at once",                        check: s => s.gold >= 1e9 },
+  { id:"ach_hoard_1t",      name:"Dragon Hoard",        desc:"Hold 1 trillion gold at once",                       check: s => s.gold >= 1e12 },
+  // Ownership
+  { id:"ach_own1k",         name:"Legion",              desc:"Own 1,000 of any profession",                        check: s => s.ventures.some(v => v.owned >= 1000) },
+  { id:"ach_ownall100",     name:"Thousand Strong",     desc:"Own 100 of every profession",                        check: s => s.ventures.every(v => v.owned >= 100) },
+  { id:"ach_ownall500",     name:"Host of Heroes",      desc:"Own 500 of every profession",                        check: s => s.ventures.every(v => v.owned >= 500) },
+  // Profession mastery
+  { id:"ach_upg_gm",        name:"Grandmaster",         desc:"Reach Grandmaster in any profession",                check: s => s.profUpgrades.some(t => t >= 5) },
+  { id:"ach_upg_master_all",name:"Master of Trades",    desc:"Reach Master in every profession",                   check: s => s.profUpgrades.every(t => t >= 4) },
+  { id:"ach_upg_gm_all",    name:"Peerless",            desc:"Reach Grandmaster in every profession",              check: s => s.profUpgrades.every(t => t >= 5) },
+  // Prestige (extreme)
+  { id:"ach_gems100",       name:"Gem Baron",           desc:"Earn 100 total Soul Gems",                           check: s => s.totalGems >= 100 },
+  { id:"ach_gems500",       name:"Gem Emperor",         desc:"Earn 500 total Soul Gems",                           check: s => s.totalGems >= 500 },
+  { id:"ach_asc25",         name:"Ascension Addict",    desc:"Ascend 25 times",                                    check: s => s.totalAscensions >= 25 },
+  { id:"ach_asc50",         name:"Cycle of Eternity",   desc:"Ascend 50 times",                                    check: s => s.totalAscensions >= 50 },
+  // Loot completionist
+  { id:"ach_legendary",     name:"First Legendary",     desc:"Find a legendary item",                              check: s => Object.keys(s.inventory).some(id => LOOT_BY_ID[id]?.rarity === "legendary") },
+  { id:"ach_all_legendary", name:"Legendary Hoarder",   desc:"Find every legendary item",                          check: s => LOOT_TABLE.filter(i => i.rarity === "legendary").every(i => s.inventory[i.id]) },
+  { id:"ach_loot_all",      name:"Completionist",       desc:"Find every item in the loot table",                  check: s => LOOT_TABLE.every(i => s.inventory[i.id]) },
+  // Transformation
+  { id:"ach_transform_any", name:"Metamorphosis",       desc:"Transform any profession",                           check: s => s.profTransforms.some(t => t != null) },
+  { id:"ach_transform_all", name:"Ultimate Evolution",  desc:"Transform every profession",                         check: s => s.profTransforms.every(t => t != null) },
+  // Skill tree
+  { id:"ach_skill_all",     name:"Scholar Supreme",     desc:"Unlock every skill tree node",                       check: s => Object.keys(s.unlockedSkills).length >= SKILL_TREE.length },
+  // Misc extreme
+  { id:"ach_mtx_all",       name:"Deep Pockets",        desc:"Purchase all 4 bonus equipment slots",               check: s => s.mtxSlots >= 4 },
+  { id:"ach_click10k",      name:"Click Machine",       desc:"Manually start 10,000 cycles",                       check: s => s.manualClicks >= 10000 },
+  { id:"ach_event50",       name:"Festival Goer",       desc:"Activate 50 dungeon events",                         check: s => s.eventsActivated >= 50 },
+  { id:"ach_event200",      name:"Event Devotee",       desc:"Activate 200 dungeon events",                        check: s => s.eventsActivated >= 200 },
+  { id:"ach_mat_tier3_any", name:"Catalyst Collector",  desc:"Earn 10 of any tier-3 specialty material",           check: s => Object.values(s.materials).some(m => m && (m.t3 || 0) >= 10) },
+  { id:"ach_mat_tier3_all", name:"Master Alchemist",    desc:"Earn a tier-3 specialty material from every profession", check: s => Array.from({length:10}, (_,i) => i).every(i => ((s.materials[i] || {}).t3 || 0) >= 1) },
+  // Tier upgrades
+  { id:"ach_apprentice1",   name:"First Rank",          desc:"Upgrade a profession to Apprentice",                 check: s => (s.profUpgrades || []).some(t => t >= 1) },
+  { id:"ach_journeyman1",   name:"Skilled Tradesman",   desc:"Upgrade a profession to Journeyman",                 check: s => (s.profUpgrades || []).some(t => t >= 2) },
+  { id:"ach_expert1",       name:"Master of the Craft", desc:"Upgrade a profession to Expert",                     check: s => (s.profUpgrades || []).some(t => t >= 3) },
+  { id:"ach_master1",       name:"Sovereign",           desc:"Upgrade a profession to Master",                     check: s => (s.profUpgrades || []).some(t => t >= 4) },
+  { id:"ach_grandmaster1",  name:"Legend Forged",       desc:"Upgrade a profession to Grandmaster",                check: s => (s.profUpgrades || []).some(t => t >= 5) },
+  { id:"ach_apprentice_all",name:"The Whole Castle",    desc:"Every profession at Apprentice or higher",           check: s => (s.profUpgrades || []).length >= 10 && s.profUpgrades.every(t => t >= 1) },
 ];
 
 // ═══ DUNGEON EVENTS ═══
@@ -340,7 +396,7 @@ const DUNGEON_EVENTS = [
   { id:"treasure_goblin", name:"Treasure Goblin",  desc:"10x gold for 30 seconds!",         duration:30000, color:"#fbbf24", effect:{ goldMult:10 } },
   { id:"material_storm",  name:"Material Storm",   desc:"5x material drops for 45 seconds!", duration:45000, color:"#14b8a6", effect:{ matMult:5 } },
   { id:"loot_frenzy",     name:"Loot Frenzy",      desc:"5x drop rates for 30 seconds!",    duration:30000, color:"#a855f7", effect:{ dropMult:5 } },
-  { id:"speed_demon",     name:"Speed Demon",      desc:"All cycles halved for 45 seconds!", duration:45000, color:"#ef4444", effect:{ speedMult:2 } },
+  { id:"speed_demon",     name:"Speed Demon",      desc:"All cycles halved for 30 seconds!", duration:30000, color:"#ef4444", effect:{ speedMult:2 } },
   { id:"boss_raid",       name:"Boss Raid",         desc:"Click rapidly! Earn gold per click!",duration:10000, color:"#f97316", effect:{ bossRaid:true } },
 ];
 const EVENT_SPAWN_MIN = 2 * 60 * 1000;
@@ -382,13 +438,30 @@ const rollMaterialDrop = (ventureIndex, owned, watchBonus = 1) => {
 };
 
 // ═══ PROFESSION UPGRADES ═══
+// Apprentice is the "real unlock" — doubles base revenue so old professions
+// genuinely pay off after their first material upgrade. Each subsequent tier
+// adds meaningful growth: GM caps at 11× rev + 1.4× speed = ~15× total power.
+// synergyBonus is a percent bonus applied to ALL higher-tier professions.
+// Direction is old → new: pushing Torch to Apprentice buffs every profession above it.
+// Stacks additively across sources. Capped naturally by there only being 5 tiers.
 const UPGRADE_TIERS = [
-  { name:"—",            t1:0,    t2:0,   t3:0,  revBonus:0,    speedBonus:0    },
-  { name:"Apprentice",   t1:50,   t2:0,   t3:0,  revBonus:0.25, speedBonus:0    },
-  { name:"Journeyman",   t1:200,  t2:25,  t3:0,  revBonus:0.50, speedBonus:0.10 },
-  { name:"Expert",       t1:600,  t2:80,  t3:0,  revBonus:1.00, speedBonus:0.20 },
-  { name:"Master",       t1:1500, t2:250, t3:3,  revBonus:2.00, speedBonus:0.30 },
-  { name:"Grandmaster",  t1:4000, t2:700, t3:10, revBonus:4.00, speedBonus:0.40 },
+  { name:"—",            t1:0,    t2:0,   t3:0,  revBonus:0,       speedBonus:0,    synergyBonus:0    },
+  { name:"Apprentice",   t1:50,   t2:0,   t3:0,  revBonus:4.00,    speedBonus:0.05, synergyBonus:0.25 }, // ×5 rev, +25% synergy to higher
+  { name:"Journeyman",   t1:200,  t2:25,  t3:0,  revBonus:19.00,   speedBonus:0.15, synergyBonus:0.75 }, // ×20 rev, +75% synergy
+  { name:"Expert",       t1:600,  t2:80,  t3:0,  revBonus:99.00,   speedBonus:0.25, synergyBonus:2.00 }, // ×100 rev, +200% synergy
+  { name:"Master",       t1:1500, t2:250, t3:3,  revBonus:499.00,  speedBonus:0.35, synergyBonus:5.00 }, // ×500 rev, +500% synergy
+  { name:"Grandmaster",  t1:4000, t2:700, t3:10, revBonus:2499.00, speedBonus:0.45, synergyBonus:15.00 }, // ×2500 rev, +1500% synergy — capstone
+];
+
+// Badge colors for profession upgrade tiers. Shown on profession rows once upgraded.
+// Index matches UPGRADE_TIERS index; tier 0 shows no badge.
+const TIER_BADGE_STYLES = [
+  null, // tier 0 — no badge
+  { label:"Bronze",   color:"#e8a87c", bg:"linear-gradient(135deg,#cd7f32,#8b4513)", glow:"rgba(205,127,50,.5)"   },
+  { label:"Silver",   color:"#e8e8e8", bg:"linear-gradient(135deg,#e0e0e0,#8a8a8a)", glow:"rgba(192,192,192,.5)"   },
+  { label:"Gold",     color:"#fff4a0", bg:"linear-gradient(135deg,#ffd700,#b8860b)", glow:"rgba(255,215,0,.6)"     },
+  { label:"Platinum", color:"#f5f5f5", bg:"linear-gradient(135deg,#e5e4e2,#a0a0a8)", glow:"rgba(229,228,226,.6)"   },
+  { label:"Diamond",  color:"#e0f7ff", bg:"linear-gradient(135deg,#b9f2ff,#5ab8d8)", glow:"rgba(185,242,255,.7)"   },
 ];
 
 // ═══ PROFESSION TRANSFORMATIONS ═══
@@ -525,13 +598,24 @@ const SLOT_UNLOCKS = [
   { slot: 7, type: "mastery3",  req: 3,   label: "Expert in 3 professions" },
 ];
 
+// Per-slot unlock rules. Slots 0-3 are base, 4-7 come from progression,
+// 8-11 are MTX/skill-bonus slots and must be purchased/earned explicitly.
+const isSlotUnlocked = (i, tGems, pUpgrades, mSlots, skillSlots = 0) => {
+  if (i < 4) return true;
+  if (i === 4) return tGems >= 5;
+  if (i === 5) return pUpgrades.some(t => t >= 2);
+  if (i === 6) return tGems >= 25;
+  if (i === 7) return pUpgrades.filter(t => t >= 3).length >= 3;
+  if (i >= 8 && i <= 11) return (i - 8) < (mSlots + skillSlots);
+  return false;
+};
+
 const getUnlockedSlotCount = (tGems, pUpgrades, mSlots, skillSlots = 0) => {
-  let count = 4;
-  if (tGems >= 5) count++;
-  if (pUpgrades.some(t => t >= 2)) count++;
-  if (tGems >= 25) count++;
-  if (pUpgrades.filter(t => t >= 3).length >= 3) count++;
-  return Math.min(12, count + mSlots + skillSlots);
+  let count = 0;
+  for (let i = 0; i < 12; i++) {
+    if (isSlotUnlocked(i, tGems, pUpgrades, mSlots, skillSlots)) count++;
+  }
+  return count;
 };
 
 const getEquippedCount = (equipped, itemId) =>
@@ -576,12 +660,28 @@ const getBulkCost = (baseCost, owned, qty) => {
 };
 
 /**
- * Revenue per cycle for a venture at given count and prestige multiplier.
+ * Sum the synergy bonuses from every profession BELOW `targetIndex` in the
+ * venture ladder. Each lower profession's tier upgrade contributes its
+ * synergyBonus value; tier 0 contributes nothing. Result is a raw additive
+ * bonus — callers add 1 to turn it into a multiplier.
  */
-const getRevenue = (venture, count, prestigeMultiplier, upgradeTier = 0, transformPath = null, lootGoldMult = 1) => {
+const getIncomingSynergy = (profUpgrades, targetIndex) => {
+  let total = 0;
+  for (let j = 0; j < targetIndex; j++) {
+    const tier = profUpgrades[j] || 0;
+    total += UPGRADE_TIERS[tier].synergyBonus;
+  }
+  return total;
+};
+
+/**
+ * Revenue per cycle for a venture at given count and prestige multiplier.
+ * `synergyMult` is the pre-computed (1 + incoming synergy) multiplier.
+ */
+const getRevenue = (venture, count, prestigeMultiplier, upgradeTier = 0, transformPath = null, lootGoldMult = 1, synergyMult = 1) => {
   const upgradeBonus = 1 + UPGRADE_TIERS[upgradeTier].revBonus;
   const transformBonus = transformPath ? TRANSFORM_TREES[venture.id][transformPath].revMult : 1;
-  return venture.baseRevenue * count * getMilestoneMultiplier(count) * prestigeMultiplier * upgradeBonus * transformBonus * lootGoldMult;
+  return venture.baseRevenue * count * getMilestoneMultiplier(count) * prestigeMultiplier * upgradeBonus * transformBonus * lootGoldMult * synergyMult;
 };
 
 const getEffectiveCycleTime = (venture, upgradeTier = 0, transformPath = null, lootSpeedMult = 1) => {
@@ -680,10 +780,10 @@ const rollLootDrop = (ventureIndex, skillLevel, dropRateMult = 1, xpMult = 1) =>
 const getRarityStyle = (rarity) => RARITY_TIERS[rarity] || RARITY_TIERS.common;
 
 /** Aggregate all loot bonuses from inventory for a given venture. */
-const getLootBonuses = (equippedArr, ventureIndex, unlockedSlots) => {
+const getLootBonuses = (equippedArr, ventureIndex) => {
   let goldMult = 0, speedBonus = 0, dropRateBonus = 0, xpBonus = 0;
   let critChance = 0, instantChance = 0, chainChance = 0;
-  for (let s = 0; s < unlockedSlots; s++) {
+  for (let s = 0; s < equippedArr.length; s++) {
     const itemId = equippedArr[s];
     if (!itemId) continue;
     const item = LOOT_BY_ID[itemId];
@@ -799,6 +899,9 @@ export default function CastleCapitalist() {
   const [mtxSlots, setMtxSlots] = useState(0);
   const [showWatchInfo, setShowWatchInfo] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showAchievements, setShowAchievements] = useState(false);
+  const [firstApprenticeSeen, setFirstApprenticeSeen] = useState(false);
+  const [showFirstApprenticeModal, setShowFirstApprenticeModal] = useState(null);
   const [equipPickerSlot, setEquipPickerSlot] = useState(null);
   const [offlineEarnings, setOfflineEarnings] = useState(null);
   const [showTutorial, setShowTutorial] = useState(false);
@@ -835,6 +938,8 @@ export default function CastleCapitalist() {
   const particleContainerRef = useRef(null);
   const pendingCompletionsRef = useRef([]);
   const lastParticleTimeRef = useRef(new Array(VENTURES.length).fill(0));
+  // Toasts (achievements/loot) queued while an event is on-screen so they don't steal focus.
+  const pendingToastsRef = useRef({ ach: [], loot: [] });
 
   goldRef.current = gold;
   venturesRef.current = ventures;
@@ -853,7 +958,7 @@ export default function CastleCapitalist() {
   const gemsSpent = getGemsSpent(unlockedSkills);
   const gemsAvailable = prestigeGems - gemsSpent;
   const achievementCount = Object.keys(achievements).length;
-  const prestigeMultiplier = 1 + skillBonuses.goldMult + achievementCount * ACHIEVEMENT_BONUS;
+  const prestigeMultiplier = 1 + (totalGems * GEM_GOLD_BONUS) + skillBonuses.goldMult + achievementCount * ACHIEVEMENT_BONUS;
 
   // ═══ PARTICLE SYSTEM ═══
   const spawnParticle = useCallback((type, x, y, color, text) => {
@@ -926,6 +1031,7 @@ export default function CastleCapitalist() {
         if (save.totalAscensions != null) setTotalAscensions(save.totalAscensions);
         if (save.manualClicks != null) setManualClicks(save.manualClicks);
         if (save.eventsActivated != null) setEventsActivated(save.eventsActivated);
+        if (save.firstApprenticeSeen) setFirstApprenticeSeen(true);
         if (save.tutorialDone) hasSave = true;
 
         // Offline earnings
@@ -936,18 +1042,18 @@ export default function CastleCapitalist() {
             const savedSkills = save.unlockedSkills || {};
             const savedSkillB = getSkillBonuses(savedSkills);
             const savedAchCount = Object.keys(save.achievements || {}).length;
-            const pm = 1 + savedSkillB.goldMult + savedAchCount * ACHIEVEMENT_BONUS;
+            const savedTotalGems = save.totalGems || 0;
+            const pm = 1 + (savedTotalGems * GEM_GOLD_BONUS) + savedSkillB.goldMult + savedAchCount * ACHIEVEMENT_BONUS;
             const offEff = OFFLINE_EFFICIENCY + savedSkillB.offlineEff;
             const savedUpg = save.profUpgrades || Array(10).fill(0);
             const savedTrans = save.profTransforms || Array(10).fill(null);
             const savedEquipped = save.equipped || Array(12).fill(null);
-            const savedMtxSlots = save.mtxSlots || 0;
-            const savedUnlockedSlots = getUnlockedSlotCount(save.totalGems || 0, savedUpg, savedMtxSlots, savedSkillB.bonusSlot);
             const savedWatch = getCurrentWatch();
             save.ventures.forEach((vs, i) => {
               if (vs.hasCompanion && vs.owned > 0) {
-                const loot = getLootBonuses(savedEquipped, i, savedUnlockedSlots);
-                const rev = getRevenue(VENTURES[i], vs.owned, pm, savedUpg[i] || 0, savedTrans[i] || null, loot.goldMult);
+                const loot = getLootBonuses(savedEquipped, i);
+                const synergyMult = 1 + getIncomingSynergy(savedUpg, i);
+                const rev = getRevenue(VENTURES[i], vs.owned, pm, savedUpg[i] || 0, savedTrans[i] || null, loot.goldMult, synergyMult);
                 const ct = getEffectiveCycleTime(VENTURES[i], savedUpg[i] || 0, savedTrans[i] || null, loot.speedMult * (1 + savedSkillB.speedMult));
                 const cycles = Math.floor(elapsed / ct);
                 const inWatch = isProfInWatch(i, savedWatch);
@@ -989,6 +1095,7 @@ export default function CastleCapitalist() {
           totalAscensions,
           manualClicks,
           eventsActivated,
+          firstApprenticeSeen,
           lastSave: Date.now(),
         }));
       } catch (e) {}
@@ -1018,6 +1125,7 @@ export default function CastleCapitalist() {
           totalAscensions,
           manualClicks,
           eventsActivated,
+          firstApprenticeSeen,
           lastSave: Date.now(),
         }));
       } catch (e) {}
@@ -1028,18 +1136,22 @@ export default function CastleCapitalist() {
 
   // ═══ ACHIEVEMENT CHECKER ═══
   useEffect(() => {
-    const state = { lifetimeGold, ventures, inventory, hasFoundRare, totalGems, totalAscensions, profUpgrades, manualClicks, eventsActivated };
+    const state = { gold, lifetimeGold, ventures, inventory, hasFoundRare, totalGems, totalAscensions, profUpgrades, profTransforms, materials, unlockedSkills, mtxSlots, manualClicks, eventsActivated };
     let newUnlocks = null;
     for (const ach of ACHIEVEMENTS) {
       if (achievements[ach.id]) continue;
       if (ach.check(state)) {
         if (!newUnlocks) newUnlocks = { ...achievements };
         newUnlocks[ach.id] = true;
-        setAchievementToast({ name: ach.name, desc: ach.desc, fadeOut: false });
+        if (activeEventRef.current) {
+          pendingToastsRef.current.ach.push({ name: ach.name, desc: ach.desc });
+        } else {
+          setAchievementToast({ name: ach.name, desc: ach.desc, fadeOut: false });
+        }
       }
     }
     if (newUnlocks) setAchievements(newUnlocks);
-  }, [lifetimeGold, ventures, inventory, hasFoundRare, totalGems, totalAscensions, profUpgrades, manualClicks, eventsActivated]);
+  }, [gold, lifetimeGold, ventures, inventory, hasFoundRare, totalGems, totalAscensions, profUpgrades, profTransforms, materials, unlockedSkills, mtxSlots, manualClicks, eventsActivated]);
 
   useEffect(() => {
     if (!achievementToast) return;
@@ -1047,6 +1159,25 @@ export default function CastleCapitalist() {
     const t2 = setTimeout(() => setAchievementToast(null), 3700);
     return () => { clearTimeout(t1); clearTimeout(t2); };
   }, [achievementToast?.name]);
+
+  // When an event ends, flush any toasts queued during it one at a time.
+  useEffect(() => {
+    if (activeEvent) return;
+    const pending = pendingToastsRef.current;
+    if (pending.ach.length === 0 && pending.loot.length === 0) return;
+    pendingToastsRef.current = { ach: [], loot: [] };
+    const timers = [];
+    let delay = 400; // small breathing room after the event clears
+    pending.ach.forEach(a => {
+      timers.push(setTimeout(() => setAchievementToast({ ...a, fadeOut: false }), delay));
+      delay += 4000;
+    });
+    pending.loot.forEach(item => {
+      timers.push(setTimeout(() => setLootToast({ item, fadeOut: false }), delay));
+      delay += 4000;
+    });
+    return () => { timers.forEach(clearTimeout); };
+  }, [activeEvent]);
 
   // ═══ DUNGEON EVENTS ═══
   useEffect(() => {
@@ -1089,7 +1220,10 @@ export default function CastleCapitalist() {
         const vs = venturesRef.current;
         let totalRev = 0;
         vs.forEach((v, i) => {
-          if (v.owned > 0) totalRev += getRevenue(VENTURES[i], v.owned, prestigeMultiplier, profUpgradesRef.current[i] || 0, profTransformsRef.current[i] || null, 1);
+          if (v.owned > 0) {
+            const synergyMult = 1 + getIncomingSynergy(profUpgradesRef.current, i);
+            totalRev += getRevenue(VENTURES[i], v.owned, prestigeMultiplier, profUpgradesRef.current[i] || 0, profTransformsRef.current[i] || null, 1, synergyMult);
+          }
         });
         const reward = clicks * Math.max(totalRev, 1) * 10;
         setGold(g => g + reward);
@@ -1138,14 +1272,13 @@ export default function CastleCapitalist() {
       const evtDrop = (evt?.state === 'active' && evt.effect.dropMult) ? evt.effect.dropMult : 1;
       const evtSpeed = (evt?.state === 'active' && evt.effect.speedMult) ? evt.effect.speedMult : 1;
       const evtMat = (evt?.state === 'active' && evt.effect.matMult) ? evt.effect.matMult : 1;
-      const eqSlots = getUnlockedSlotCount(totalGems, profUpgradesRef.current, mtxSlots, sk.bonusSlot);
       const chainTriggers = [];
       const next = prev.map((vs, i) => {
         if (vs.owned === 0 || (!vs.running && !vs.hasCompanion)) return vs;
 
         const upgTier = profUpgradesRef.current[i] || 0;
         const tPath = profTransformsRef.current[i] || null;
-        const loot = getLootBonuses(eq, i, eqSlots);
+        const loot = getLootBonuses(eq, i);
         const totalSpeedMult = loot.speedMult * (1 + sk.speedMult) * evtSpeed;
         const totalDropMult = loot.dropRateMult * (1 + sk.dropRate) * evtDrop;
         const totalMatMult = (1 + sk.matDrop) * evtMat;
@@ -1155,7 +1288,8 @@ export default function CastleCapitalist() {
 
         if (newProgress >= cycleTime) {
           const cycles = Math.floor(newProgress / cycleTime);
-          const baseRev = getRevenue(VENTURES[i], vs.owned, prestigeMultiplier, upgTier, tPath, loot.goldMult);
+          const synergyMult = 1 + getIncomingSynergy(profUpgradesRef.current, i);
+          const baseRev = getRevenue(VENTURES[i], vs.owned, prestigeMultiplier, upgTier, tPath, loot.goldMult, synergyMult);
           let rev = baseRev * cycles * (inWatch ? 1.25 : 1) * evtGold;
 
           // Crit gold — per cycle, chance for 50x on that cycle
@@ -1240,7 +1374,11 @@ export default function CastleCapitalist() {
       const rarest = drops.sort((a, b) =>
         rarityOrder.indexOf(a.rarity) - rarityOrder.indexOf(b.rarity)
       )[0];
-      setLootToast({ item: rarest, fadeOut: false });
+      if (activeEventRef.current) {
+        pendingToastsRef.current.loot.push(rarest);
+      } else {
+        setLootToast({ item: rarest, fadeOut: false });
+      }
       if (["rare", "epic", "legendary"].includes(rarest.rarity)) {
         setHasFoundRare(true);
       }
@@ -1361,6 +1499,12 @@ export default function CastleCapitalist() {
       }
     }));
     setProfUpgrades(prev => prev.map((t, i) => i === ventureIdx ? t + 1 : t));
+    // First-Apprentice teaching moment: the very first tier-0 → tier-1 upgrade
+    // triggers an explainer modal so players understand the rebalanced economy.
+    if (currentTier === 0 && !firstApprenticeSeen) {
+      setFirstApprenticeSeen(true);
+      setShowFirstApprenticeModal({ ventureIdx });
+    }
   };
 
   const handleTransformProfession = (ventureIdx, path) => {
@@ -1471,9 +1615,12 @@ export default function CastleCapitalist() {
 
   // ═══ DERIVED VALUES ═══
   const unlockedSlots = getUnlockedSlotCount(totalGems, profUpgrades, mtxSlots, skillBonuses.bonusSlot);
+  const hasAffordableAlly = ventures.some((vs, i) => !vs.hasCompanion && vs.owned > 0 && gold >= COMPANION_COSTS[i]);
+
+  const slotUnlockCheck = (i) => isSlotUnlocked(i, totalGems, profUpgrades, mtxSlots, skillBonuses.bonusSlot);
 
   const handleEquip = (itemId, slotIndex) => {
-    if (slotIndex >= unlockedSlots) return;
+    if (!slotUnlockCheck(slotIndex)) return;
     const totalOwned = inventory[itemId] || 0;
     const alreadyEquipped = getEquippedCount(equipped, itemId);
     if (alreadyEquipped >= totalOwned) return;
@@ -1485,7 +1632,7 @@ export default function CastleCapitalist() {
   };
 
   const handleQuickEquip = (itemId) => {
-    const slot = equipped.findIndex((id, i) => id === null && i < unlockedSlots);
+    const slot = equipped.findIndex((id, i) => id === null && slotUnlockCheck(i));
     if (slot === -1) return;
     handleEquip(itemId, slot);
   };
@@ -1587,6 +1734,10 @@ export default function CastleCapitalist() {
         <button className="settings-cog" onClick={() => setShowSettings(true)}>
           <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M6.5.5h3l.4 2 .6.3 1.8-1 2.1 2.1-1 1.8.3.6 2 .4v3l-2 .4-.3.6 1 1.8-2.1 2.1-1.8-1-.6.3-.4 2h-3l-.4-2-.6-.3-1.8 1-2.1-2.1 1-1.8-.3-.6-2-.4v-3l2-.4.3-.6-1-1.8L4.6 1.9l1.8 1 .6-.3.4-2zM8 5.5a2.5 2.5 0 100 5 2.5 2.5 0 000-5z"/></svg>
         </button>
+        <button className="trophy-btn" onClick={() => setShowAchievements(true)} title="Achievements">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M4 1h8v1.5h2.5v3A2.5 2.5 0 0 1 12 8V9a4 4 0 0 1-3.25 3.93V14H11v1.5H5V14h2.25v-1.07A4 4 0 0 1 4 9V8a2.5 2.5 0 0 1-2.5-2.5v-3H4V1zm0 2.5H3v2a1 1 0 0 0 1 1v-3zm8 0v3a1 1 0 0 0 1-1v-2h-1z"/></svg>
+          <span className="trophy-count">{achievementCount}</span>
+        </button>
         <div className="hd-brand">
           <div className="hd-title-wrap">
             <span className="hd-title-castle">CASTLE</span>
@@ -1620,7 +1771,7 @@ export default function CastleCapitalist() {
           { key: "prestige",   label: "Ascend",     icon: "\u2726",      mod: "ascend" },
         ].map(t => (
           <button key={t.key}
-            className={`bnav-btn ${tab === t.key ? 'bnav-on' : ''}`}
+            className={`bnav-btn ${tab === t.key ? 'bnav-on' : ''} ${t.key === 'companions' && hasAffordableAlly && tab !== 'companions' ? 'bnav-pulse' : ''}`}
             style={tab === t.key ? { color: `var(--mod-${t.mod})` } : undefined}
             onClick={() => setTab(t.key)}
           >
@@ -1681,12 +1832,14 @@ export default function CastleCapitalist() {
             const canAfford = gold >= cost;
             const upgTier = profUpgrades[i] || 0;
             const tPath = profTransforms[i] || null;
-            const loot = getLootBonuses(equipped, i, unlockedSlots);
+            const loot = getLootBonuses(equipped, i);
             const effCycle = getEffectiveCycleTime(v, upgTier, tPath, loot.speedMult);
             const pct = unlocked ? Math.min(100, (vs.progress / effCycle) * 100) : 0;
             const remaining = unlocked && vs.running ? Math.max(0, effCycle - vs.progress) : effCycle;
             const inWatch = unlocked && isProfInWatch(i, getCurrentWatch());
-            const revPerCycle = unlocked ? getRevenue(v, vs.owned, prestigeMultiplier, upgTier, tPath, loot.goldMult) * (inWatch ? 1.25 : 1) : 0;
+            const incomingSynergy = getIncomingSynergy(profUpgrades, i);
+            const synergyMult = 1 + incomingSynergy;
+            const revPerCycle = unlocked ? getRevenue(v, vs.owned, prestigeMultiplier, upgTier, tPath, loot.goldMult, synergyMult) * (inWatch ? 1.25 : 1) : 0;
 
             // Hide far-away ventures
             if (!unlocked && gold < v.unlockCost * 0.05 && i > 2) return null;
@@ -1721,6 +1874,18 @@ export default function CastleCapitalist() {
                 <div className="vmid" onClick={(e) => unlocked && handleStartVenture(i, e)}>
                   <div className="vname">
                     {v.name}
+                    {upgTier > 0 && TIER_BADGE_STYLES[upgTier] && (
+                      <span
+                        className="tier-badge"
+                        style={{
+                          background: TIER_BADGE_STYLES[upgTier].bg,
+                          color: TIER_BADGE_STYLES[upgTier].color,
+                          boxShadow: `0 0 6px ${TIER_BADGE_STYLES[upgTier].glow}`,
+                        }}
+                      >
+                        {TIER_BADGE_STYLES[upgTier].label}
+                      </span>
+                    )}
                     {vs.hasCompanion && <span className="auto-tag">AUTO</span>}
                     {inWatch && <span className="watch-tag">{WATCHES[getCurrentWatch()].icon}</span>}
                   </div>
@@ -1736,6 +1901,11 @@ export default function CastleCapitalist() {
                   {unlocked && (
                     <div className="vms">
                       <GoldCoinIcon size={10} /> <span className="vms-n">{formatNumber(revPerCycle)}</span> / fill
+                      {incomingSynergy > 0 && (
+                        <span className="vms-syn" title="Bonus from lower-tier profession upgrades (synergy)">
+                          +{Math.round(incomingSynergy * 100)}% synergy
+                        </span>
+                      )}
                     </div>
                   )}
                   {unlocked && materials[i] && (materials[i].t1 > 0 || materials[i].t2 > 0 || materials[i].t3 > 0) && (
@@ -1834,7 +2004,7 @@ export default function CastleCapitalist() {
             <div className="eq-hdr">Equipment <span className="eq-count">{equipped.filter(Boolean).length}/{unlockedSlots} slots</span></div>
             <div className="eq-grid">
               {Array.from({length: 12}, (_, i) => {
-                const isUnlocked = i < unlockedSlots;
+                const isUnlocked = isSlotUnlocked(i, totalGems, profUpgrades, mtxSlots, skillBonuses.bonusSlot);
                 const isMtxZone = i >= 8;
                 const itemId = equipped[i];
                 const item = itemId ? LOOT_BY_ID[itemId] : null;
@@ -1918,7 +2088,7 @@ export default function CastleCapitalist() {
                       {(() => {
                         const eqCount = getEquippedCount(equipped, item.id);
                         const available = (inventory[item.id] || 0) - eqCount;
-                        const hasEmptySlot = equipped.slice(0, unlockedSlots).some(id => id === null);
+                        const hasEmptySlot = equipped.some((id, idx) => id === null && slotUnlockCheck(idx));
                         const rarityIdx = RARITY_ORDER.indexOf(item.rarity);
                         const canCombine = rarityIdx >= 0 && rarityIdx < RARITY_ORDER.length - 1 && available >= COMBINE_COST;
                         return (
@@ -2000,6 +2170,11 @@ export default function CastleCapitalist() {
                     <div className="up-card-bonuses">
                       <span className="up-bonus">+{Math.round(current.revBonus * 100)}% rev</span>
                       {current.speedBonus > 0 && <span className="up-bonus">-{Math.round(current.speedBonus * 100)}% time</span>}
+                      {current.synergyBonus > 0 && i < VENTURES.length - 1 && (
+                        <span className="up-bonus up-bonus-syn" title={`Adds to every higher-tier profession (${VENTURES.length - 1 - i} of them)`}>
+                          +{Math.round(current.synergyBonus * 100)}% synergy &rarr; higher
+                        </span>
+                      )}
                       {tPath && tree[tPath].revMult > 1 && <span className="up-bonus" style={{color:'var(--gd)'}}>×{tree[tPath].revMult} transform</span>}
                       {tPath && tree[tPath].speedMult > 1 && <span className="up-bonus" style={{color:'var(--accent)'}}>×{tree[tPath].speedMult} speed</span>}
                     </div>
@@ -2051,6 +2226,17 @@ export default function CastleCapitalist() {
                   {next ? (
                     <div className="up-card-next">
                       <div className="up-next-label">Next: <strong>{next.name}</strong></div>
+                      <div className="up-next-gains">
+                        <span className="up-next-gain">×{(1 + next.revBonus).toFixed(0)} rev</span>
+                        {next.speedBonus > current.speedBonus && (
+                          <span className="up-next-gain">-{Math.round((next.speedBonus - current.speedBonus) * 100)}% time</span>
+                        )}
+                        {next.synergyBonus > current.synergyBonus && i < VENTURES.length - 1 && (
+                          <span className="up-next-gain up-next-gain-syn">
+                            +{Math.round((next.synergyBonus - current.synergyBonus) * 100)}% synergy &rarr; {VENTURES.length - 1 - i} higher
+                          </span>
+                        )}
+                      </div>
                       <div className="up-cost-row">
                         {next.t1 > 0 && <span className={`up-cost ${m.t1 >= next.t1 ? 'up-cost-ok' : 'up-cost-no'}`} style={{color: sm.t1.color}}>{m.t1}/{next.t1} {sm.t1.name}</span>}
                         {next.t2 > 0 && <span className={`up-cost ${m.t2 >= next.t2 ? 'up-cost-ok' : 'up-cost-no'}`} style={{color: sm.t2.color}}>{m.t2}/{next.t2} {sm.t2.name}</span>}
@@ -2087,7 +2273,7 @@ export default function CastleCapitalist() {
               <div className="prest-title">DUNGEON ASCENSION</div>
               <p className="prest-sub">
                 Sacrifice all progress to earn <strong style={{ color: 'var(--gm)' }}>Soul Gems</strong>.
-                Spend gems on permanent skills in the Skills tab.
+                Every gem gives <strong style={{ color: 'var(--gm)' }}>+{Math.round(GEM_GOLD_BONUS * 100)}% gold forever</strong>, plus you can spend them on permanent skills.
               </p>
               <div className="prest-grid">
                 <div className="prest-stat">
@@ -2106,6 +2292,29 @@ export default function CastleCapitalist() {
                   <div className="prest-label">Ascensions</div>
                   <div className="prest-val">{totalAscensions}</div>
                 </div>
+              </div>
+              {/* Power breakdown so players can see where their multiplier comes from */}
+              <div className="prest-breakdown">
+                <div className="prest-break-row">
+                  <span>From Soul Gems ({totalGems} × {Math.round(GEM_GOLD_BONUS * 100)}%)</span>
+                  <span style={{ color: 'var(--gm)' }}>+{Math.round(totalGems * GEM_GOLD_BONUS * 100)}%</span>
+                </div>
+                <div className="prest-break-row">
+                  <span>From Skills</span>
+                  <span style={{ color: 'var(--mod-skills)' }}>+{Math.round(skillBonuses.goldMult * 100)}%</span>
+                </div>
+                <div className="prest-break-row">
+                  <span>From Achievements ({achievementCount})</span>
+                  <span style={{ color: 'var(--gn)' }}>+{Math.round(achievementCount * ACHIEVEMENT_BONUS * 100)}%</span>
+                </div>
+                {pendingGems > 0 && (
+                  <div className="prest-break-row prest-break-preview">
+                    <span>After Ascend (+{Math.floor(pendingGems * (1 + skillBonuses.gemBonus))} gems)</span>
+                    <span style={{ color: 'var(--gm)' }}>
+                      {(1 + ((totalGems + Math.floor(pendingGems * (1 + skillBonuses.gemBonus))) * GEM_GOLD_BONUS) + skillBonuses.goldMult + achievementCount * ACHIEVEMENT_BONUS).toFixed(2)}x
+                    </span>
+                  </div>
+                )}
               </div>
               <button className="prest-btn" disabled={pendingGems <= 0} onClick={handlePrestige}>
                 {pendingGems > 0 ? `ASCEND (+${Math.floor(pendingGems * (1 + skillBonuses.gemBonus))} Gems)` : "Gather more gold to ascend"}
@@ -2323,6 +2532,79 @@ export default function CastleCapitalist() {
         </div>
       )}
 
+      {/* ── ACHIEVEMENTS MODAL ── */}
+      {showAchievements && (
+        <div className="watch-modal-overlay" onClick={() => setShowAchievements(false)}>
+          <div className="watch-modal ach-modal" onClick={e => e.stopPropagation()}>
+            <div className="watch-modal-header">
+              <span className="watch-modal-title">Achievements ({achievementCount}/{ACHIEVEMENTS.length})</span>
+              <button className="watch-modal-close" onClick={() => setShowAchievements(false)}>X</button>
+            </div>
+            <div className="ach-panel">
+              <div className="ach-bonus">+{achievementCount}% gold from {achievementCount} achievements</div>
+              <div className="ach-list">
+                {ACHIEVEMENTS.map(ach => {
+                  const unlocked = !!achievements[ach.id];
+                  return (
+                    <div key={ach.id} className={`ach-card ${unlocked ? 'ach-unlocked' : 'ach-locked'}`}>
+                      <div className="ach-icon">{unlocked ? '\u2726' : '\uD83D\uDD12'}</div>
+                      <div className="ach-info">
+                        <span className="ach-name">{unlocked ? ach.name : '???'}</span>
+                        <span className="ach-desc">{unlocked ? ach.desc : 'Keep playing to discover...'}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── FIRST APPRENTICE TEACHING MODAL ── */}
+      {showFirstApprenticeModal && (() => {
+        const v = VENTURES[showFirstApprenticeModal.ventureIdx];
+        const higherCount = VENTURES.length - 1 - showFirstApprenticeModal.ventureIdx;
+        return (
+          <div className="watch-modal-overlay" onClick={() => setShowFirstApprenticeModal(null)}>
+            <div className="watch-modal first-app-modal" onClick={e => e.stopPropagation()} style={{borderColor: v.color}}>
+              <div className="first-app-hdr" style={{background: `linear-gradient(135deg, ${v.colorDark}66, ${v.color}33)`}}>
+                <div className="first-app-badge" style={{background: 'linear-gradient(135deg,#cd7f32,#8b4513)', boxShadow: '0 0 20px rgba(205,127,50,.5)'}}>APPRENTICE</div>
+                <div className="first-app-title">{v.name} has ranked up!</div>
+                <div className="first-app-sub">You've unlocked your first profession tier. This is where the real game begins.</div>
+              </div>
+              <div className="first-app-body">
+                <div className="first-app-reward">
+                  <div className="first-app-reward-icon" style={{color: v.color}}>&#9733;</div>
+                  <div className="first-app-reward-text">
+                    <strong>{v.name}</strong> now earns <strong style={{color:'var(--gd)'}}>×5 gold</strong> and runs <strong style={{color:'var(--accent)'}}>5% faster</strong>.
+                  </div>
+                </div>
+                {higherCount > 0 && (
+                  <div className="first-app-reward">
+                    <div className="first-app-reward-icon" style={{color:'var(--accent)'}}>&#10148;</div>
+                    <div className="first-app-reward-text">
+                      Every higher profession ({higherCount} of them) gets a permanent <strong style={{color:'var(--accent)'}}>+25% synergy bonus</strong>.
+                    </div>
+                  </div>
+                )}
+                <div className="first-app-teach">
+                  <div className="first-app-teach-title">How Progression Works Now</div>
+                  <ul className="first-app-teach-list">
+                    <li><strong>Tier upgrades</strong> are your main power lever. Each tier multiplies a profession's revenue up to <strong>×2500</strong> at Grandmaster.</li>
+                    <li><strong>Synergies</strong> flow upward. Upgrading old professions buffs every newer one you unlock.</li>
+                    <li><strong>Materials</strong> come from running cycles. Keep your old professions spinning — their drops fund the upgrades that make you stronger.</li>
+                  </ul>
+                </div>
+              </div>
+              <button className="first-app-btn" onClick={() => setShowFirstApprenticeModal(null)}>
+                Let's go
+              </button>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* ── SETTINGS MODAL ── */}
       {showSettings && (
         <div className="watch-modal-overlay" onClick={() => setShowSettings(false)}>
@@ -2409,6 +2691,11 @@ const STYLES = `
 .hd-watch { font-family:'Fira Code',monospace; font-size:10px; color:var(--txd); padding:3px 8px; border-radius:10px; background:rgba(255,255,255,.05); border:1px solid var(--bd); display:inline-flex; align-items:center; gap:5px; }
 .watch-info-btn { width:16px; height:16px; border-radius:50%; border:1px solid rgba(255,255,255,.4); background:rgba(255,255,255,.15); color:#fff; font-size:10px; font-family:'Inter',sans-serif; font-style:normal; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; padding:0 0 1px 0; line-height:1; transition:all .2s; }
 .watch-info-btn:hover { background:rgba(255,255,255,.3); color:#fff; border-color:var(--gold); }
+.trophy-btn { position:absolute; right:12px; top:50%; transform:translateY(-50%); background:none; border:none; color:#c0a040; cursor:pointer; padding:4px; display:flex; align-items:center; gap:4px; z-index:21; transition:all .2s; min-width:32px; min-height:32px; justify-content:center; }
+.trophy-btn:hover { color:#fbbf24; filter:drop-shadow(0 0 6px #fbbf24); }
+.trophy-btn:active { transform:translateY(-50%) scale(.9); }
+.trophy-count { font-family:'Fira Code',monospace; font-size:10px; font-weight:700; color:inherit; line-height:1; }
+.ach-modal { max-width:480px; max-height:80vh; overflow-y:auto; }
 
 @media (max-width:400px) {
   .hd-amount { font-size:18px; }
@@ -2420,6 +2707,23 @@ const STYLES = `
 /* Watch Info Modal */
 .watch-modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.7); z-index:100; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(3px); animation:fadeIn .15s ease; }
 .watch-modal { background:linear-gradient(180deg,#1a1f30,#111520); border:1px solid var(--bd2); border-radius:12px; padding:20px; max-width:380px; width:90%; box-shadow:0 8px 32px rgba(0,0,0,.6); }
+.first-app-modal { padding:0; max-width:440px; border-width:2px; overflow:hidden; }
+.first-app-hdr { padding:22px 24px 18px; text-align:center; border-bottom:1px solid var(--bd); }
+.first-app-badge { display:inline-block; font-family:'Cinzel',serif; font-size:11px; font-weight:900; letter-spacing:2px; color:#fff4d1; padding:6px 14px; border-radius:14px; border:1px solid rgba(0,0,0,.35); text-shadow:0 1px 2px rgba(0,0,0,.5); margin-bottom:10px; }
+.first-app-title { font-family:'Cinzel',serif; font-size:20px; font-weight:900; color:var(--tx); margin-bottom:6px; }
+.first-app-sub { font-family:'Fira Code',monospace; font-size:11px; color:var(--txd); line-height:1.5; }
+.first-app-body { padding:18px 24px; }
+.first-app-reward { display:flex; gap:12px; align-items:flex-start; margin-bottom:14px; }
+.first-app-reward-icon { font-size:20px; line-height:1; flex-shrink:0; margin-top:1px; }
+.first-app-reward-text { font-family:'Fira Code',monospace; font-size:12px; color:var(--tx); line-height:1.5; }
+.first-app-teach { margin-top:18px; padding:14px; background:rgba(255,255,255,.03); border:1px solid var(--bd); border-radius:8px; }
+.first-app-teach-title { font-family:'Cinzel',serif; font-size:12px; font-weight:700; color:var(--gd); letter-spacing:1px; text-transform:uppercase; margin-bottom:10px; }
+.first-app-teach-list { margin:0; padding-left:18px; font-family:'Fira Code',monospace; font-size:11px; color:var(--txd); line-height:1.6; }
+.first-app-teach-list li { margin-bottom:6px; }
+.first-app-teach-list li:last-child { margin-bottom:0; }
+.first-app-teach-list strong { color:var(--tx); }
+.first-app-btn { display:block; width:calc(100% - 48px); margin:0 24px 24px; padding:14px; font-family:'Cinzel',serif; font-size:14px; font-weight:900; letter-spacing:1.5px; color:#fff; background:linear-gradient(135deg,#cd7f32,#8b4513); border:2px solid rgba(255,255,255,.15); border-radius:10px; cursor:pointer; box-shadow:0 4px 16px rgba(205,127,50,.3); transition:all .2s; text-transform:uppercase; }
+.first-app-btn:hover { transform:translateY(-1px); box-shadow:0 6px 20px rgba(205,127,50,.5); }
 .watch-modal-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
 .watch-modal-title { font-family:'Cinzel',serif; font-size:16px; color:var(--tx); }
 .watch-modal-close { background:none; border:1px solid var(--bd); color:var(--txd); width:24px; height:24px; border-radius:6px; cursor:pointer; font-size:12px; display:flex; align-items:center; justify-content:center; transition:all .2s; }
@@ -2465,6 +2769,13 @@ const STYLES = `
 .bnav-on { color:inherit; }
 .bnav-on .bnav-icon { filter:drop-shadow(0 0 8px currentColor); }
 .bnav-on .bnav-label { text-shadow:0 0 8px currentColor; font-weight:900; border-bottom:2px solid currentColor; padding-bottom:1px; }
+.bnav-pulse { color:var(--mod-allies) !important; animation:bnav-pulse 1.4s ease-in-out infinite; }
+.bnav-pulse .bnav-icon { filter:drop-shadow(0 0 6px var(--mod-allies)) drop-shadow(0 0 12px var(--mod-allies)); }
+.bnav-pulse .bnav-label { text-shadow:0 0 8px var(--mod-allies); font-weight:900; }
+@keyframes bnav-pulse {
+  0%, 100% { transform:translateY(0); filter:brightness(1); }
+  50%      { transform:translateY(-2px); filter:brightness(1.35); }
+}
 
 /* Buy Quantity */
 .qty-row { display:flex; gap:6px; padding:8px 12px; justify-content:flex-end; background:var(--bg2); }
@@ -2497,6 +2808,7 @@ const STYLES = `
 .vname { font-family:'Cinzel',serif; font-size:12px; font-weight:700; color:var(--txb); margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-shadow:0 1px 2px rgba(0,0,0,.4); }
 .auto-tag { font-family:'Fira Code',monospace; font-size:8px; font-weight:700; color:var(--gn); margin-left:6px; padding:1px 5px; border-radius:3px; background:rgba(52,211,153,.12); }
 .watch-tag { font-size:10px; margin-left:4px; filter:drop-shadow(0 0 3px rgba(255,200,50,.5)); }
+.tier-badge { font-family:'Cinzel',serif; font-size:9px; font-weight:700; letter-spacing:.5px; text-transform:uppercase; margin-left:6px; padding:2px 7px; border-radius:10px; border:1px solid rgba(0,0,0,.35); text-shadow:0 1px 1px rgba(0,0,0,.5); vertical-align:middle; }
 
 /* Progress Bar */
 .bar-out { height:14px; background:#1a1b26; border-radius:7px; overflow:hidden; border:1px solid var(--bd); box-shadow:inset 0 2px 4px rgba(0,0,0,.4); margin-bottom:3px; position:relative; }
@@ -2506,8 +2818,9 @@ const STYLES = `
 .bar-time { position:absolute; right:6px; top:50%; transform:translateY(-50%); font-family:'Fira Code',monospace; font-size:9px; font-weight:600; color:var(--txb); text-shadow:0 1px 3px rgba(0,0,0,.8); z-index:2; }
 
 /* Milestone */
-.vms { font-family:'Fira Code',monospace; font-size:9px; color:var(--txd); }
+.vms { font-family:'Fira Code',monospace; font-size:9px; color:var(--txd); display:flex; align-items:center; flex-wrap:wrap; gap:4px; }
 .vms-n { color:var(--gd); }
+.vms-syn { color:var(--gn); font-weight:700; padding:1px 5px; border-radius:3px; background:rgba(52,211,153,.1); letter-spacing:.3px; }
 
 /* Material Badges */
 .vmat-row { display:flex; flex-wrap:wrap; gap:4px; margin-top:2px; }
@@ -2557,6 +2870,10 @@ const STYLES = `
 .up-card-tier { font-family:'Fira Code',monospace; font-size:10px; color:var(--txd); }
 .up-card-bonuses { display:flex; gap:8px; margin-bottom:6px; }
 .up-bonus { font-family:'Fira Code',monospace; font-size:9px; color:var(--gn); padding:1px 6px; border-radius:3px; background:rgba(158,206,106,.1); }
+.up-bonus-syn { color:var(--accent); background:rgba(122,162,247,.12); }
+.up-next-gains { display:flex; flex-wrap:wrap; gap:4px; margin:4px 0 6px; }
+.up-next-gain { font-family:'Fira Code',monospace; font-size:9px; color:var(--gd); padding:1px 5px; border-radius:3px; background:rgba(224,175,104,.1); }
+.up-next-gain-syn { color:var(--accent); background:rgba(122,162,247,.12); }
 .up-card-next { }
 .up-next-label { font-family:'Fira Code',monospace; font-size:10px; color:var(--txd); margin-bottom:4px; }
 .up-next-label strong { color:var(--txb); }
@@ -2597,6 +2914,12 @@ const STYLES = `
 .prest-progress-bar { height:100%; background:linear-gradient(90deg,var(--gmd),var(--gm)); border-radius:6px; transition:width .5s ease; }
 .prest-progress-text { position:absolute; right:8px; top:50%; transform:translateY(-50%); font-family:'Fira Code',monospace; font-size:9px; color:var(--txb); text-shadow:0 1px 3px rgba(0,0,0,.8); z-index:2; }
 .prest-hint { font-family:'Fira Code',monospace; font-size:10px; color:var(--txd); margin-top:8px; display:flex; align-items:center; justify-content:center; gap:3px; flex-wrap:wrap; }
+.prest-breakdown { background:var(--sf); border:1px solid var(--bd); border-radius:10px; padding:12px 14px; margin-top:14px; }
+.prest-break-row { display:flex; justify-content:space-between; align-items:center; font-family:'Fira Code',monospace; font-size:11px; color:var(--txd); padding:4px 0; }
+.prest-break-row + .prest-break-row { border-top:1px dashed rgba(255,255,255,.05); }
+.prest-break-row span:last-child { font-weight:700; }
+.prest-break-preview { margin-top:4px; padding-top:8px !important; border-top:1px solid var(--bd) !important; color:var(--txb); }
+.prest-break-preview span:last-child { font-family:'Cinzel',serif; font-size:14px; }
 
 /* Footer */
 .ft { display:flex; justify-content:space-between; align-items:center; padding:8px 16px; border-top:1px solid var(--bd); background:var(--bg2); }
