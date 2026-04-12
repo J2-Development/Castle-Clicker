@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useLayoutEffect } from "react";
 import { VentureIcon, CompanionPortrait, GoldCoinIcon, SoulGemIcon } from "./src/GameAssets.jsx";
 
 // ═══ ICONS ═══
@@ -211,10 +211,13 @@ const MILESTONES = [
 
 // Cost to recruit each companion (auto-runner)
 // Priced as a mid-tier luxury — you feel it when you buy one
+// Priced at ~150-300x the profession unlock cost so companions arrive
+// mid-investment, not after you've fully saturated the profession.
+// Previous values for Dungeon/Demon/Elder were 1300-2700x — unreachable.
 const COMPANION_COSTS = [
   2500, 60000, 800000, 20000000, 500000000,
-  15000000000, 500000000000, 20000000000000,
-  800000000000000, 40000000000000000,
+  15000000000, 400000000000, 3000000000000,
+  100000000000000, 3000000000000000,
 ];
 
 const COMPANION_NAMES = [
@@ -247,7 +250,7 @@ const COMPANION_DESCS = [
 // First prestige gem is now earned at 1B lifetime gold — reachable in a couple hours
 // of play rather than weeks. Previous value (1e12) was tuned for an obsolete economy
 // and put first prestige functionally out of reach for mid-game players.
-const PRESTIGE_BASE = 1e9;
+const PRESTIGE_BASE = 3e9;
 // Every Soul Gem earned gives +2% gold permanently (uncapped). This is the "angels"
 // model from AdVenture Capitalist: prestige currency should have inherent power so
 // the very first prestige delivers a visible, felt reward before any skill spending.
@@ -389,6 +392,9 @@ const ACHIEVEMENTS = [
   { id:"ach_master1",       name:"Sovereign",           desc:"Upgrade a profession to Master",                     check: s => (s.profUpgrades || []).some(t => t >= 4) },
   { id:"ach_grandmaster1",  name:"Legend Forged",       desc:"Upgrade a profession to Grandmaster",                check: s => (s.profUpgrades || []).some(t => t >= 5) },
   { id:"ach_apprentice_all",name:"The Whole Castle",    desc:"Every profession at Apprentice or higher",           check: s => (s.profUpgrades || []).length >= 10 && s.profUpgrades.every(t => t >= 1) },
+  // Sacrifice
+  { id:"ach_sacrifice1",    name:"First Offering",      desc:"Sacrifice an item at the altar",                     check: s => Object.values(s.consumedBuffs || {}).some(v => v > 0) },
+  { id:"ach_sacrifice_gold",name:"Altar of Power",      desc:"Accumulate +50% permanent gold from sacrifices",     check: s => (s.consumedBuffs?.goldMultiplier || 0) >= 0.50 },
 ];
 
 // ═══ DUNGEON EVENTS ═══
@@ -425,14 +431,19 @@ const SPECIALTY_MATERIALS = [
 const MAT_DROP_RATES = { t1: 0.015, t2: 0.0015, t3: 0.00003 };
 const MAT_LEVEL_SCALING = { t1: 0.01, t2: 0.005, t3: 0.0001 }; // bonus per 10 owned levels
 
-const rollMaterialDrop = (ventureIndex, owned, watchBonus = 1) => {
+// cycleTimeFactor compensates for slow professions: a 240s cycle drops
+// 240x more materials than a 1s cycle so wall-clock farming time is equal.
+const rollMaterialDrop = (ventureIndex, owned, watchBonus = 1, cycleTimeFactor = 1) => {
   const levelBonus = Math.floor(owned / 10);
   const drops = {};
   for (const tier of ["t3", "t2", "t1"]) {
-    const rate = MAT_DROP_RATES[tier] * (1 + levelBonus * MAT_LEVEL_SCALING[tier]) * watchBonus;
-    if (Math.random() < rate) {
-      drops[tier] = (drops[tier] || 0) + 1;
-    }
+    const rate = MAT_DROP_RATES[tier] * (1 + levelBonus * MAT_LEVEL_SCALING[tier]) * watchBonus * cycleTimeFactor;
+    // Support rates > 1: guaranteed floor + fractional chance for remainder
+    const guaranteed = Math.floor(rate);
+    const remainder = rate - guaranteed;
+    let count = guaranteed;
+    if (Math.random() < remainder) count++;
+    if (count > 0) drops[tier] = (drops[tier] || 0) + count;
   }
   return Object.keys(drops).length > 0 ? drops : null;
 };
@@ -480,15 +491,53 @@ const TRANSFORM_TREES = [
          b:{ name:"Arcane Defusing",        color:"#00aaff", colorDark:"#0070aa", revMult:1,   speedMult:1,   passive:"Mana Siphon",          passiveDesc:"Each cycle steals 5% of highest-revenue profession as bonus gold",    cost:{t3:2, cross:{ventureId:5, tier:"t2", qty:3}} } },
   { id:5, a:{ name:"Elixir Mastery",       color:"#ffd700", colorDark:"#aa9000", revMult:3,   speedMult:1,   passive:"Golden Draught",       passiveDesc:"Once per hour, next cycle grants 10x gold",                          cost:{t3:2, cross:{ventureId:0, tier:"t2", qty:3}} },
          b:{ name:"Poison Distilling",      color:"#39ff14", colorDark:"#20aa0a", revMult:1,   speedMult:2,   passive:"Weakening Toxin",      passiveDesc:"All profession buy costs reduced 5%",                                cost:{t3:2, cross:{ventureId:8, tier:"t2", qty:3}} } },
-  { id:6, a:{ name:"Dragon Riding",        color:"#4fc3f7", colorDark:"#2090c0", revMult:1,   speedMult:3,   passive:"Aerial Survey",        passiveDesc:"Reveals hidden expedition rewards",                                  cost:{t3:2, cross:{ventureId:4, tier:"t2", qty:3}} },
+  { id:6, a:{ name:"Dragon Riding",        color:"#4fc3f7", colorDark:"#2090c0", revMult:1,   speedMult:3,   passive:"Aerial Survey",        passiveDesc:"+25% all loot drop rates",                                           cost:{t3:2, cross:{ventureId:4, tier:"t2", qty:3}} },
          b:{ name:"Dragon Breeding",        color:"#8b0000", colorDark:"#5a0000", revMult:4,   speedMult:1,   passive:"Brood Mother",         passiveDesc:"Every 100 cycles, permanently +1% revenue to this profession",       cost:{t3:2, cross:{ventureId:6, tier:"t1", qty:50}} } },
   { id:7, a:{ name:"Realm Architecture",    color:"#f5f5dc", colorDark:"#b0b090", revMult:3,   speedMult:1,   passive:"Grand Architect",      passiveDesc:"Every 5th profession upgrade costs 50% less materials",              cost:{t3:2, cross:{ventureId:4, tier:"t2", qty:3}} },
          b:{ name:"Void Tunneling",         color:"#2a0845", colorDark:"#1a0030", revMult:1,   speedMult:2,   passive:"Dimensional Shortcut", passiveDesc:"All profession cycle times reduced 3% globally",                     cost:{t3:2, cross:{ventureId:9, tier:"t2", qty:3}} } },
   { id:8, a:{ name:"Demon Pact Brokering",  color:"#cc3300", colorDark:"#881a00", revMult:3,   speedMult:1,   passive:"Infernal Contract",    passiveDesc:"+15% revenue from ALL professions, but Demon cycle time doubled",    cost:{t3:2, cross:{ventureId:9, tier:"t2", qty:3}} },
          b:{ name:"Hellfire Conquest",      color:"#ffee00", colorDark:"#bbaa00", revMult:1,   speedMult:2,   passive:"Scorched Earth",       passiveDesc:"10% chance per cycle to grant 2x materials from all profs for 60s",  cost:{t3:2, cross:{ventureId:6, tier:"t2", qty:3}} } },
   { id:9, a:{ name:"Cosmic Ascension",     color:"#ffffff", colorDark:"#aaaaaa", revMult:5,   speedMult:1,   passive:"Transcendence",        passiveDesc:"+50% Soul Gems earned on prestige",                                 cost:{t3:3, crossAll:{tier:"t2", qty:2}} },
-         b:{ name:"Eldritch Dominion",      color:"#2a1a4a", colorDark:"#1a0a30", revMult:1,   speedMult:3,   passive:"The Deep",             passiveDesc:"Unlocks Abyss auto-clear +5 floors per run",                        cost:{t3:3, crossAll:{tier:"t3", qty:1}} } },
+         b:{ name:"Eldritch Dominion",      color:"#2a1a4a", colorDark:"#1a0a30", revMult:1,   speedMult:3,   passive:"The Deep",             passiveDesc:"3x material drops during Abyss watch (11pm-4am)",                   cost:{t3:3, crossAll:{tier:"t3", qty:1}} } },
 ];
+
+// ═══ TRANSFORM PASSIVE BONUSES ═══
+// Aggregates static bonuses from all active transform passives.
+// Per-cycle procs (Pyroclasm, Big Score, etc.) are handled in the game loop.
+const getTransformPassives = (profTransforms) => {
+  const p = {
+    globalGoldMult: 0,     // Infernal Contract: +15% all revenue
+    globalSpeedMult: 0,    // Dimensional Shortcut: +3%
+    globalDropMult: 0,     // Aerial Survey: +25% all drop rates
+    globalMatMult: 0,      // Crystalline Growth: +10%
+    gemBonus: 0,           // Ancient Knowledge: +30%, Transcendence: +50%
+    offlineGoldMult: 0,    // Fortification: +50%
+    costReduction: 0,      // Weakening Toxin: -5%
+    nightSpeedBonus: 0,    // Lunar Tide: +5% during Dusk/Abyss
+    demonSpeedPenalty: false, // Infernal Contract: 2x Demon cycle
+    abyssMatMult: 0,       // The Deep: +200% mats during Abyss watch
+    graveRobber: false,    // Grave Robber: +25% Bone Shard from Skeleton
+  };
+  for (let i = 0; i < profTransforms.length; i++) {
+    const path = profTransforms[i];
+    if (!path) continue;
+    const tf = TRANSFORM_TREES[i][path];
+    switch (tf.passive) {
+      case "Lunar Tide":          p.nightSpeedBonus += 0.05; break;
+      case "Grave Robber":        p.graveRobber = true; break;
+      case "Crystalline Growth":  p.globalMatMult += 0.10; break;
+      case "Ancient Knowledge":   p.gemBonus += 0.30; break;
+      case "Fortification":       p.offlineGoldMult += 0.50; break;
+      case "Weakening Toxin":     p.costReduction += 0.05; break;
+      case "Aerial Survey":       p.globalDropMult += 0.25; break;
+      case "Dimensional Shortcut":p.globalSpeedMult += 0.03; break;
+      case "Infernal Contract":   p.globalGoldMult += 0.15; p.demonSpeedPenalty = true; break;
+      case "Transcendence":       p.gemBonus += 0.50; break;
+      case "The Deep":            p.abyssMatMult += 2.0; break;
+    }
+  }
+  return p;
+};
 
 // ═══ DUNGEON CLOCK ═══
 // Real local time → 4 watches. Each profession has a preferred watch.
@@ -532,6 +581,10 @@ const DROP_RATES = {
 };
 const DROP_LEVEL_BONUS = 0.005; // +0.5% per skill level, multiplicative
 
+// Fraction of an item's effect granted as a permanent buff when sacrificed.
+// Scales by rarity so rare sacrifices feel impactful.
+const CONSUME_FRACTIONS = { common: 0.20, uncommon: 0.25, rare: 0.30, epic: 0.40, legendary: 0.50 };
+
 const LOOT_TABLE = [
   // ── Common ── (16 items)
   // Global
@@ -541,17 +594,17 @@ const LOOT_TABLE = [
   { id:"cracked_gem",       name:"Cracked Gem",        rarity:"common", icon:"/assets/loot/cracked_gem.png", description:"+1% drop rates",                          effects:[{ type:"dropRateBoost",  target:"all", value:0.01 }]},
   { id:"minor_rune",        name:"Minor Rune",         rarity:"common", icon:"/assets/loot/minor_rune.png", description:"+2% drop rates",                          effects:[{ type:"dropRateBoost",  target:"all", value:0.02 }]},
   // Targeted
-  { id:"worn_gloves",       name:"Worn Gloves",        rarity:"common", icon:"/assets/loot/worn_gloves.png", description:"+5% speed for Torch Scavenging",          effects:[{ type:"speedBoost",     target:0,     value:0.05 }]},
-  { id:"tattered_map",      name:"Tattered Map",       rarity:"common", icon:"/assets/loot/tattered_map.png", description:"+3% speed for Goblin Pickpocketing",      effects:[{ type:"speedBoost",     target:1,     value:0.03 }]},
-  { id:"spore_poultice",    name:"Spore Poultice",     rarity:"common", icon:"/assets/loot/spore_poultice.png", description:"+3% speed for Mushroom Foraging",         effects:[{ type:"speedBoost",     target:2,     value:0.03 }]},
-  { id:"mushroom_cap",      name:"Mushroom Cap",       rarity:"common", icon:"/assets/loot/mushroom_cap.png", description:"+3% gold from Mushroom Foraging",         effects:[{ type:"goldMultiplier", target:2,     value:0.03 }]},
-  { id:"dull_blade",        name:"Dull Blade",         rarity:"common", icon:"/assets/loot/dull_blade.png", description:"+4% gold from Skeleton Looting",          effects:[{ type:"goldMultiplier", target:3,     value:0.04 }]},
-  { id:"skeleton_key",      name:"Skeleton Key",       rarity:"common", icon:"/assets/loot/skeleton_key.png", description:"+3% speed for Skeleton Looting",          effects:[{ type:"speedBoost",     target:3,     value:0.03 }]},
-  { id:"broken_lockpick",   name:"Broken Lockpick",    rarity:"common", icon:"/assets/loot/broken_lockpick.png", description:"+4% speed for Trap Disarming",            effects:[{ type:"speedBoost",     target:4,     value:0.04 }]},
-  { id:"drake_whistle",     name:"Drake Whistle",      rarity:"common", icon:"/assets/loot/drake_whistle.png", description:"+4% speed for Dragon Taming",             effects:[{ type:"speedBoost",     target:6,     value:0.04 }]},
-  { id:"blueprint_scrap",   name:"Blueprint Scrap",    rarity:"common", icon:"/assets/loot/blueprint_scrap.png", description:"+3% speed for Dungeon Expansion",         effects:[{ type:"speedBoost",     target:7,     value:0.03 }]},
-  { id:"hellfire_ember",    name:"Hellfire Ember",      rarity:"common", icon:"/assets/loot/hellfire_ember.png", description:"+3% speed for Demon Gate Siege",          effects:[{ type:"speedBoost",     target:8,     value:0.03 }]},
-  { id:"star_map",          name:"Star Map",            rarity:"common", icon:"/assets/loot/star_map.png", description:"+3% speed for Elder God Pact",            effects:[{ type:"speedBoost",     target:9,     value:0.03 }]},
+  { id:"worn_gloves",       name:"Worn Gloves",        rarity:"common", icon:"/assets/loot/worn_gloves.png", description:"+3% speed for all professions",           effects:[{ type:"speedBoost",     target:"all", value:0.03 }]},
+  { id:"tattered_map",      name:"Tattered Map",       rarity:"common", icon:"/assets/loot/tattered_map.png", description:"+2% drop rates",                          effects:[{ type:"dropRateBoost",  target:"all", value:0.02 }]},
+  { id:"spore_poultice",    name:"Spore Poultice",     rarity:"common", icon:"/assets/loot/spore_poultice.png", description:"+2% speed for all professions",           effects:[{ type:"speedBoost",     target:"all", value:0.02 }]},
+  { id:"mushroom_cap",      name:"Mushroom Cap",       rarity:"common", icon:"/assets/loot/mushroom_cap.png", description:"+3% gold from all professions",           effects:[{ type:"goldMultiplier", target:"all", value:0.03 }]},
+  { id:"dull_blade",        name:"Dull Blade",         rarity:"common", icon:"/assets/loot/dull_blade.png", description:"+4% gold from all professions",           effects:[{ type:"goldMultiplier", target:"all", value:0.04 }]},
+  { id:"skeleton_key",      name:"Skeleton Key",       rarity:"common", icon:"/assets/loot/skeleton_key.png", description:"+2% drop rates",                          effects:[{ type:"dropRateBoost",  target:"all", value:0.02 }]},
+  { id:"broken_lockpick",   name:"Broken Lockpick",    rarity:"common", icon:"/assets/loot/broken_lockpick.png", description:"+4% speed for all professions",           effects:[{ type:"speedBoost",     target:"all", value:0.04 }]},
+  { id:"drake_whistle",     name:"Drake Whistle",      rarity:"common", icon:"/assets/loot/drake_whistle.png", description:"+4% gold from all professions",           effects:[{ type:"goldMultiplier", target:"all", value:0.04 }]},
+  { id:"blueprint_scrap",   name:"Blueprint Scrap",    rarity:"common", icon:"/assets/loot/blueprint_scrap.png", description:"+3% speed for all professions",           effects:[{ type:"speedBoost",     target:"all", value:0.03 }]},
+  { id:"hellfire_ember",    name:"Hellfire Ember",      rarity:"common", icon:"/assets/loot/hellfire_ember.png", description:"+3% gold from all professions",           effects:[{ type:"goldMultiplier", target:"all", value:0.03 }]},
+  { id:"star_map",          name:"Star Map",            rarity:"common", icon:"/assets/loot/star_map.png", description:"+3% drop rates",                          effects:[{ type:"dropRateBoost",  target:"all", value:0.03 }]},
 
   // ── Uncommon ── (12 items)
   // Global
@@ -767,12 +820,18 @@ const formatTime = (ms) => {
  * Roll for a loot drop on venture cycle completion.
  * Checks from legendary down to common — only one drop per roll.
  */
-const rollLootDrop = (ventureIndex, skillLevel, dropRateMult = 1, xpMult = 1) => {
+const isItemRelevant = (item, unlockedSet) =>
+  item.effects.some(e => e.target === "all" || unlockedSet.has(e.target));
+
+const rollLootDrop = (ventureIndex, skillLevel, dropRateMult = 1, xpMult = 1, unlockedSet = null) => {
   const levelBonus = 1 + (skillLevel * xpMult) * DROP_LEVEL_BONUS;
   const tiers = ["legendary", "epic", "rare", "uncommon", "common"];
   for (const tier of tiers) {
     if (Math.random() < DROP_RATES[tier] * levelBonus * dropRateMult) {
-      const tierItems = LOOT_TABLE.filter(item => item.rarity === tier);
+      const tierItems = LOOT_TABLE.filter(item =>
+        item.rarity === tier && (!unlockedSet || isItemRelevant(item, unlockedSet))
+      );
+      if (tierItems.length === 0) continue; // no relevant items this tier, try next
       return tierItems[Math.floor(Math.random() * tierItems.length)];
     }
   }
@@ -814,6 +873,20 @@ const getLootBonuses = (equippedArr, ventureIndex) => {
   };
 };
 
+/** Aggregate all permanent buffs from sacrificed items. Same shape as getLootBonuses. */
+const getConsumedBonuses = (consumed) => {
+  if (!consumed) return { goldMult:1, speedMult:1, dropRateMult:1, xpMult:1, critChance:0, instantChance:0, chainChance:0 };
+  return {
+    goldMult:     1 + (consumed.goldMultiplier  || 0),
+    speedMult:    1 + (consumed.speedBoost      || 0),
+    dropRateMult: 1 + (consumed.dropRateBoost   || 0),
+    xpMult:       1 + (consumed.xpBoost         || 0),
+    critChance:        consumed.critGold         || 0,
+    instantChance:     consumed.instantComplete  || 0,
+    chainChance:       consumed.chainRun         || 0,
+  };
+};
+
 
 // ═══ MAIN GAME ═══
 /* ═══════════════════════════════════════════════════════════════
@@ -851,6 +924,11 @@ const TUTORIAL_STEPS = [
     title: "Forging",
     text: "Collect 10 of the same item and forge them into a random item of the next rarity tier. Common \u2192 Uncommon \u2192 Rare \u2192 Epic \u2192 Legendary.",
     icon: "\u2728",
+  },
+  {
+    title: "Sacrifice",
+    text: "Destroy a loot item to gain a permanent buff that survives ascension. Rarer items grant a larger fraction of their effect. Equip, forge, or sacrifice \u2014 choose wisely.",
+    icon: "\uD83D\uDD25",
   },
   {
     title: "Upgrades & Mastery",
@@ -904,6 +982,17 @@ export default function CastleCapitalist() {
   const [showAchievements, setShowAchievements] = useState(false);
   const [firstApprenticeSeen, setFirstApprenticeSeen] = useState(false);
   const [showFirstApprenticeModal, setShowFirstApprenticeModal] = useState(null);
+  const [firstForgeSeen, setFirstForgeSeen] = useState(false);
+  const [showFirstForgeModal, setShowFirstForgeModal] = useState(null);
+  const [firstAscendSeen, setFirstAscendSeen] = useState(false);
+  const [showFirstAscendModal, setShowFirstAscendModal] = useState(false);
+  const [firstEquipSeen, setFirstEquipSeen] = useState(false);
+  const [showFirstEquipModal, setShowFirstEquipModal] = useState(null);
+  const [firstAllySeen, setFirstAllySeen] = useState(false);
+  const [showFirstAllyModal, setShowFirstAllyModal] = useState(null);
+  const [firstSacrificeSeen, setFirstSacrificeSeen] = useState(false);
+  const [showFirstSacrificeModal, setShowFirstSacrificeModal] = useState(null);
+  const [consumedBuffs, setConsumedBuffs] = useState({});
   const [equipPickerSlot, setEquipPickerSlot] = useState(null);
   const [offlineEarnings, setOfflineEarnings] = useState(null);
   const [showTutorial, setShowTutorial] = useState(false);
@@ -934,11 +1023,20 @@ export default function CastleCapitalist() {
   const equippedRef = useRef(equipped);
   const unlockedSkillsRef = useRef(unlockedSkills);
   const activeEventRef = useRef(activeEvent);
+  const firstForgeSeenRef = useRef(firstForgeSeen);
+  const consumedBuffsRef = useRef(consumedBuffs);
   const eventTimerRef = useRef(null);
   const pendingDropsRef = useRef([]);
   const pendingMatsRef = useRef([]);
   const particleContainerRef = useRef(null);
+  const hdRef = useRef(null);
   const pendingCompletionsRef = useRef([]);
+  // Transform passive tracking refs (session-level, reset on reload/prestige)
+  const pyroCyclesRef = useRef(0);        // Pyroclasm: cycles since last trigger
+  const broodCyclesRef = useRef(0);       // Brood Mother: cycles since last +1%
+  const broodBonusRef = useRef(0);        // Brood Mother: accumulated permanent bonus
+  const goldenDraughtLastRef = useRef(0); // Golden Draught: timestamp of last trigger
+  const scorchedUntilRef = useRef(0);     // Scorched Earth: timestamp buff expires
   const lastParticleTimeRef = useRef(new Array(VENTURES.length).fill(0));
   // Toasts (achievements/loot) queued while an event is on-screen so they don't steal focus.
   const pendingToastsRef = useRef({ ach: [], loot: [] });
@@ -954,6 +1052,8 @@ export default function CastleCapitalist() {
   equippedRef.current = equipped;
   unlockedSkillsRef.current = unlockedSkills;
   activeEventRef.current = activeEvent;
+  firstForgeSeenRef.current = firstForgeSeen;
+  consumedBuffsRef.current = consumedBuffs;
 
   // Derived skill tree values
   const skillBonuses = getSkillBonuses(unlockedSkills);
@@ -1008,6 +1108,19 @@ export default function CastleCapitalist() {
   // ═══ SAVE / LOAD ═══
   useEffect(() => { localStorage.setItem('cc-brightness', brightness); }, [brightness]);
 
+  // Measure header height → CSS var so the event banner can stick just below it.
+  useLayoutEffect(() => {
+    const el = hdRef.current;
+    if (!el) return;
+    const update = () => {
+      document.documentElement.style.setProperty('--hd-h', `${el.offsetHeight}px`);
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   useEffect(() => {
     let hasSave = false;
     try {
@@ -1034,6 +1147,12 @@ export default function CastleCapitalist() {
         if (save.manualClicks != null) setManualClicks(save.manualClicks);
         if (save.eventsActivated != null) setEventsActivated(save.eventsActivated);
         if (save.firstApprenticeSeen) setFirstApprenticeSeen(true);
+        if (save.firstForgeSeen) setFirstForgeSeen(true);
+        if (save.firstAscendSeen) setFirstAscendSeen(true);
+        if (save.firstEquipSeen) setFirstEquipSeen(true);
+        if (save.firstAllySeen) setFirstAllySeen(true);
+        if (save.firstSacrificeSeen) setFirstSacrificeSeen(true);
+        if (save.consumedBuffs) setConsumedBuffs(save.consumedBuffs);
         if (save.tutorialDone) hasSave = true;
 
         // Offline earnings
@@ -1050,13 +1169,16 @@ export default function CastleCapitalist() {
             const savedUpg = save.profUpgrades || Array(10).fill(0);
             const savedTrans = save.profTransforms || Array(10).fill(null);
             const savedEquipped = save.equipped || Array(12).fill(null);
+            const savedConsumed = getConsumedBonuses(save.consumedBuffs);
             const savedWatch = getCurrentWatch();
             save.ventures.forEach((vs, i) => {
               if (vs.hasCompanion && vs.owned > 0) {
                 const loot = getLootBonuses(savedEquipped, i);
+                const comboGold = loot.goldMult + (savedConsumed.goldMult - 1);
+                const comboSpeed = loot.speedMult + (savedConsumed.speedMult - 1);
                 const synergyMult = 1 + getIncomingSynergy(savedUpg, i);
-                const rev = getRevenue(VENTURES[i], vs.owned, pm, savedUpg[i] || 0, savedTrans[i] || null, loot.goldMult, synergyMult);
-                const ct = getEffectiveCycleTime(VENTURES[i], savedUpg[i] || 0, savedTrans[i] || null, loot.speedMult * (1 + savedSkillB.speedMult));
+                const rev = getRevenue(VENTURES[i], vs.owned, pm, savedUpg[i] || 0, savedTrans[i] || null, comboGold, synergyMult);
+                const ct = getEffectiveCycleTime(VENTURES[i], savedUpg[i] || 0, savedTrans[i] || null, comboSpeed * (1 + savedSkillB.speedMult));
                 const cycles = Math.floor(elapsed / ct);
                 const inWatch = isProfInWatch(i, savedWatch);
                 offlineGold += rev * cycles * (inWatch ? 1.25 : 1) * offEff;
@@ -1098,6 +1220,12 @@ export default function CastleCapitalist() {
           manualClicks,
           eventsActivated,
           firstApprenticeSeen,
+          firstForgeSeen,
+          firstAscendSeen,
+          firstEquipSeen,
+          firstAllySeen,
+          firstSacrificeSeen,
+          consumedBuffs,
           lastSave: Date.now(),
         }));
       } catch (e) {}
@@ -1128,6 +1256,12 @@ export default function CastleCapitalist() {
           manualClicks,
           eventsActivated,
           firstApprenticeSeen,
+          firstForgeSeen,
+          firstAscendSeen,
+          firstEquipSeen,
+          firstAllySeen,
+          firstSacrificeSeen,
+          consumedBuffs,
           lastSave: Date.now(),
         }));
       } catch (e) {}
@@ -1138,7 +1272,7 @@ export default function CastleCapitalist() {
 
   // ═══ ACHIEVEMENT CHECKER ═══
   useEffect(() => {
-    const state = { gold, lifetimeGold, ventures, inventory, hasFoundRare, totalGems, totalAscensions, profUpgrades, profTransforms, materials, unlockedSkills, mtxSlots, manualClicks, eventsActivated };
+    const state = { gold, lifetimeGold, ventures, inventory, hasFoundRare, totalGems, totalAscensions, profUpgrades, profTransforms, materials, unlockedSkills, mtxSlots, manualClicks, eventsActivated, consumedBuffs };
     let newUnlocks = null;
     for (const ach of ACHIEVEMENTS) {
       if (achievements[ach.id]) continue;
@@ -1153,7 +1287,7 @@ export default function CastleCapitalist() {
       }
     }
     if (newUnlocks) setAchievements(newUnlocks);
-  }, [gold, lifetimeGold, ventures, inventory, hasFoundRare, totalGems, totalAscensions, profUpgrades, profTransforms, materials, unlockedSkills, mtxSlots, manualClicks, eventsActivated]);
+  }, [gold, lifetimeGold, ventures, inventory, hasFoundRare, totalGems, totalAscensions, profUpgrades, profTransforms, materials, unlockedSkills, mtxSlots, manualClicks, eventsActivated, consumedBuffs]);
 
   useEffect(() => {
     if (!achievementToast) return;
@@ -1227,7 +1361,7 @@ export default function CastleCapitalist() {
             totalRev += getRevenue(VENTURES[i], v.owned, prestigeMultiplier, profUpgradesRef.current[i] || 0, profTransformsRef.current[i] || null, 1, synergyMult);
           }
         });
-        const reward = clicks * Math.max(totalRev, 1) * 10;
+        const reward = Math.min(clicks, 60) * Math.max(totalRev, 1) * 0.1;
         setGold(g => g + reward);
         setLifetimeGold(l => l + reward);
         setActiveEvent(null);
@@ -1274,7 +1408,26 @@ export default function CastleCapitalist() {
       const evtDrop = (evt?.state === 'active' && evt.effect.dropMult) ? evt.effect.dropMult : 1;
       const evtSpeed = (evt?.state === 'active' && evt.effect.speedMult) ? evt.effect.speedMult : 1;
       const evtMat = (evt?.state === 'active' && evt.effect.matMult) ? evt.effect.matMult : 1;
+      const unlockedSet = new Set();
+      for (let u = 0; u < prev.length; u++) if (prev[u].owned > 0) unlockedSet.add(u);
+      const con = getConsumedBonuses(consumedBuffsRef.current);
+      const tp = getTransformPassives(profTransformsRef.current);
+      const isNight = currentWatch === 2 || currentWatch === 3; // Dusk or Abyss
+      const isAbyss = currentWatch === 3;
+      const scorchedActive = Date.now() < scorchedUntilRef.current;
+      // Mana Siphon: pre-compute highest base revenue across all running professions
+      let manaSiphonBaseRev = 0;
+      if (profTransformsRef.current[4] === 'b') {
+        for (let j = 0; j < prev.length; j++) {
+          if (prev[j].owned > 0) {
+            const sM = 1 + getIncomingSynergy(profUpgradesRef.current, j);
+            const r = getRevenue(VENTURES[j], prev[j].owned, prestigeMultiplier, profUpgradesRef.current[j] || 0, profTransformsRef.current[j] || null, 1, sM);
+            if (r > manaSiphonBaseRev) manaSiphonBaseRev = r;
+          }
+        }
+      }
       const chainTriggers = [];
+      const freeOwnedGains = []; // Raise Dead: [{ventureIdx, count}]
       const next = prev.map((vs, i) => {
         if (vs.owned === 0 || (!vs.running && !vs.hasCompanion)) return vs;
 
@@ -1282,9 +1435,22 @@ export default function CastleCapitalist() {
         const tPath = profTransformsRef.current[i] || null;
         const loot = getLootBonuses(eq, i);
         const tierDropMult = 1 + UPGRADE_TIERS[upgTier].dropBonus;
-        const totalSpeedMult = loot.speedMult * (1 + sk.speedMult) * evtSpeed;
-        const totalDropMult = loot.dropRateMult * (1 + sk.dropRate) * evtDrop * tierDropMult;
-        const totalMatMult = (1 + sk.matDrop) * evtMat;
+        // Combine equipped + consumed + transform passive bonuses
+        const comboGold = loot.goldMult + (con.goldMult - 1) + tp.globalGoldMult;
+        const comboSpeed = loot.speedMult + (con.speedMult - 1) + tp.globalSpeedMult
+          + (isNight ? tp.nightSpeedBonus : 0);
+        const comboDrop = loot.dropRateMult + (con.dropRateMult - 1) + tp.globalDropMult;
+        const comboXp = loot.xpMult + (con.xpMult - 1);
+        const comboCrit = loot.critChance + con.critChance;
+        const comboInstant = loot.instantChance + con.instantChance;
+        const comboChain = loot.chainChance + con.chainChance;
+        // Infernal Contract: Demon (idx 8) cycle time doubled
+        const demonPenalty = (tp.demonSpeedPenalty && i === 8) ? 0.5 : 1;
+        const totalSpeedMult = comboSpeed * (1 + sk.speedMult) * evtSpeed * demonPenalty;
+        const totalDropMult = comboDrop * (1 + sk.dropRate) * evtDrop * tierDropMult;
+        const totalMatMult = (1 + sk.matDrop) * evtMat * (1 + tp.globalMatMult)
+          * (isAbyss ? (1 + tp.abyssMatMult) : 1)
+          * (scorchedActive ? 2 : 1);
         const cycleTime = getEffectiveCycleTime(VENTURES[i], upgTier, tPath, totalSpeedMult);
         let newProgress = vs.progress + dt;
         const inWatch = isProfInWatch(i, currentWatch);
@@ -1292,24 +1458,98 @@ export default function CastleCapitalist() {
         if (newProgress >= cycleTime) {
           const cycles = Math.floor(newProgress / cycleTime);
           const synergyMult = 1 + getIncomingSynergy(profUpgradesRef.current, i);
-          const baseRev = getRevenue(VENTURES[i], vs.owned, prestigeMultiplier, upgTier, tPath, loot.goldMult, synergyMult);
+          // Brood Mother: accumulated permanent revenue bonus for Dragon
+          const broodMult = (i === 6 && profTransformsRef.current[6] === 'b') ? (1 + broodBonusRef.current) : 1;
+          const baseRev = getRevenue(VENTURES[i], vs.owned, prestigeMultiplier, upgTier, tPath, comboGold * broodMult, synergyMult);
           let rev = baseRev * cycles * (inWatch ? 1.25 : 1) * evtGold;
 
-          // Crit gold — per cycle, chance for 50x on that cycle
-          if (loot.critChance > 0) {
+          // ── Transform passive procs ──
+          const myTransform = profTransformsRef.current[i];
+          const myPassive = myTransform ? TRANSFORM_TREES[i][myTransform].passive : null;
+
+          // Big Score (Goblin B): 1% chance per cycle for 50x gold
+          if (myPassive === "Big Score") {
             for (let c = 0; c < cycles; c++) {
-              if (Math.random() < loot.critChance) rev += baseRev * 49 * (inWatch ? 1.25 : 1) * evtGold;
+              if (Math.random() < 0.01) rev += baseRev * 49 * (inWatch ? 1.25 : 1) * evtGold;
+            }
+          }
+
+          // Mana Siphon (Trap B): each cycle steals 5% of highest-revenue profession
+          if (myPassive === "Mana Siphon") {
+            rev += manaSiphonBaseRev * 0.05 * cycles * (inWatch ? 1.25 : 1) * evtGold;
+          }
+
+          // Golden Draught (Potion A): once per hour, 10x gold on next cycle
+          if (myPassive === "Golden Draught") {
+            const now = Date.now();
+            if (now - goldenDraughtLastRef.current >= 3600000) {
+              goldenDraughtLastRef.current = now;
+              rev += baseRev * 9 * (inWatch ? 1.25 : 1) * evtGold; // 10x = base + 9x bonus
+            }
+          }
+
+          // Pyroclasm (Torch A): every 10th cycle → start 2 random professions
+          if (myPassive === "Pyroclasm") {
+            pyroCyclesRef.current += cycles;
+            const triggers = Math.floor(pyroCyclesRef.current / 10);
+            pyroCyclesRef.current %= 10;
+            for (let t = 0; t < triggers; t++) {
+              chainTriggers.push(Math.floor(Math.random() * 10));
+              chainTriggers.push(Math.floor(Math.random() * 10));
+            }
+          }
+
+          // Contagion (Mushroom A): 15% chance per cycle to auto-start idle profession
+          if (myPassive === "Contagion") {
+            for (let c = 0; c < cycles; c++) {
+              if (Math.random() < 0.15) chainTriggers.push(Math.floor(Math.random() * 10));
+            }
+          }
+
+          // Raise Dead (Skeleton A): 5% chance per cycle for +1 free owned level
+          if (myPassive === "Raise Dead") {
+            let gained = 0;
+            for (let c = 0; c < cycles; c++) {
+              if (Math.random() < 0.05) gained++;
+            }
+            if (gained > 0) freeOwnedGains.push({ idx: i, count: gained });
+          }
+
+          // Brood Mother (Dragon B): every 100 cycles → +1% permanent revenue
+          if (myPassive === "Brood Mother") {
+            broodCyclesRef.current += cycles;
+            const procs = Math.floor(broodCyclesRef.current / 100);
+            broodCyclesRef.current %= 100;
+            if (procs > 0) broodBonusRef.current += procs * 0.01;
+          }
+
+          // Scorched Earth (Demon B): 10% chance per cycle for 2x materials for 60s
+          if (myPassive === "Scorched Earth") {
+            for (let c = 0; c < cycles; c++) {
+              if (Math.random() < 0.10) {
+                scorchedUntilRef.current = Math.max(scorchedUntilRef.current, Date.now() + 60000);
+              }
+            }
+          }
+
+          // Grave Robber (Goblin A): +25% Bone Shard (t1) drops from Skeleton (handled in mat drop below)
+
+          // Crit gold — per cycle, chance for 50x on that cycle
+          if (comboCrit > 0) {
+            for (let c = 0; c < cycles; c++) {
+              if (Math.random() < comboCrit) rev += baseRev * 49 * (inWatch ? 1.25 : 1) * evtGold;
             }
           }
 
           // Instant complete — bonus cycle of revenue + drops
-          if (loot.instantChance > 0) {
+          if (comboInstant > 0) {
             for (let c = 0; c < cycles; c++) {
-              if (Math.random() < loot.instantChance) {
+              if (Math.random() < comboInstant) {
                 rev += baseRev * (inWatch ? 1.25 : 1) * evtGold;
-                const drop = rollLootDrop(i, vs.owned, totalDropMult, loot.xpMult);
+                const drop = rollLootDrop(i, vs.owned, totalDropMult, comboXp, unlockedSet);
                 if (drop) pendingDropsRef.current.push(drop);
-                const matDrop = rollMaterialDrop(i, vs.owned, (inWatch ? 1.5 : 1) * totalDropMult * totalMatMult);
+                const ctf = VENTURES[i].baseTime / 1000;
+                const matDrop = rollMaterialDrop(i, vs.owned, (inWatch ? 1.5 : 1) * totalDropMult * totalMatMult, ctf);
                 if (matDrop) pendingMatsRef.current.push({ ventureId: i, drops: matDrop });
               }
             }
@@ -1320,17 +1560,18 @@ export default function CastleCapitalist() {
 
           // Loot rolls — one per completed cycle
           for (let c = 0; c < cycles; c++) {
-            const drop = rollLootDrop(i, vs.owned, totalDropMult, loot.xpMult);
+            const drop = rollLootDrop(i, vs.owned, totalDropMult, comboXp, unlockedSet);
             if (drop) pendingDropsRef.current.push(drop);
-            // Material drops
-            const matDrop = rollMaterialDrop(i, vs.owned, (inWatch ? 1.5 : 1) * totalDropMult * totalMatMult);
+            // Material drops — cycleTimeFactor normalises wall-clock farming across fast/slow professions
+            const ctf = VENTURES[i].baseTime / 1000;
+            const matDrop = rollMaterialDrop(i, vs.owned, (inWatch ? 1.5 : 1) * totalDropMult * totalMatMult, ctf);
             if (matDrop) pendingMatsRef.current.push({ ventureId: i, drops: matDrop });
           }
 
           // Chain run — queue adjacent profession triggers
-          if (loot.chainChance > 0) {
+          if (comboChain > 0) {
             for (let c = 0; c < cycles; c++) {
-              if (Math.random() < loot.chainChance) {
+              if (Math.random() < comboChain) {
                 const adj = Math.random() < 0.5 ? Math.max(0, i - 1) : Math.min(9, i + 1);
                 chainTriggers.push(adj);
               }
@@ -1372,6 +1613,33 @@ export default function CastleCapitalist() {
         }
         return next;
       });
+      // First-forge teaching moment: any non-legendary item crossing 10 for the first time.
+      if (!firstForgeSeenRef.current) {
+        const pre = inventoryRef.current || {};
+        const counts = { ...pre };
+        for (const drop of drops) counts[drop.id] = (counts[drop.id] || 0) + 1;
+        const trigger = drops.find(d =>
+          d.rarity !== 'legendary' &&
+          (pre[d.id] || 0) < COMBINE_COST &&
+          counts[d.id] >= COMBINE_COST
+        );
+        if (trigger) {
+          firstForgeSeenRef.current = true;
+          setFirstForgeSeen(true);
+          setShowFirstForgeModal({ item: trigger });
+        }
+      }
+      // First-sacrifice teaching moment: any item crossing 3 copies (enough to consider sacrificing extras).
+      if (!firstSacrificeSeen) {
+        const pre = inventoryRef.current || {};
+        const counts = { ...pre };
+        for (const drop of drops) counts[drop.id] = (counts[drop.id] || 0) + 1;
+        const trigger = drops.find(d => (pre[d.id] || 0) < 3 && counts[d.id] >= 3);
+        if (trigger) {
+          setFirstSacrificeSeen(true);
+          setShowFirstSacrificeModal({ item: trigger });
+        }
+      }
       // Show toast for the rarest drop
       const rarityOrder = ["legendary", "epic", "rare", "uncommon", "common"];
       const rarest = drops.sort((a, b) =>
@@ -1484,6 +1752,10 @@ export default function CastleCapitalist() {
     setVentures(prev => prev.map((s, i) =>
       i === idx ? { ...s, hasCompanion: true, running: true } : s
     ));
+    if (!firstAllySeen) {
+      setFirstAllySeen(true);
+      setShowFirstAllyModal({ ventureIdx: idx });
+    }
   };
 
   const handleUpgradeProfession = (ventureIdx) => {
@@ -1559,6 +1831,14 @@ export default function CastleCapitalist() {
 
   const pendingGems = calcPrestigeGems(lifetimeGold);
 
+  // First time the player could profitably ascend → teaching modal.
+  useEffect(() => {
+    if (!firstAscendSeen && pendingGems > 0) {
+      setFirstAscendSeen(true);
+      setShowFirstAscendModal(true);
+    }
+  }, [pendingGems, firstAscendSeen]);
+
   const handlePrestige = () => {
     if (pendingGems <= 0) return;
     const earnedGems = Math.floor(pendingGems * (1 + skillBonuses.gemBonus));
@@ -1606,6 +1886,7 @@ export default function CastleCapitalist() {
     setManualClicks(0);
     setEventsActivated(0);
     setActiveEvent(null);
+    setConsumedBuffs({});
   };
 
   const handleBuySkill = (skillId) => {
@@ -1628,6 +1909,10 @@ export default function CastleCapitalist() {
     const alreadyEquipped = getEquippedCount(equipped, itemId);
     if (alreadyEquipped >= totalOwned) return;
     setEquipped(prev => { const next = [...prev]; next[slotIndex] = itemId; return next; });
+    if (!firstEquipSeen) {
+      setFirstEquipSeen(true);
+      setShowFirstEquipModal({ itemId });
+    }
   };
 
   const handleUnequip = (slotIndex) => {
@@ -1668,6 +1953,31 @@ export default function CastleCapitalist() {
       return next;
     });
     setLootToast({ item: result, fused: true });
+    setTimeout(() => setLootToast(null), 3000);
+  };
+
+  const handleConsumeItem = (itemId) => {
+    const item = LOOT_BY_ID[itemId];
+    if (!item) return;
+    const owned = (inventory[itemId] || 0) - getEquippedCount(equipped, itemId);
+    if (owned < 1) return;
+    const frac = CONSUME_FRACTIONS[item.rarity] || 0.20;
+    // Remove 1 from inventory
+    setInventory(prev => {
+      const next = { ...prev };
+      next[itemId] = (next[itemId] || 0) - 1;
+      if (next[itemId] <= 0) delete next[itemId];
+      return next;
+    });
+    // Add fractional buffs permanently
+    setConsumedBuffs(prev => {
+      const next = { ...prev };
+      for (const e of item.effects) {
+        next[e.type] = (next[e.type] || 0) + e.value * frac;
+      }
+      return next;
+    });
+    setLootToast({ item, sacrificed: true });
     setTimeout(() => setLootToast(null), 3000);
   };
 
@@ -1733,7 +2043,7 @@ export default function CastleCapitalist() {
       <div className="cc-brightness" style={brightness !== 1 ? { filter: `brightness(${brightness})` } : undefined}>
 
       {/* ── HEADER ── */}
-      <div className="hd">
+      <div className="hd" ref={hdRef}>
         <button className="settings-cog" onClick={() => setShowSettings(true)}>
           <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M6.5.5h3l.4 2 .6.3 1.8-1 2.1 2.1-1 1.8.3.6 2 .4v3l-2 .4-.3.6 1 1.8-2.1 2.1-1.8-1-.6.3-.4 2h-3l-.4-2-.6-.3-1.8 1-2.1-2.1 1-1.8-.3-.6-2-.4v-3l2-.4.3-.6-1-1.8L4.6 1.9l1.8 1 .6-.3.4-2zM8 5.5a2.5 2.5 0 100 5 2.5 2.5 0 000-5z"/></svg>
         </button>
@@ -1836,13 +2146,16 @@ export default function CastleCapitalist() {
             const upgTier = profUpgrades[i] || 0;
             const tPath = profTransforms[i] || null;
             const loot = getLootBonuses(equipped, i);
-            const effCycle = getEffectiveCycleTime(v, upgTier, tPath, loot.speedMult);
+            const con = getConsumedBonuses(consumedBuffs);
+            const comboGold = loot.goldMult + (con.goldMult - 1);
+            const comboSpeed = loot.speedMult + (con.speedMult - 1);
+            const effCycle = getEffectiveCycleTime(v, upgTier, tPath, comboSpeed);
             const pct = unlocked ? Math.min(100, (vs.progress / effCycle) * 100) : 0;
             const remaining = unlocked && vs.running ? Math.max(0, effCycle - vs.progress) : effCycle;
             const inWatch = unlocked && isProfInWatch(i, getCurrentWatch());
             const incomingSynergy = getIncomingSynergy(profUpgrades, i);
             const synergyMult = 1 + incomingSynergy;
-            const revPerCycle = unlocked ? getRevenue(v, vs.owned, prestigeMultiplier, upgTier, tPath, loot.goldMult, synergyMult) * (inWatch ? 1.25 : 1) : 0;
+            const revPerCycle = unlocked ? getRevenue(v, vs.owned, prestigeMultiplier, upgTier, tPath, comboGold, synergyMult) * (inWatch ? 1.25 : 1) : 0;
 
             // Hide far-away ventures
             if (!unlocked && gold < v.unlockCost * 0.05 && i > 2) return null;
@@ -2060,6 +2373,28 @@ export default function CastleCapitalist() {
             </div>
           </div>
 
+          {/* ── PERMANENT SACRIFICE BUFFS ── */}
+          {Object.keys(consumedBuffs).length > 0 && (() => {
+            const labels = [];
+            if (consumedBuffs.goldMultiplier)  labels.push({ label: `+${(consumedBuffs.goldMultiplier * 100).toFixed(1)}% gold`,       color: '#f0c030' });
+            if (consumedBuffs.speedBoost)      labels.push({ label: `+${(consumedBuffs.speedBoost * 100).toFixed(1)}% speed`,           color: '#5eead4' });
+            if (consumedBuffs.dropRateBoost)   labels.push({ label: `+${(consumedBuffs.dropRateBoost * 100).toFixed(1)}% drop rates`,   color: '#a855f7' });
+            if (consumedBuffs.xpBoost)         labels.push({ label: `+${(consumedBuffs.xpBoost * 100).toFixed(1)}% XP bonus`,           color: '#60a5fa' });
+            if (consumedBuffs.critGold)        labels.push({ label: `+${(consumedBuffs.critGold * 100).toFixed(2)}% crit chance`,        color: '#fbbf24' });
+            if (consumedBuffs.instantComplete) labels.push({ label: `+${(consumedBuffs.instantComplete * 100).toFixed(2)}% bonus cycle`, color: '#f472b6' });
+            if (consumedBuffs.chainRun)        labels.push({ label: `+${(consumedBuffs.chainRun * 100).toFixed(2)}% chain chance`,       color: '#fb923c' });
+            return labels.length > 0 ? (
+              <div className="sacrifice-summary">
+                <div className="sacrifice-hdr">Sacrifice Buffs <span className="sacrifice-sub">(permanent)</span></div>
+                <div className="sacrifice-tags">
+                  {labels.map((l, idx) => (
+                    <span key={idx} className="sacrifice-tag" style={{ color: l.color, borderColor: l.color + '40' }}>{l.label}</span>
+                  ))}
+                </div>
+              </div>
+            ) : null;
+          })()}
+
           <div className="inv-hdr">Dungeon Loot</div>
           <p className="inv-sub">Equip items to activate their effects.</p>
           {Object.keys(inventory).length === 0 ? (
@@ -2110,6 +2445,20 @@ export default function CastleCapitalist() {
                             {rarityIdx >= 0 && rarityIdx < RARITY_ORDER.length - 1 && available > 0 && available < COMBINE_COST && (
                               <span className="inv-combine-progress">{available}/{COMBINE_COST} to forge</span>
                             )}
+                            {available > 0 && (() => {
+                              const frac = CONSUME_FRACTIONS[item.rarity] || 0.20;
+                              const buffDesc = item.effects.map(e => {
+                                const pct = (e.value * frac * 100);
+                                const label = e.type === 'goldMultiplier' ? 'gold' : e.type === 'speedBoost' ? 'speed' : e.type === 'dropRateBoost' ? 'drops' : e.type === 'xpBoost' ? 'XP' : e.type === 'critGold' ? 'crit' : e.type === 'instantComplete' ? 'bonus cycle' : e.type === 'chainRun' ? 'chain' : e.type;
+                                return `+${pct >= 1 ? pct.toFixed(1) : pct.toFixed(2)}% ${label}`;
+                              }).join(', ');
+                              return (
+                                <button className="inv-sacrifice-btn" onClick={() => handleConsumeItem(item.id)}
+                                  title={`Sacrifice 1 for permanent: ${buffDesc}`}>
+                                  Sacrifice &rarr; {buffDesc}
+                                </button>
+                              );
+                            })()}
                           </div>
                         );
                       })()}
@@ -2447,6 +2796,7 @@ export default function CastleCapitalist() {
           style={{ borderColor: getRarityStyle(lootToast.item.rarity).color }}>
           {lootToast.item.icon && <img src={lootToast.item.icon} alt="" className="loot-toast-icon" style={{ imageRendering: 'pixelated' }} />}
           {lootToast.fused && <span className="loot-toast-fused">Forged!</span>}
+          {lootToast.sacrificed && <span className="loot-toast-fused" style={{color:'#ef4444'}}>Sacrificed!</span>}
           <span className="loot-toast-rarity"
             style={{ color: getRarityStyle(lootToast.item.rarity).color }}>
             {getRarityStyle(lootToast.item.rarity).label}
@@ -2618,6 +2968,200 @@ export default function CastleCapitalist() {
         );
       })()}
 
+      {/* ── FIRST FORGE TEACHING MODAL ── */}
+      {showFirstForgeModal && (() => {
+        const item = showFirstForgeModal.item;
+        const rarityStyle = getRarityStyle(item.rarity);
+        const nextRarity = RARITY_ORDER[RARITY_ORDER.indexOf(item.rarity) + 1];
+        const nextStyle = nextRarity ? getRarityStyle(nextRarity) : rarityStyle;
+        return (
+          <div className="watch-modal-overlay" onClick={() => setShowFirstForgeModal(null)}>
+            <div className="watch-modal first-app-modal" onClick={e => e.stopPropagation()} style={{borderColor: rarityStyle.color}}>
+              <div className="first-app-hdr" style={{background: `linear-gradient(135deg, ${rarityStyle.color}33, ${nextStyle.color}33)`}}>
+                <div className="first-app-badge" style={{background: `linear-gradient(135deg, ${rarityStyle.color}, ${nextStyle.color})`, boxShadow: `0 0 20px ${rarityStyle.color}80`}}>FORGE UNLOCKED</div>
+                <div className="first-app-title">10 × {item.name}</div>
+                <div className="first-app-sub">You've stockpiled enough of one item to forge it into something stronger.</div>
+              </div>
+              <div className="first-app-body">
+                <div className="first-app-reward">
+                  {item.icon && <img src={item.icon} alt="" style={{width:32, height:32, imageRendering:'pixelated', flexShrink:0}} />}
+                  <div className="first-app-reward-text">
+                    Head to the <strong style={{color:'var(--gd)'}}>Loot</strong> tab. Any item with 10+ copies shows a <strong>Forge 10 &rarr; 1</strong> button — it consumes 10 and rolls a random item of the next rarity.
+                  </div>
+                </div>
+                <div className="first-app-teach">
+                  <div className="first-app-teach-title">The Rarity Ladder</div>
+                  <ul className="first-app-teach-list">
+                    <li><strong>Common &rarr; Uncommon &rarr; Rare &rarr; Epic &rarr; Legendary.</strong> Each tier is a meaningful jump in power.</li>
+                    <li>The result is <strong>random</strong> within the target tier — you might get something useful, or duplicates you can forge again.</li>
+                    <li>Forging is <strong>optional</strong>. Equipped pieces don't count toward the stack, so hold onto what you're using.</li>
+                  </ul>
+                </div>
+              </div>
+              <button className="first-app-btn" onClick={() => setShowFirstForgeModal(null)} style={{background: `linear-gradient(135deg, ${rarityStyle.color}, ${nextStyle.color})`, boxShadow: `0 4px 16px ${rarityStyle.color}4d`}}>
+                Got it
+              </button>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── FIRST SACRIFICE TEACHING MODAL ── */}
+      {showFirstSacrificeModal && (() => {
+        const item = showFirstSacrificeModal.item;
+        const rarityStyle = getRarityStyle(item.rarity);
+        const frac = CONSUME_FRACTIONS[item.rarity] || 0.20;
+        const buffPreview = item.effects.map(e => {
+          const pct = (e.value * frac * 100);
+          const label = e.type === 'goldMultiplier' ? 'gold' : e.type === 'speedBoost' ? 'speed' : e.type === 'dropRateBoost' ? 'drops' : e.type;
+          return `+${pct >= 1 ? pct.toFixed(1) : pct.toFixed(2)}% ${label}`;
+        }).join(', ');
+        return (
+          <div className="watch-modal-overlay" onClick={() => setShowFirstSacrificeModal(null)}>
+            <div className="watch-modal first-app-modal" onClick={e => e.stopPropagation()} style={{borderColor: '#ef4444'}}>
+              <div className="first-app-hdr" style={{background: 'linear-gradient(135deg, rgba(239,68,68,.25), rgba(168,85,247,.2))'}}>
+                <div className="first-app-badge" style={{background: 'linear-gradient(135deg,#ef4444,#a855f7)', boxShadow: '0 0 20px rgba(239,68,68,.5)'}}>SACRIFICE UNLOCKED</div>
+                <div className="first-app-title">The Altar Awaits</div>
+                <div className="first-app-sub">You have enough duplicates to sacrifice one for a permanent bonus.</div>
+              </div>
+              <div className="first-app-body">
+                <div className="first-app-reward">
+                  {item.icon && <img src={item.icon} alt="" style={{width:32, height:32, imageRendering:'pixelated', flexShrink:0}} />}
+                  <div className="first-app-reward-text">
+                    Sacrificing <strong style={{color: rarityStyle.color}}>{item.name}</strong> would permanently grant <strong style={{color:'#ef4444'}}>{buffPreview}</strong>.
+                  </div>
+                </div>
+                <div className="first-app-teach">
+                  <div className="first-app-teach-title">How Sacrifice Works</div>
+                  <ul className="first-app-teach-list">
+                    <li><strong>Destroy 1 item</strong> to gain a fraction of its effect as a <strong>permanent buff</strong> that survives ascension.</li>
+                    <li>Rarer items grant a <strong>larger fraction</strong> — common 20%, uncommon 25%, rare 30%, epic 40%, legendary 50%.</li>
+                    <li>Sacrifice stacks — feed the altar 10 commons and those tiny buffs add up.</li>
+                    <li>Choose wisely: <strong>Equip</strong> for full power, <strong>Forge</strong> to gamble for upgrades, or <strong>Sacrifice</strong> for permanent growth.</li>
+                  </ul>
+                </div>
+              </div>
+              <button className="first-app-btn" onClick={() => setShowFirstSacrificeModal(null)} style={{background: 'linear-gradient(135deg,#ef4444,#a855f7)', boxShadow: '0 4px 16px rgba(239,68,68,.4)'}}>
+                Got it
+              </button>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── FIRST ASCEND TEACHING MODAL ── */}
+      {showFirstAscendModal && (() => {
+        const gemBonus = Math.round(GEM_GOLD_BONUS * 100);
+        return (
+          <div className="watch-modal-overlay" onClick={() => setShowFirstAscendModal(false)}>
+            <div className="watch-modal first-app-modal" onClick={e => e.stopPropagation()} style={{borderColor: 'var(--gm)'}}>
+              <div className="first-app-hdr" style={{background: 'linear-gradient(135deg, rgba(192,132,252,.3), rgba(122,162,247,.2))'}}>
+                <div className="first-app-badge" style={{background: 'linear-gradient(135deg,#c084fc,#7aa2f7)', boxShadow: '0 0 20px rgba(192,132,252,.5)'}}>ASCEND READY</div>
+                <div className="first-app-title">You can now Ascend</div>
+                <div className="first-app-sub">You've earned enough lifetime gold to break through. This is how idle games get huge.</div>
+              </div>
+              <div className="first-app-body">
+                <div className="first-app-reward">
+                  <div className="first-app-reward-icon" style={{color:'var(--gm)'}}><SoulGemIcon /></div>
+                  <div className="first-app-reward-text">
+                    Ascending <strong style={{color:'#f7768e'}}>resets</strong> your gold, professions, and materials — but every <strong style={{color:'var(--gm)'}}>Soul Gem</strong> you collect gives a permanent <strong style={{color:'var(--gd)'}}>+{gemBonus}% gold</strong> bonus, forever.
+                  </div>
+                </div>
+                <div className="first-app-reward">
+                  <div className="first-app-reward-icon" style={{color:'var(--accent)'}}>&#10148;</div>
+                  <div className="first-app-reward-text">
+                    Gems also unlock the <strong>Skill Tree</strong> — permanent upgrades you keep through every ascension.
+                  </div>
+                </div>
+                <div className="first-app-teach">
+                  <div className="first-app-teach-title">When To Ascend</div>
+                  <ul className="first-app-teach-list">
+                    <li><strong>Don't rush it.</strong> Your next gem costs 4× the lifetime gold of the previous one — wait until you're hitting a wall.</li>
+                    <li>Check the <strong>Ascend</strong> tab any time to see pending gems and your new multiplier preview.</li>
+                    <li><strong>Equipped loot</strong> and <strong>achievements</strong> survive the reset. Your runs get faster every cycle.</li>
+                  </ul>
+                </div>
+              </div>
+              <button className="first-app-btn" onClick={() => setShowFirstAscendModal(false)} style={{background: 'linear-gradient(135deg,#c084fc,#7aa2f7)', boxShadow: '0 4px 16px rgba(192,132,252,.4)'}}>
+                Understood
+              </button>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── FIRST EQUIP TEACHING MODAL ── */}
+      {showFirstEquipModal && (() => {
+        const item = LOOT_BY_ID[showFirstEquipModal.itemId];
+        if (!item) return null;
+        const rarityStyle = getRarityStyle(item.rarity);
+        return (
+          <div className="watch-modal-overlay" onClick={() => setShowFirstEquipModal(null)}>
+            <div className="watch-modal first-app-modal" onClick={e => e.stopPropagation()} style={{borderColor: rarityStyle.color}}>
+              <div className="first-app-hdr" style={{background: `linear-gradient(135deg, ${rarityStyle.color}33, ${rarityStyle.color}11)`}}>
+                <div className="first-app-badge" style={{background: `linear-gradient(135deg, ${rarityStyle.color}, ${rarityStyle.color}aa)`, boxShadow: `0 0 20px ${rarityStyle.color}80`}}>FIRST EQUIP</div>
+                <div className="first-app-title">{item.name} equipped</div>
+                <div className="first-app-sub">Equipped gear is where your real power curve lives.</div>
+              </div>
+              <div className="first-app-body">
+                <div className="first-app-reward">
+                  {item.icon && <img src={item.icon} alt="" style={{width:32, height:32, imageRendering:'pixelated', flexShrink:0}} />}
+                  <div className="first-app-reward-text">
+                    <strong>{item.name}</strong> is now active: <em style={{color: rarityStyle.color}}>{item.description}</em>
+                  </div>
+                </div>
+                <div className="first-app-teach">
+                  <div className="first-app-teach-title">How Loadouts Work</div>
+                  <ul className="first-app-teach-list">
+                    <li><strong>Slots stack.</strong> You can equip multiple copies of the same item across slots — the bonuses add up.</li>
+                    <li><strong>More slots unlock</strong> as you earn Soul Gems and upgrade professions. Mid-game you'll be juggling 6+ slots.</li>
+                    <li><strong>Equipped items are safe</strong> from forging — the stack you see counts only unequipped copies.</li>
+                  </ul>
+                </div>
+              </div>
+              <button className="first-app-btn" onClick={() => setShowFirstEquipModal(null)} style={{background: `linear-gradient(135deg, ${rarityStyle.color}, ${rarityStyle.color}aa)`, boxShadow: `0 4px 16px ${rarityStyle.color}4d`}}>
+                Got it
+              </button>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── FIRST ALLY TEACHING MODAL ── */}
+      {showFirstAllyModal && (() => {
+        const v = VENTURES[showFirstAllyModal.ventureIdx];
+        return (
+          <div className="watch-modal-overlay" onClick={() => setShowFirstAllyModal(null)}>
+            <div className="watch-modal first-app-modal" onClick={e => e.stopPropagation()} style={{borderColor: v.color}}>
+              <div className="first-app-hdr" style={{background: `linear-gradient(135deg, ${v.colorDark}66, ${v.color}33)`}}>
+                <div className="first-app-badge" style={{background: `linear-gradient(135deg, ${v.color}, ${v.colorDark})`, boxShadow: `0 0 20px ${v.color}80`}}>ALLY HIRED</div>
+                <div className="first-app-title">{v.name} runs itself</div>
+                <div className="first-app-sub">Your first ally is on the job. Welcome to idle mode.</div>
+              </div>
+              <div className="first-app-body">
+                <div className="first-app-reward">
+                  <div className="first-app-reward-icon" style={{color: v.color}}>&#9733;</div>
+                  <div className="first-app-reward-text">
+                    <strong>{v.name}</strong> now <strong style={{color:'var(--gd)'}}>auto-runs</strong> every cycle forever. No more clicking to start runs — the gold flows on its own.
+                  </div>
+                </div>
+                <div className="first-app-teach">
+                  <div className="first-app-teach-title">What Changes Now</div>
+                  <ul className="first-app-teach-list">
+                    <li><strong>Offline progress</strong> kicks in for this profession. Earnings accrue even when the app is closed.</li>
+                    <li><strong>Hire more allies</strong> from the <strong>Allies</strong> tab — one per profession. Priority is usually your top earners first.</li>
+                    <li>Allies stack with everything else — <strong>tier upgrades</strong>, <strong>loot</strong>, <strong>synergies</strong> still apply.</li>
+                  </ul>
+                </div>
+              </div>
+              <button className="first-app-btn" onClick={() => setShowFirstAllyModal(null)} style={{background: `linear-gradient(135deg, ${v.color}, ${v.colorDark})`, boxShadow: `0 4px 16px ${v.color}4d`}}>
+                Let's go
+              </button>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* ── SETTINGS MODAL ── */}
       {showSettings && (
         <div className="watch-modal-overlay" onClick={() => setShowSettings(false)}>
@@ -2700,7 +3244,9 @@ const STYLES = `
 .hd-title-wrap { display:flex; flex-direction:column; align-items:center; line-height:1; transform:rotateX(12deg); transform-style:preserve-3d; filter:drop-shadow(0 6px 16px rgba(0,0,0,.8)) drop-shadow(0 2px 0 rgba(0,0,0,.9)); }
 .hd-title-castle { font-family:'GothicByte',serif; font-size:26px; letter-spacing:14px; color:#94a3b8; text-shadow:0 1px 3px rgba(0,0,0,.6); }
 .hd-title-clicker { font-family:'Cinzel',serif; font-size:44px; font-weight:900; letter-spacing:4px; color:#fbbf24; text-shadow: 0 1px 0 #b45309, 0 2px 0 #92400e, 0 3px 0 #78350f, 0 4px 0 #5c2d0a, 0 5px 10px rgba(0,0,0,.6), 0 8px 20px rgba(0,0,0,.4); margin-top:-4px; }
-.hd-stats { display:flex; justify-content:space-between; align-items:center; }
+.hd-stats { display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:8px; }
+.hd-stats > .hd-gold-box { justify-self:start; }
+.hd-stats > .hd-gems { justify-self:end; }
 .hd-watch { font-family:'Fira Code',monospace; font-size:10px; color:var(--txd); padding:3px 8px; border-radius:10px; background:rgba(255,255,255,.05); border:1px solid var(--bd); display:inline-flex; align-items:center; gap:5px; }
 .watch-info-btn { width:16px; height:16px; border-radius:50%; border:1px solid rgba(255,255,255,.4); background:rgba(255,255,255,.15); color:#fff; font-size:10px; font-family:'Inter',sans-serif; font-style:normal; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; padding:0 0 1px 0; line-height:1; transition:all .2s; }
 .watch-info-btn:hover { background:rgba(255,255,255,.3); color:#fff; border-color:var(--gold); }
@@ -2953,7 +3499,7 @@ const STYLES = `
 .cc ::-webkit-scrollbar-thumb { background:var(--bd); border-radius:2px; }
 
 /* Loot Toast */
-.loot-toast { position:fixed; top:140px; left:50%; transform:translateX(-50%); background:var(--bg2); border:2px solid; border-radius:10px; padding:10px 20px; z-index:50; text-align:center; min-width:220px; max-width:360px; animation:toast-in .3s ease-out; box-shadow:0 4px 20px rgba(0,0,0,.6); }
+.loot-toast { position:fixed; top:140px; left:50%; transform:translateX(-50%); background:var(--bg2); border:2px solid; border-radius:10px; padding:10px 20px; z-index:50; text-align:center; min-width:220px; max-width:360px; animation:toast-in .3s ease-out; box-shadow:0 4px 20px rgba(0,0,0,.6); pointer-events:none; }
 .loot-toast-out { animation:toast-out .7s ease-in forwards; }
 @keyframes toast-in { from { opacity:0; transform:translateX(-50%) translateY(-20px); } to { opacity:1; transform:translateX(-50%) translateY(0); } }
 @keyframes toast-out { from { opacity:1; } to { opacity:0; transform:translateX(-50%) translateY(-20px); } }
@@ -2970,7 +3516,7 @@ const STYLES = `
 .offline-dismiss { font-family:'Fira Code',monospace; font-size:9px; color:var(--txd); margin-top:12px; opacity:.5; }
 
 /* Milestone Toast */
-.milestone-toast { position:fixed; top:140px; left:50%; transform:translateX(-50%); background:linear-gradient(135deg,#2a2000,#1a1500); border:2px solid var(--gold); border-radius:10px; padding:10px 20px; z-index:50; text-align:center; min-width:220px; max-width:360px; animation:toast-in .3s ease-out; box-shadow:0 4px 20px rgba(0,0,0,.6),0 0 12px rgba(251,191,36,.15); }
+.milestone-toast { position:fixed; top:140px; left:50%; transform:translateX(-50%); background:linear-gradient(135deg,#2a2000,#1a1500); border:2px solid var(--gold); border-radius:10px; padding:10px 20px; z-index:50; text-align:center; min-width:220px; max-width:360px; animation:toast-in .3s ease-out; box-shadow:0 4px 20px rgba(0,0,0,.6),0 0 12px rgba(251,191,36,.15); pointer-events:none; }
 .milestone-toast-title { font-family:'Fira Code',monospace; font-size:9px; text-transform:uppercase; letter-spacing:1.5px; display:block; margin-bottom:2px; color:var(--gold); }
 .milestone-toast-name { font-family:'Cinzel',serif; font-size:14px; font-weight:700; display:block; color:var(--txb); }
 .milestone-toast-desc { font-size:10px; color:var(--txd); margin-top:4px; display:block; }
@@ -3008,6 +3554,13 @@ const STYLES = `
 .inv-combine-btn { font-family:'Cinzel',serif; font-size:10px; font-weight:700; padding:4px 12px; border-radius:6px; border:1px solid #a855f7; color:#a855f7; background:rgba(168,85,247,.1); cursor:pointer; transition:all .2s; }
 .inv-combine-btn:hover { background:rgba(168,85,247,.25); color:#e9d5ff; border-color:#c084fc; }
 .inv-combine-progress { font-family:'Fira Code',monospace; font-size:9px; color:var(--txd); font-style:italic; }
+.inv-sacrifice-btn { font-family:'Cinzel',serif; font-size:10px; font-weight:700; padding:4px 12px; border-radius:6px; border:1px solid #ef4444; color:#ef4444; background:rgba(239,68,68,.1); cursor:pointer; transition:all .2s; }
+.inv-sacrifice-btn:hover { background:rgba(239,68,68,.25); color:#fca5a5; border-color:#f87171; }
+.sacrifice-summary { background:rgba(239,68,68,.06); border:1px solid rgba(239,68,68,.15); border-radius:10px; padding:10px 14px; margin-bottom:12px; }
+.sacrifice-hdr { font-family:'Cinzel',serif; font-size:13px; font-weight:700; color:#ef4444; margin-bottom:6px; }
+.sacrifice-sub { font-family:'Fira Code',monospace; font-size:9px; color:var(--txd); font-weight:400; margin-left:4px; }
+.sacrifice-tags { display:flex; flex-wrap:wrap; gap:6px; }
+.sacrifice-tag { font-family:'Fira Code',monospace; font-size:10px; padding:2px 8px; border:1px solid; border-radius:4px; background:rgba(0,0,0,.2); }
 .loot-toast-fused { font-family:'Fira Code',monospace; font-size:9px; text-transform:uppercase; letter-spacing:1.5px; display:block; margin-bottom:2px; color:#a855f7; }
 
 /* ── Equip Picker Modal ── */
@@ -3183,14 +3736,14 @@ const STYLES = `
 .ach-unlocked .ach-name { color:var(--gold,#fbbf24); }
 
 /* Achievement Toast */
-.achievement-toast { position:fixed; top:100px; left:50%; transform:translateX(-50%); background:linear-gradient(135deg,#2a2000,#1a1500); border:2px solid var(--gold,#fbbf24); border-radius:10px; padding:12px 24px; z-index:55; text-align:center; min-width:240px; max-width:360px; animation:toast-in .3s ease-out; box-shadow:0 4px 20px rgba(0,0,0,.6),0 0 20px rgba(251,191,36,.2); }
+.achievement-toast { position:fixed; top:100px; left:50%; transform:translateX(-50%); background:linear-gradient(135deg,#2a2000,#1a1500); border:2px solid var(--gold,#fbbf24); border-radius:10px; padding:12px 24px; z-index:55; text-align:center; min-width:240px; max-width:360px; animation:toast-in .3s ease-out; box-shadow:0 4px 20px rgba(0,0,0,.6),0 0 20px rgba(251,191,36,.2); pointer-events:none; }
 .ach-toast-icon { font-size:24px; display:block; margin-bottom:4px; }
 .ach-toast-label { font-family:'Fira Code',monospace; font-size:8px; text-transform:uppercase; letter-spacing:2px; color:var(--gold,#fbbf24); display:block; margin-bottom:4px; }
 .ach-toast-name { font-family:'Cinzel',serif; font-size:15px; font-weight:900; color:#fff; display:block; }
 .ach-toast-desc { font-size:10px; color:var(--txd); margin-top:4px; display:block; }
 
 /* ── Dungeon Events ── */
-.event-banner { position:sticky; top:0; z-index:25; margin:0 0 8px; padding:12px 16px; border:2px solid; border-radius:10px; text-align:center; cursor:pointer; box-shadow:0 4px 24px rgba(0,0,0,.6); background:linear-gradient(135deg,#1a1f30,#0e1018); }
+.event-banner { position:sticky; top:var(--hd-h,112px); z-index:25; margin:0 0 8px; padding:12px 16px; border:2px solid; border-radius:10px; text-align:center; cursor:pointer; box-shadow:0 4px 24px rgba(0,0,0,.6); background:linear-gradient(135deg,#1a1f30,#0e1018); }
 .event-pending { animation:event-pulse 1s ease-in-out infinite alternate; }
 @keyframes event-pulse { from { box-shadow:0 4px 24px rgba(0,0,0,.6); } to { box-shadow:0 4px 32px rgba(0,0,0,.6),0 0 24px var(--evt-glow,rgba(251,191,36,.3)); } }
 .event-title { font-family:'Cinzel',serif; font-size:16px; font-weight:900; display:block; letter-spacing:2px; text-shadow:0 0 12px currentColor; }

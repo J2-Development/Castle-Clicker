@@ -17,7 +17,11 @@
       "Bash(npm run:*)",
       "Bash(grep -E \"\\\\.jsx?$|\\\\.json$\")",
       "Bash(unzip -o gothicbyte.zip -d gothicbyte_temp)",
-      "Bash(unzip -o enchanted_land.zip -d enchanted_temp)"
+      "Bash(unzip -o enchanted_land.zip -d enchanted_temp)",
+      "Bash(du -sh public/assets/*)",
+      "Bash(unzip -l \"public/assets/Free-Game-Achievement-Vector-RPG-Icons.zip\")",
+      "Bash(mkdir -p C:/J2/CastleClicker/public/assets/achievements)",
+      "Bash(unzip -j -o \"public/assets/Free-Game-Achievement-Vector-RPG-Icons.zip\" \"PNG/*.png\" -d public/assets/achievements)"
     ]
   }
 }
