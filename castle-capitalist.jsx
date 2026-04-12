@@ -2001,28 +2001,27 @@ export default function CastleCapitalist() {
     setTimeout(() => setLootToast(null), 3000);
   };
 
-  const handleConsumeItem = (itemId) => {
+  const handleConsumeItem = (itemId, count = 1) => {
     const item = LOOT_BY_ID[itemId];
     if (!item) return;
     const owned = (inventory[itemId] || 0) - getEquippedCount(equipped, itemId);
-    if (owned < 1) return;
+    const n = Math.min(count, owned);
+    if (n < 1) return;
     const frac = CONSUME_FRACTIONS[item.rarity] || 0.20;
-    // Remove 1 from inventory
     setInventory(prev => {
       const next = { ...prev };
-      next[itemId] = (next[itemId] || 0) - 1;
+      next[itemId] = (next[itemId] || 0) - n;
       if (next[itemId] <= 0) delete next[itemId];
       return next;
     });
-    // Add fractional buffs permanently
     setConsumedBuffs(prev => {
       const next = { ...prev };
       for (const e of item.effects) {
-        next[e.type] = (next[e.type] || 0) + e.value * frac;
+        next[e.type] = (next[e.type] || 0) + e.value * frac * n;
       }
       return next;
     });
-    setLootToast({ item, sacrificed: true });
+    setLootToast({ item, sacrificed: true, count: n });
     setTimeout(() => setLootToast(null), 3000);
   };
 
@@ -2492,16 +2491,26 @@ export default function CastleCapitalist() {
                             )}
                             {available > 0 && (() => {
                               const frac = CONSUME_FRACTIONS[item.rarity] || 0.20;
-                              const buffDesc = item.effects.map(e => {
-                                const pct = (e.value * frac * 100);
+                              const fmtBuff = (mult) => item.effects.map(e => {
+                                const pct = (e.value * frac * mult * 100);
                                 const label = e.type === 'goldMultiplier' ? 'gold' : e.type === 'speedBoost' ? 'speed' : e.type === 'dropRateBoost' ? 'drops' : e.type === 'xpBoost' ? 'XP' : e.type === 'critGold' ? 'crit' : e.type === 'instantComplete' ? 'bonus cycle' : e.type === 'chainRun' ? 'chain' : e.type;
                                 return `+${pct >= 1 ? pct.toFixed(1) : pct.toFixed(2)}% ${label}`;
                               }).join(', ');
+                              const oneBuff = fmtBuff(1);
+                              const allBuff = fmtBuff(available);
                               return (
-                                <button className="inv-sacrifice-btn" onClick={() => handleConsumeItem(item.id)}
-                                  title={`Sacrifice 1 for permanent: ${buffDesc}`}>
-                                  Sacrifice &rarr; {buffDesc}
-                                </button>
+                                <div className="inv-sacrifice-row">
+                                  <button className="inv-sacrifice-btn" onClick={() => handleConsumeItem(item.id, 1)}
+                                    title={`Sacrifice 1 for permanent: ${oneBuff}`}>
+                                    Sacrifice &rarr; {oneBuff}
+                                  </button>
+                                  {available > 1 && (
+                                    <button className="inv-sacrifice-btn inv-sacrifice-all-btn" onClick={() => handleConsumeItem(item.id, available)}
+                                      title={`Sacrifice all ${available} copies for permanent: ${allBuff}`}>
+                                      Sacrifice All &times;{available} &rarr; {allBuff}
+                                    </button>
+                                  )}
+                                </div>
                               );
                             })()}
                           </div>
@@ -2851,7 +2860,7 @@ export default function CastleCapitalist() {
           style={{ borderColor: getRarityStyle(lootToast.item.rarity).color }}>
           {lootToast.item.icon && <img src={lootToast.item.icon} alt="" className="loot-toast-icon" style={{ imageRendering: 'pixelated' }} />}
           {lootToast.fused && <span className="loot-toast-fused">Forged!</span>}
-          {lootToast.sacrificed && <span className="loot-toast-fused" style={{color:'#ef4444'}}>Sacrificed!</span>}
+          {lootToast.sacrificed && <span className="loot-toast-fused" style={{color:'#ef4444'}}>Sacrificed{lootToast.count > 1 ? ` ×${lootToast.count}` : ''}!</span>}
           <span className="loot-toast-rarity"
             style={{ color: getRarityStyle(lootToast.item.rarity).color }}>
             {getRarityStyle(lootToast.item.rarity).label}
@@ -3614,8 +3623,11 @@ const STYLES = `
 .inv-combine-btn { font-family:'Cinzel',serif; font-size:10px; font-weight:700; padding:4px 12px; border-radius:6px; border:1px solid #a855f7; color:#a855f7; background:rgba(168,85,247,.1); cursor:pointer; transition:all .2s; }
 .inv-combine-btn:hover { background:rgba(168,85,247,.25); color:#e9d5ff; border-color:#c084fc; }
 .inv-combine-progress { font-family:'Fira Code',monospace; font-size:9px; color:var(--txd); font-style:italic; }
+.inv-sacrifice-row { display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
 .inv-sacrifice-btn { font-family:'Cinzel',serif; font-size:10px; font-weight:700; padding:4px 12px; border-radius:6px; border:1px solid #ef4444; color:#ef4444; background:rgba(239,68,68,.1); cursor:pointer; transition:all .2s; }
 .inv-sacrifice-btn:hover { background:rgba(239,68,68,.25); color:#fca5a5; border-color:#f87171; }
+.inv-sacrifice-all-btn { border-color:#b91c1c; color:#fca5a5; background:linear-gradient(135deg,rgba(185,28,28,.25),rgba(239,68,68,.15)); }
+.inv-sacrifice-all-btn:hover { background:linear-gradient(135deg,rgba(185,28,28,.45),rgba(239,68,68,.3)); color:#fee2e2; border-color:#ef4444; }
 .sacrifice-summary { background:rgba(239,68,68,.06); border:1px solid rgba(239,68,68,.15); border-radius:10px; padding:10px 14px; margin-bottom:12px; }
 .sacrifice-hdr { font-family:'Cinzel',serif; font-size:13px; font-weight:700; color:#ef4444; margin-bottom:6px; }
 .sacrifice-sub { font-family:'Fira Code',monospace; font-size:9px; color:var(--txd); font-weight:400; margin-left:4px; }
