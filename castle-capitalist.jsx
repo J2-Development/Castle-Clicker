@@ -397,6 +397,51 @@ const ACHIEVEMENTS = [
   { id:"ach_sacrifice_gold",name:"Altar of Power",      desc:"Accumulate +50% permanent gold from sacrifices",     check: s => (s.consumedBuffs?.goldMultiplier || 0) >= 0.50 },
 ];
 
+// Maps achievement id → icon number in /assets/achievements/. 30 hand-drawn
+// icons split across three themes: jewelry (1-10), wealth (11-20), combat (21-30).
+// Related achievements share icons along each tier progression.
+const ACH_ICONS = {
+  // Gold / wealth progression
+  ach_gold1:11, ach_gold2:12, ach_gold3:13, ach_gold4:14, ach_gold5:15, ach_gold6:16,
+  ach_hoard_1b:17, ach_hoard_1t:18,
+  // Soul Gems — endgame pouches / chests
+  ach_gems10:17, ach_gems50:18, ach_gems100:19, ach_gems500:20,
+  // Events — treasure discoveries
+  ach_event5:11, ach_event20:13, ach_event50:15, ach_event200:18,
+  // MTX slots
+  ach_mtx_all:20,
+  // Loot discovery (jewelry set)
+  ach_rare:1, ach_loot10:2, ach_loot25:3,
+  ach_legendary:4, ach_all_legendary:5, ach_loot_all:6,
+  // Sacrifice (altar offerings)
+  ach_sacrifice1:7, ach_sacrifice_gold:8,
+  // Materials / alchemy
+  ach_mat_tier3_any:9, ach_mat_tier3_all:10,
+  // Ownership (shield set)
+  ach_own25:21, ach_own100:22, ach_own500:23, ach_own1k:24,
+  ach_all10:25, ach_ownall100:26, ach_ownall500:27,
+  // Tier mastery
+  ach_upg1:21, ach_apprentice1:21,
+  ach_journeyman1:22,
+  ach_expert1:23,
+  ach_upg5:24, ach_master1:24,
+  ach_upg_gm:25, ach_grandmaster1:25,
+  ach_upgall:26, ach_apprentice_all:26,
+  ach_upg_master_all:27,
+  ach_upg_gm_all:28,
+  // Companions — allies
+  ach_comp1:22, ach_comp5:25, ach_comp10:28,
+  // Transforms
+  ach_transform_any:28, ach_transform_all:29,
+  // Skill tree
+  ach_skill_all:30,
+  // Ascension
+  ach_asc1:22, ach_asc5:24, ach_asc10:26, ach_asc25:28, ach_asc50:30,
+  // Activity / clicks
+  ach_click100:21, ach_click1k:23, ach_click10k:25,
+};
+const getAchievementIcon = id => (ACH_ICONS[id] ? `/assets/achievements/${ACH_ICONS[id]}.png` : null);
+
 // ═══ DUNGEON EVENTS ═══
 const DUNGEON_EVENTS = [
   { id:"treasure_goblin", name:"Treasure Goblin",  desc:"10x gold for 30 seconds!",         duration:30000, color:"#fbbf24", effect:{ goldMult:10 } },
@@ -1280,9 +1325,9 @@ export default function CastleCapitalist() {
         if (!newUnlocks) newUnlocks = { ...achievements };
         newUnlocks[ach.id] = true;
         if (activeEventRef.current) {
-          pendingToastsRef.current.ach.push({ name: ach.name, desc: ach.desc });
+          pendingToastsRef.current.ach.push({ id: ach.id, name: ach.name, desc: ach.desc });
         } else {
-          setAchievementToast({ name: ach.name, desc: ach.desc, fadeOut: false });
+          setAchievementToast({ id: ach.id, name: ach.name, desc: ach.desc, fadeOut: false });
         }
       }
     }
@@ -2742,9 +2787,14 @@ export default function CastleCapitalist() {
               <div className="ach-list">
                 {ACHIEVEMENTS.map(ach => {
                   const unlocked = !!achievements[ach.id];
+                  const iconUrl = getAchievementIcon(ach.id);
                   return (
                     <div key={ach.id} className={`ach-card ${unlocked ? 'ach-unlocked' : 'ach-locked'}`}>
-                      <div className="ach-icon">{unlocked ? '\u2726' : '\uD83D\uDD12'}</div>
+                      <div className="ach-icon">
+                        {iconUrl
+                          ? <img src={iconUrl} alt="" className="ach-icon-img" />
+                          : (unlocked ? '\u2726' : '\uD83D\uDD12')}
+                      </div>
                       <div className="ach-info">
                         <span className="ach-name">{unlocked ? ach.name : '???'}</span>
                         <span className="ach-desc">{unlocked ? ach.desc : 'Keep playing to discover...'}</span>
@@ -2774,7 +2824,12 @@ export default function CastleCapitalist() {
       {/* ── ACHIEVEMENT TOAST ── */}
       {achievementToast && (
         <div className={`achievement-toast ${achievementToast.fadeOut ? 'loot-toast-out' : ''}`}>
-          <span className="ach-toast-icon">{'\u2726'}</span>
+          {(() => {
+            const iconUrl = getAchievementIcon(achievementToast.id);
+            return iconUrl
+              ? <img src={iconUrl} alt="" className="ach-toast-img" />
+              : <span className="ach-toast-icon">{'\u2726'}</span>;
+          })()}
           <span className="ach-toast-label">Achievement Unlocked</span>
           <span className="ach-toast-name">{achievementToast.name}</span>
           <span className="ach-toast-desc">{achievementToast.desc}</span>
@@ -2908,9 +2963,14 @@ export default function CastleCapitalist() {
               <div className="ach-list">
                 {ACHIEVEMENTS.map(ach => {
                   const unlocked = !!achievements[ach.id];
+                  const iconUrl = getAchievementIcon(ach.id);
                   return (
                     <div key={ach.id} className={`ach-card ${unlocked ? 'ach-unlocked' : 'ach-locked'}`}>
-                      <div className="ach-icon">{unlocked ? '\u2726' : '\uD83D\uDD12'}</div>
+                      <div className="ach-icon">
+                        {iconUrl
+                          ? <img src={iconUrl} alt="" className="ach-icon-img" />
+                          : (unlocked ? '\u2726' : '\uD83D\uDD12')}
+                      </div>
                       <div className="ach-info">
                         <span className="ach-name">{unlocked ? ach.name : '???'}</span>
                         <span className="ach-desc">{unlocked ? ach.desc : 'Keep playing to discover...'}</span>
@@ -3729,7 +3789,9 @@ const STYLES = `
 .ach-card { display:flex; align-items:center; gap:10px; background:var(--sf); border:1px solid var(--bd); border-radius:8px; padding:10px 12px; transition:all .2s; }
 .ach-unlocked { border-color:rgba(251,191,36,.3); background:rgba(251,191,36,.05); }
 .ach-locked { opacity:.4; }
-.ach-icon { font-size:18px; flex-shrink:0; width:28px; text-align:center; }
+.ach-icon { font-size:18px; flex-shrink:0; width:44px; height:44px; display:flex; align-items:center; justify-content:center; }
+.ach-icon-img { width:44px; height:44px; object-fit:contain; display:block; filter:drop-shadow(0 2px 4px rgba(0,0,0,.5)); }
+.ach-locked .ach-icon-img { filter:grayscale(1) brightness(.55) drop-shadow(0 2px 4px rgba(0,0,0,.5)); }
 .ach-info { flex:1; min-width:0; }
 .ach-name { font-family:'Cinzel',serif; font-size:12px; font-weight:700; color:var(--txb); display:block; }
 .ach-desc { font-size:10px; color:var(--txd); display:block; margin-top:2px; }
@@ -3738,6 +3800,7 @@ const STYLES = `
 /* Achievement Toast */
 .achievement-toast { position:fixed; top:100px; left:50%; transform:translateX(-50%); background:linear-gradient(135deg,#2a2000,#1a1500); border:2px solid var(--gold,#fbbf24); border-radius:10px; padding:12px 24px; z-index:55; text-align:center; min-width:240px; max-width:360px; animation:toast-in .3s ease-out; box-shadow:0 4px 20px rgba(0,0,0,.6),0 0 20px rgba(251,191,36,.2); pointer-events:none; }
 .ach-toast-icon { font-size:24px; display:block; margin-bottom:4px; }
+.ach-toast-img { width:56px; height:56px; object-fit:contain; display:block; margin:0 auto 4px; filter:drop-shadow(0 2px 6px rgba(251,191,36,.4)); }
 .ach-toast-label { font-family:'Fira Code',monospace; font-size:8px; text-transform:uppercase; letter-spacing:2px; color:var(--gold,#fbbf24); display:block; margin-bottom:4px; }
 .ach-toast-name { font-family:'Cinzel',serif; font-size:15px; font-weight:900; color:#fff; display:block; }
 .ach-toast-desc { font-size:10px; color:var(--txd); margin-top:4px; display:block; }
