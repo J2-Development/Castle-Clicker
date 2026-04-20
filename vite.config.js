@@ -13,7 +13,7 @@ export default defineConfig({
       },
       manifest: {
         name: 'Castle Clicker',
-        short_name: 'Castle',
+        short_name: 'Castle Clicker',
         description: 'A dungeon-themed idle RPG. Train professions, raid dungeons, collect loot.',
         theme_color: '#2a1a10',
         background_color: '#1a1b26',
