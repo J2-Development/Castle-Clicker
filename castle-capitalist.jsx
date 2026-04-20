@@ -266,7 +266,7 @@ const OFFLINE_EFFICIENCY = 0.25;
 const OFFLINE_CAP = 8 * 60 * 60 * 1000;
 
 // Save key for localStorage / AsyncStorage
-const SAVE_KEY = "castle_clicker_v12"; // bumped: profession evolution
+const SAVE_KEY = "castle_clicker_v13"; // bumped: dungeon expeditions
 
 // ═══ EXPEDITIONS ═══
 // Medium-clock (~5h) check-in cycle. Send a companion on a dungeon run for a
@@ -1027,6 +1027,64 @@ const rollLootDrop = (ventureIndex, skillLevel, dropRateMult = 1, xpMult = 1, un
 
 const getRarityStyle = (rarity) => RARITY_TIERS[rarity] || RARITY_TIERS.common;
 
+// ═══ DUNGEON EXPEDITIONS ═══
+// Medium-clock retention layer (~3-8h cycles). Send a companion away; that
+// venture stops earning, but on return you get a chunky reward bundle.
+// Reward target: ~1.2-1.6× the gold the venture would've earned passively,
+// plus a meaningfully boosted loot/material chance.
+const EXPEDITION_DUNGEONS = [
+  { id: 0, name: "Kobold Burrows",     flavor: "Skittering tunnels filled with petty thieves and shiny baubles.",   durationMs: 3*3600_000, minVentureIdx: 0, rewardMult: 1.2, lootChance: 0.20, materialTier: 't1', materialChance: 0.80, color: '#9ece6a' },
+  { id: 1, name: "Crypt of Whispers",  flavor: "Ancient bones still murmur of where their treasures lie buried.",   durationMs: 4*3600_000, minVentureIdx: 1, rewardMult: 1.3, lootChance: 0.25, materialTier: 't1', materialChance: 1.00, color: '#bb9af7' },
+  { id: 2, name: "Flooded Reliquary",  flavor: "Sunken vaults guarded by drowned wardens and waterlogged relics.", durationMs: 6*3600_000, minVentureIdx: 2, rewardMult: 1.4, lootChance: 0.30, materialTier: 't2', materialChance: 0.50, color: '#7aa2f7' },
+  { id: 3, name: "Sunless Keep",       flavor: "A fortress where torches gutter and shadows hold every door.",     durationMs: 4*3600_000, minVentureIdx: 3, rewardMult: 1.3, lootChance: 0.35, materialTier: 't2', materialChance: 0.70, color: '#e0af68' },
+  { id: 4, name: "Dragon's Hoard",     flavor: "A wyrm's lair piled with centuries of melted crowns and coins.",   durationMs: 8*3600_000, minVentureIdx: 5, rewardMult: 1.6, lootChance: 0.40, materialTier: 't2', materialChance: 1.00, color: '#f7768e' },
+  { id: 5, name: "Void Rift",          flavor: "A wound in the world that bleeds raw essence and impossible loot.", durationMs: 6*3600_000, minVentureIdx: 7, rewardMult: 1.5, lootChance: 0.45, materialTier: 't3', materialChance: 0.30, color: '#ff9e64' },
+  { id: 6, name: "Celestial Spire",    flavor: "A tower so tall its summit grazes the breath of forgotten gods.",   durationMs: 8*3600_000, minVentureIdx: 8, rewardMult: 1.5, lootChance: 0.50, materialTier: 't3', materialChance: 0.60, color: '#c0caf5' },
+];
+const EXPEDITION_DUNGEON_BY_ID = {};
+for (const d of EXPEDITION_DUNGEONS) EXPEDITION_DUNGEON_BY_ID[d.id] = d;
+
+// Deterministic mulberry32 PRNG so that previewing/displaying rewards before
+// claim matches the actual claim (rewardSeed locked at launch).
+const seededRng = (seed) => {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6D2B79F5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+};
+
+// Roll the reward bundle. `gpsBaseline` is gold-per-second the venture would
+// have earned if just left running passively (caller computes with current
+// modifiers so reward scales with player's current build).
+const rollExpeditionReward = (dungeon, gpsBaseline, unlockedSet, seed) => {
+  const rng = seededRng(seed);
+  const gold = Math.max(1, Math.floor(gpsBaseline * (dungeon.durationMs / 1000) * dungeon.rewardMult));
+  let lootItemId = null;
+  if (rng() < dungeon.lootChance) {
+    // Bias toward higher rarities than normal venture drops — expeditions
+    // should feel "chunky." Roll once per rarity from rare→legendary, fall
+    // back to uncommon if nothing hits.
+    const rarities = ['legendary', 'epic', 'rare', 'uncommon'];
+    const tierWeights = { legendary: 0.05, epic: 0.15, rare: 0.40, uncommon: 0.40 };
+    let pickedRarity = 'uncommon';
+    let acc = 0;
+    const r = rng();
+    for (const rar of rarities) {
+      acc += tierWeights[rar];
+      if (r < acc) { pickedRarity = rar; break; }
+    }
+    const pool = LOOT_TABLE.filter(it => it.rarity === pickedRarity && (!unlockedSet || isItemRelevant(it, unlockedSet)));
+    if (pool.length) lootItemId = pool[Math.floor(rng() * pool.length)].id;
+  }
+  let materialTier = null;
+  if (rng() < dungeon.materialChance) materialTier = dungeon.materialTier;
+  return { gold, lootItemId, materialTier };
+};
+
 /** Aggregate all loot bonuses from inventory for a given venture. */
 const getLootBonuses = (equippedArr, ventureIndex) => {
   let goldMult = 0, speedBonus = 0, dropRateBonus = 0, xpBonus = 0;
@@ -1164,6 +1222,7 @@ const createInitialState = () =>
     hasCompanion: false,
     progress: 0,
     running: false,
+    expedition: null, // { dungeonId, startedAt, durationMs, rewardSeed }
   }));
 
 export default function CastleCapitalist() {
@@ -1200,6 +1259,11 @@ export default function CastleCapitalist() {
   const [showFirstAllyModal, setShowFirstAllyModal] = useState(null);
   const [firstSacrificeSeen, setFirstSacrificeSeen] = useState(false);
   const [showFirstSacrificeModal, setShowFirstSacrificeModal] = useState(null);
+  const [firstExpeditionSeen, setFirstExpeditionSeen] = useState(false);
+  const [showFirstExpeditionModal, setShowFirstExpeditionModal] = useState(false);
+  const [expeditionPickerIdx, setExpeditionPickerIdx] = useState(null); // venture idx whose dungeon picker is open
+  const [expeditionRewardToast, setExpeditionRewardToast] = useState(null);
+  const [expeditionTick, setExpeditionTick] = useState(0); // 1Hz countdown re-render
   const [consumedBuffs, setConsumedBuffs] = useState({}); // legacy, kept for one-cycle migration only
   const [essence, setEssence] = useState(0);
   const [legendaryEssence, setLegendaryEssence] = useState(0);
@@ -1382,7 +1446,7 @@ export default function CastleCapitalist() {
     let raw = null;
     let loadedKey = null;
     try {
-      const candidates = [SAVE_KEY, "castle_clicker_v11", "castle_clicker_v10", "castle_clicker_v9", "castle_clicker_v8", "castle_clicker_v7", "castle_clicker_v6", "castle_clicker_v5"];
+      const candidates = [SAVE_KEY, "castle_clicker_v12", "castle_clicker_v11", "castle_clicker_v10", "castle_clicker_v9", "castle_clicker_v8", "castle_clicker_v7", "castle_clicker_v6", "castle_clicker_v5"];
       for (const k of candidates) {
         const v = localStorage.getItem(k);
         if (v) { raw = v; loadedKey = k; break; }
@@ -1392,7 +1456,7 @@ export default function CastleCapitalist() {
         const save = JSON.parse(raw);
 
         if (save.gold != null) setGold(save.gold);
-        if (save.ventures) setVentures(save.ventures);
+        if (save.ventures) setVentures(save.ventures.map(vs => ({ ...vs, expedition: vs.expedition || null })));
         if (save.prestigeGems != null) setPrestigeGems(save.prestigeGems);
         if (save.totalGems != null) setTotalGems(save.totalGems);
         if (save.lifetimeGold != null) setLifetimeGold(save.lifetimeGold);
@@ -1416,6 +1480,7 @@ export default function CastleCapitalist() {
         if (save.firstEquipSeen) setFirstEquipSeen(true);
         if (save.firstAllySeen) setFirstAllySeen(true);
         if (save.firstSacrificeSeen) setFirstSacrificeSeen(true);
+        if (save.firstExpeditionSeen) setFirstExpeditionSeen(true);
 
         // ── Altar (essence) state — load if present, otherwise migrate from legacy consumedBuffs.
         if (save.essence != null || save.altarRanks) {
@@ -1467,6 +1532,8 @@ export default function CastleCapitalist() {
             const savedWatch = getCurrentWatch();
             save.ventures.forEach((vs, i) => {
               if (vs.hasCompanion && vs.owned > 0) {
+                // Expedition pauses passive income from the moment it was launched.
+                if (vs.expedition) return;
                 // Evolving professions produce no income while the cooldown is active.
                 const endTs = savedEvolveEnd[i] || 0;
                 let activeMs = elapsed;
@@ -1549,6 +1616,7 @@ export default function CastleCapitalist() {
           firstEquipSeen,
           firstAllySeen,
           firstSacrificeSeen,
+          firstExpeditionSeen,
           consumedBuffs,
           essence: essenceRef.current,
           legendaryEssence: legendaryEssenceRef.current,
@@ -1594,6 +1662,7 @@ export default function CastleCapitalist() {
           firstEquipSeen,
           firstAllySeen,
           firstSacrificeSeen,
+          firstExpeditionSeen,
           consumedBuffs,
           essence: essenceRef.current,
           legendaryEssence: legendaryEssenceRef.current,
@@ -1803,6 +1872,10 @@ export default function CastleCapitalist() {
         if (vs.owned === 0 || (!vs.running && !vs.hasCompanion)) return vs;
         // Profession is mid-evolution — no progress, no income, no drops.
         if (isEvolvingNow(evolveEndTsRef.current[i])) {
+          return vs.progress === 0 ? vs : { ...vs, progress: 0 };
+        }
+        // Companion is on expedition — venture pauses passive income until claimed.
+        if (vs.expedition) {
           return vs.progress === 0 ? vs : { ...vs, progress: 0 };
         }
 
@@ -2105,6 +2178,22 @@ export default function CastleCapitalist() {
     const id = setInterval(() => setEvolveTick(n => n + 1), 1000);
     return () => clearInterval(id);
   }, [evolveEndTs]);
+
+  // 1Hz tick to refresh expedition countdowns only when one is active.
+  useEffect(() => {
+    const anyActive = ventures.some(vs => vs && vs.expedition);
+    if (!anyActive) return;
+    const id = setInterval(() => setExpeditionTick(n => n + 1), 1000);
+    return () => clearInterval(id);
+  }, [ventures]);
+
+  // Expedition reward toast auto-dismiss
+  useEffect(() => {
+    if (!expeditionRewardToast) return;
+    const fade = setTimeout(() => setExpeditionRewardToast(t => t ? { ...t, fadeOut: true } : null), 4500);
+    const remove = setTimeout(() => setExpeditionRewardToast(null), 5200);
+    return () => { clearTimeout(fade); clearTimeout(remove); };
+  }, [expeditionRewardToast?.at]);
 
   // ═══ ACTIONS ═══
   const handleBuyVenture = (idx) => {
@@ -2508,6 +2597,87 @@ export default function CastleCapitalist() {
     haptic(20);
   };
 
+  // ── Dungeon expeditions ──
+  // Compute the venture's current effective gold-per-second using the same
+  // multiplier stack the live game loop uses, so reward scales with the
+  // player's current build.
+  const getVentureGps = (idx) => {
+    const v = VENTURES[idx];
+    const vs = ventures[idx];
+    if (!v || !vs || vs.owned <= 0) return 0;
+    const upgTier = profUpgrades[idx] || 0;
+    const tPath = profTransforms[idx] || null;
+    const evoStage = profEvolutions[idx] || 0;
+    const loot = getLootBonuses(equipped, idx);
+    const con = getAltarBonuses(altarRanks);
+    const profInvMult = getProfInvestMult(profInvest, idx);
+    const comboGold = (loot.goldMult + (con.goldMult - 1)) * profInvMult;
+    const comboSpeed = loot.speedMult + (con.speedMult - 1);
+    const synergyMult = 1 + getIncomingSynergy(profUpgrades, idx);
+    const rev = getRevenue(v, vs.owned, prestigeMultiplier, upgTier, tPath, comboGold, synergyMult, evoStage);
+    const cycle = getEffectiveCycleTime(v, upgTier, tPath, comboSpeed * (1 + skillBonuses.speedMult));
+    return cycle > 0 ? (rev / cycle) * 1000 : 0;
+  };
+
+  const handleLaunchExpedition = (ventureIdx, dungeonId) => {
+    const dungeon = EXPEDITION_DUNGEON_BY_ID[dungeonId];
+    if (!dungeon) return;
+    const vs = ventures[ventureIdx];
+    if (!vs || vs.owned <= 0 || !vs.hasCompanion) return;
+    if (vs.expedition) return;
+    if (ventureIdx < dungeon.minVentureIdx) return;
+    const seed = (Math.floor(Math.random() * 0xFFFFFFFF)) >>> 0;
+    setVentures(prev => prev.map((s, i) => i === ventureIdx ? {
+      ...s,
+      progress: 0,
+      expedition: { dungeonId, startedAt: Date.now(), durationMs: dungeon.durationMs, rewardSeed: seed },
+    } : s));
+    setExpeditionPickerIdx(null);
+    haptic(25);
+    if (!firstExpeditionSeen) {
+      setFirstExpeditionSeen(true);
+      setShowFirstExpeditionModal(true);
+    }
+  };
+
+  const handleClaimExpedition = (ventureIdx) => {
+    const vs = ventures[ventureIdx];
+    if (!vs || !vs.expedition) return;
+    const exp = vs.expedition;
+    if (Date.now() < exp.startedAt + exp.durationMs) return;
+    const dungeon = EXPEDITION_DUNGEON_BY_ID[exp.dungeonId];
+    if (!dungeon) return;
+    // Use the venture's gps at launch-equivalent rates. We approximate with
+    // current gps; rewardSeed locks the loot/material rolls deterministically.
+    const gps = getVentureGps(ventureIdx);
+    const unlockedSet = new Set();
+    ventures.forEach((v, i) => { if (v.owned > 0) unlockedSet.add(i); });
+    const reward = rollExpeditionReward(dungeon, gps, unlockedSet, exp.rewardSeed);
+    setGold(g => g + reward.gold);
+    setLifetimeGold(l => l + reward.gold);
+    if (reward.lootItemId) {
+      setInventory(inv => ({ ...inv, [reward.lootItemId]: (inv[reward.lootItemId] || 0) + 1 }));
+    }
+    if (reward.materialTier) {
+      setMaterials(prev => {
+        const next = { ...prev };
+        if (!next[ventureIdx]) next[ventureIdx] = { t1: 0, t2: 0, t3: 0 };
+        next[ventureIdx][reward.materialTier] = (next[ventureIdx][reward.materialTier] || 0) + 1;
+        return next;
+      });
+    }
+    setVentures(prev => prev.map((s, i) => i === ventureIdx ? { ...s, expedition: null, progress: 0 } : s));
+    setExpeditionRewardToast({
+      ventureIdx,
+      dungeonName: dungeon.name,
+      gold: reward.gold,
+      lootItemId: reward.lootItemId,
+      materialTier: reward.materialTier,
+      at: Date.now(),
+    });
+    haptic(40);
+  };
+
   const handleTutorialClose = () => {
     setShowTutorial(false);
     setTutorialStep(0);
@@ -2735,6 +2905,12 @@ export default function CastleCapitalist() {
                       </span>
                     )}
                     {isEvolvingNow(evolveEndTs[i]) && <span className="evo-badge evo-badge-active" style={{borderColor: v.color, color: v.color}}>EVOLVING</span>}
+                    {vs.expedition && (() => {
+                      const endTs = vs.expedition.startedAt + vs.expedition.durationMs;
+                      const ready = Date.now() >= endTs;
+                      const dungeon = EXPEDITION_DUNGEON_BY_ID[vs.expedition.dungeonId];
+                      return <span className={`evo-badge ${ready ? 'evo-badge-active' : ''}`} style={{borderColor: dungeon?.color || v.color, color: dungeon?.color || v.color}} title={dungeon?.name || 'Expedition'}>{ready ? 'CLAIM' : 'AWAY'}</span>;
+                    })()}
                     {upgTier > 0 && TIER_BADGE_STYLES[upgTier] && (
                       <span
                         className="tier-badge"
@@ -2825,7 +3001,40 @@ export default function CastleCapitalist() {
                   </div>
                 </div>
                 {vs.hasCompanion ? (
-                  <span className="comp-hired">✦ RECRUITED</span>
+                  vs.expedition ? (() => {
+                    const exp = vs.expedition;
+                    const dungeon = EXPEDITION_DUNGEON_BY_ID[exp.dungeonId];
+                    const endTs = exp.startedAt + exp.durationMs;
+                    const remMs = Math.max(0, endTs - Date.now());
+                    const ready = remMs <= 0;
+                    const totalMs = exp.durationMs || 1;
+                    const pct = Math.max(0, Math.min(100, (1 - remMs / totalMs) * 100));
+                    const hrs = Math.floor(remMs / 3600000);
+                    const mins = Math.floor((remMs % 3600000) / 60000);
+                    const secs = Math.floor((remMs % 60000) / 1000);
+                    const timeStr = hrs > 0 ? `${hrs}h ${mins}m` : (mins > 0 ? `${mins}m ${secs}s` : `${secs}s`);
+                    return (
+                      <div className="exp-status">
+                        <div className="exp-status-name" style={{color: dungeon?.color || v.color}}>
+                          {ready ? '✦ RETURNED' : `⛓ ${dungeon?.name || 'Expedition'}`}
+                        </div>
+                        <div className="exp-status-bar"><div className="exp-status-bar-fill" style={{width: `${pct}%`, background: dungeon?.color || v.color}}/></div>
+                        <div className="exp-status-meta">
+                          <span>{ready ? 'Reward ready' : `${timeStr} left`}</span>
+                          {ready ? (
+                            <button className="exp-claim-btn" onClick={() => handleClaimExpedition(i)}>Claim</button>
+                          ) : null}
+                        </div>
+                      </div>
+                    );
+                  })() : (
+                    <div className="comp-hired-wrap">
+                      <span className="comp-hired">✦ RECRUITED</span>
+                      <button className="exp-send-btn" onClick={() => setExpeditionPickerIdx(i)} title="Send on expedition">
+                        Send
+                      </button>
+                    </div>
+                  )
                 ) : vs.owned === 0 ? (
                   <span className="comp-locked">🔒 Locked</span>
                 ) : (
@@ -3894,6 +4103,119 @@ export default function CastleCapitalist() {
         );
       })()}
 
+      {/* ── EXPEDITION PICKER MODAL ── */}
+      {expeditionPickerIdx != null && (() => {
+        const idx = expeditionPickerIdx;
+        const v = VENTURES[idx];
+        const vs = ventures[idx];
+        if (!v || !vs) return null;
+        const gps = getVentureGps(idx);
+        return (
+          <div className="watch-modal-overlay" onClick={() => setExpeditionPickerIdx(null)}>
+            <div className="watch-modal exp-picker" onClick={e => e.stopPropagation()} style={{borderColor: v.color}}>
+              <div className="watch-modal-header" style={{background: `linear-gradient(135deg, ${v.colorDark}55, ${v.color}22)`}}>
+                <span className="watch-modal-title" style={{color: v.color}}>
+                  Send {COMPANION_NAMES[idx]} on Expedition
+                </span>
+                <button className="watch-modal-close" onClick={() => setExpeditionPickerIdx(null)}>X</button>
+              </div>
+              <p className="exp-picker-sub">
+                {v.name} pauses passive income while away. On return, claim a chunky reward bundle.
+              </p>
+              <div className="exp-dungeon-list">
+                {EXPEDITION_DUNGEONS.map(d => {
+                  const eligible = idx >= d.minVentureIdx;
+                  const expectedGold = Math.floor(gps * (d.durationMs / 1000) * d.rewardMult);
+                  const passiveGold = Math.floor(gps * (d.durationMs / 1000));
+                  const cdH = d.durationMs / 3600000;
+                  return (
+                    <div key={d.id} className={`exp-dungeon ${eligible ? '' : 'exp-dungeon-locked'}`} style={{borderLeftColor: d.color}}>
+                      <div className="exp-dungeon-hdr">
+                        <div className="exp-dungeon-name" style={{color: d.color}}>{d.name}</div>
+                        <div className="exp-dungeon-time">{cdH}h</div>
+                      </div>
+                      <div className="exp-dungeon-flavor">{d.flavor}</div>
+                      <div className="exp-dungeon-rewards">
+                        <span className="exp-reward-tag" style={{color:'var(--gd)'}}>
+                          <GoldCoinIcon size={11}/> ~{formatNumber(expectedGold)} <span className="exp-reward-vs">vs ~{formatNumber(passiveGold)} idle</span>
+                        </span>
+                        <span className="exp-reward-tag">{Math.round(d.lootChance * 100)}% loot</span>
+                        <span className="exp-reward-tag">{Math.round(d.materialChance * 100)}% {d.materialTier.toUpperCase()} mat</span>
+                      </div>
+                      {eligible ? (
+                        <button className="exp-launch-btn" style={{background: `linear-gradient(180deg, ${d.color}, ${d.color}99)`, color:'#1a1b26'}}
+                          onClick={() => handleLaunchExpedition(idx, d.id)}>
+                          Launch Expedition
+                        </button>
+                      ) : (
+                        <div className="exp-locked-hint">Unlocks at venture #{d.minVentureIdx + 1}</div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── EXPEDITION REWARD TOAST ── */}
+      {expeditionRewardToast && (() => {
+        const t = expeditionRewardToast;
+        const v = VENTURES[t.ventureIdx];
+        const item = t.lootItemId ? LOOT_BY_ID[t.lootItemId] : null;
+        const itemStyle = item ? getRarityStyle(item.rarity) : null;
+        return (
+          <div className={`exp-toast ${t.fadeOut ? 'exp-toast-fade' : ''}`} style={{borderColor: v.color}}>
+            <div className="exp-toast-hdr" style={{color: v.color}}>{COMPANION_NAMES[t.ventureIdx]} returned</div>
+            <div className="exp-toast-dungeon">from <strong>{t.dungeonName}</strong></div>
+            <div className="exp-toast-rewards">
+              <div className="exp-toast-row"><GoldCoinIcon size={12}/> <strong>{formatNumber(t.gold)}</strong> gold</div>
+              {item && (
+                <div className="exp-toast-row" style={{color: itemStyle.color}}>
+                  ✦ <strong>{item.name}</strong> <span className="exp-toast-rarity">({item.rarity})</span>
+                </div>
+              )}
+              {t.materialTier && (
+                <div className="exp-toast-row">+1 {SPECIALTY_MATERIALS[t.ventureIdx][t.materialTier].name}</div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── FIRST EXPEDITION TEACHING MODAL ── */}
+      {showFirstExpeditionModal && (
+        <div className="watch-modal-overlay" onClick={() => setShowFirstExpeditionModal(false)}>
+          <div className="watch-modal first-app-modal" onClick={e => e.stopPropagation()} style={{borderColor: '#bb9af7'}}>
+            <div className="first-app-hdr" style={{background: 'linear-gradient(135deg, rgba(187,154,247,.4), rgba(122,162,247,.2))'}}>
+              <div className="first-app-badge" style={{background: 'linear-gradient(135deg, #bb9af7, #7a5cc8)', boxShadow: '0 0 20px rgba(187,154,247,.5)'}}>EXPEDITION</div>
+              <div className="first-app-title">Send a companion away</div>
+              <div className="first-app-sub">Trade steady gold now for a chunky reward later.</div>
+            </div>
+            <div className="first-app-body">
+              <div className="first-app-reward">
+                <div className="first-app-reward-icon" style={{color:'#bb9af7'}}>&#9733;</div>
+                <div className="first-app-reward-text">
+                  While away, that profession <strong>stops earning gold</strong>. On return, claim a bundle worth <strong>more than the lost income</strong> — plus a boosted shot at loot and materials.
+                </div>
+              </div>
+              <div className="first-app-teach">
+                <div className="first-app-teach-title">How to play it</div>
+                <ul className="first-app-teach-list">
+                  <li><strong>Pick a long dungeon</strong> when you'll be away from the game (matches the wall-clock timer).</li>
+                  <li><strong>Pick a short one</strong> for a quick chunky reward during active play.</li>
+                  <li>Rewards <strong>scale with your build</strong> — the stronger that profession, the bigger the payout.</li>
+                </ul>
+              </div>
+            </div>
+            <button className="first-app-btn" onClick={() => setShowFirstExpeditionModal(false)} style={{background: 'linear-gradient(135deg, #bb9af7, #7a5cc8)', boxShadow: '0 4px 16px rgba(187,154,247,.3)'}}>
+              Onward
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ── SAVE RECOVERY MODAL ── */}
       {saveRecovery && (
         <div className="watch-modal-overlay" onClick={() => setSaveRecovery(null)}>
@@ -4192,6 +4514,43 @@ const STYLES = `
 .comp-btn:disabled { opacity:.3; cursor:default; }
 .comp-btn-afford { background:linear-gradient(180deg,#9ece6a,#6fa33e); color:#1a2a0a; border-color:#2a3a15; box-shadow:0 3px 8px rgba(0,0,0,.4),0 0 14px rgba(158,206,106,.25); }
 .comp-btn-afford:hover { filter:brightness(1.1); box-shadow:0 3px 8px rgba(0,0,0,.4),0 0 20px rgba(158,206,106,.35); }
+.comp-hired-wrap { display:flex; flex-direction:column; align-items:flex-end; gap:4px; }
+.exp-send-btn { font-family:'Cinzel',serif; font-size:10px; padding:5px 12px; border-radius:6px; background:linear-gradient(180deg,#bb9af7,#7a5cc8); color:#1a1b26; border:1px solid #3a2a5a; cursor:pointer; box-shadow:0 2px 8px rgba(187,154,247,.25); -webkit-tap-highlight-color:transparent; min-height:30px; font-weight:700; letter-spacing:.5px; }
+.exp-send-btn:active { transform:scale(.96); }
+.exp-status { display:flex; flex-direction:column; gap:4px; min-width:140px; align-items:flex-end; }
+.exp-status-name { font-family:'Cinzel',serif; font-size:10px; font-weight:700; letter-spacing:.5px; }
+.exp-status-bar { width:100%; height:6px; background:rgba(255,255,255,.08); border-radius:3px; overflow:hidden; border:1px solid rgba(255,255,255,.12); }
+.exp-status-bar-fill { height:100%; transition:width .5s linear; box-shadow:0 0 6px currentColor; }
+.exp-status-meta { display:flex; justify-content:space-between; align-items:center; gap:8px; width:100%; font-size:9px; color:var(--txd); }
+.exp-claim-btn { font-family:'Cinzel',serif; font-size:10px; padding:4px 10px; border-radius:5px; background:linear-gradient(180deg,#9ece6a,#6fa33e); color:#1a2a0a; border:1px solid #2a3a15; cursor:pointer; font-weight:700; letter-spacing:.5px; box-shadow:0 0 8px rgba(158,206,106,.3); animation:claimPulse 1.6s ease-in-out infinite; -webkit-tap-highlight-color:transparent; }
+@keyframes claimPulse { 0%,100% { box-shadow:0 0 8px rgba(158,206,106,.3); } 50% { box-shadow:0 0 18px rgba(158,206,106,.7); } }
+
+/* Expedition picker modal */
+.exp-picker { max-width:520px; width:92%; }
+.exp-picker-sub { font-size:11px; color:var(--txd); padding:8px 14px 4px; line-height:1.5; }
+.exp-dungeon-list { display:flex; flex-direction:column; gap:8px; padding:10px 14px 14px; max-height:60vh; overflow-y:auto; }
+.exp-dungeon { background:rgba(255,255,255,.03); border:1px solid var(--bd); border-left:3px solid; border-radius:8px; padding:10px 12px; }
+.exp-dungeon-locked { opacity:.45; }
+.exp-dungeon-hdr { display:flex; justify-content:space-between; align-items:baseline; }
+.exp-dungeon-name { font-family:'Cinzel',serif; font-size:13px; font-weight:700; }
+.exp-dungeon-time { font-family:'Fira Code',monospace; font-size:11px; color:var(--gd); font-weight:700; }
+.exp-dungeon-flavor { font-size:10px; color:var(--txd); margin:4px 0 6px; line-height:1.4; font-style:italic; }
+.exp-dungeon-rewards { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px; }
+.exp-reward-tag { font-family:'Fira Code',monospace; font-size:9px; padding:2px 7px; border-radius:3px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.1); display:inline-flex; align-items:center; gap:3px; }
+.exp-reward-vs { color:var(--txd); margin-left:4px; }
+.exp-launch-btn { width:100%; padding:8px; font-family:'Cinzel',serif; font-size:11px; font-weight:700; border-radius:6px; border:1px solid rgba(0,0,0,.3); cursor:pointer; letter-spacing:.5px; -webkit-tap-highlight-color:transparent; }
+.exp-launch-btn:active { transform:scale(.98); }
+.exp-locked-hint { text-align:center; font-size:10px; color:var(--txd); padding:6px 0; }
+
+/* Expedition reward toast */
+.exp-toast { position:fixed; top:80px; right:14px; max-width:280px; background:linear-gradient(135deg,rgba(20,22,32,.97),rgba(28,30,42,.97)); border:2px solid; border-radius:10px; padding:12px 14px; box-shadow:0 8px 28px rgba(0,0,0,.6),0 0 24px rgba(187,154,247,.25); z-index:200; animation:expToastIn .35s ease-out; transition:opacity .6s, transform .6s; }
+.exp-toast-fade { opacity:0; transform:translateX(20px); }
+@keyframes expToastIn { from { opacity:0; transform:translateX(40px); } to { opacity:1; transform:translateX(0); } }
+.exp-toast-hdr { font-family:'Cinzel',serif; font-size:13px; font-weight:700; letter-spacing:.5px; }
+.exp-toast-dungeon { font-size:10px; color:var(--txd); margin:2px 0 8px; }
+.exp-toast-rewards { display:flex; flex-direction:column; gap:4px; }
+.exp-toast-row { font-size:11px; display:flex; align-items:center; gap:6px; color:var(--txb); }
+.exp-toast-rarity { font-size:9px; color:var(--txd); text-transform:uppercase; }
 
 /* Upgrades */
 .upgrades { padding:12px 12px 20px; }
