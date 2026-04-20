@@ -266,7 +266,23 @@ const OFFLINE_EFFICIENCY = 0.25;
 const OFFLINE_CAP = 8 * 60 * 60 * 1000;
 
 // Save key for localStorage / AsyncStorage
-const SAVE_KEY = "castle_clicker_v9"; // bumped: skill tree, achievements, events
+const SAVE_KEY = "castle_clicker_v12"; // bumped: profession evolution
+
+// ═══ EXPEDITIONS ═══
+// Medium-clock (~5h) check-in cycle. Send a companion on a dungeon run for a
+// chunky reward bundle (gold + loot + materials). While away, that venture
+// does NOT earn passive gold — meaningful tradeoff vs steady trickle.
+// Expedition reward target: ~1.2-1.6x the gold the venture would have earned
+// passively, plus an elevated loot/material roll.
+const DUNGEONS = [
+  { id:1, name:"Kobold Burrows",     flavor:"A warren of scavengers",           durationMs: 3*60*60*1000, minVentureId:1,  rewardMult:1.2, lootChance:0.20, matTier:1, matChance:0.80 },
+  { id:2, name:"Crypt of Whispers",  flavor:"Dust and restless bones",          durationMs: 4*60*60*1000, minVentureId:2,  rewardMult:1.3, lootChance:0.25, matTier:1, matChance:1.00 },
+  { id:3, name:"Flooded Reliquary",  flavor:"Drowned saints clutch relics",     durationMs: 6*60*60*1000, minVentureId:3,  rewardMult:1.4, lootChance:0.30, matTier:2, matChance:0.50 },
+  { id:4, name:"Sunless Keep",       flavor:"A fortress untouched by dawn",     durationMs: 4*60*60*1000, minVentureId:4,  rewardMult:1.3, lootChance:0.35, matTier:2, matChance:0.70 },
+  { id:5, name:"Dragon's Hoard",     flavor:"Embers banked over centuries",     durationMs: 8*60*60*1000, minVentureId:5,  rewardMult:1.6, lootChance:0.40, matTier:2, matChance:1.00 },
+  { id:6, name:"Void Rift",          flavor:"A tear between worlds",            durationMs: 6*60*60*1000, minVentureId:7,  rewardMult:1.5, lootChance:0.45, matTier:3, matChance:0.30 },
+  { id:7, name:"Celestial Spire",    flavor:"A tower that scrapes the heavens", durationMs: 8*60*60*1000, minVentureId:8,  rewardMult:1.5, lootChance:0.50, matTier:3, matChance:0.60 },
+];
 
 // ═══ PRESTIGE SKILL TREE ═══
 const SKILL_TREE = [
@@ -392,9 +408,13 @@ const ACHIEVEMENTS = [
   { id:"ach_master1",       name:"Sovereign",           desc:"Upgrade a profession to Master",                     check: s => (s.profUpgrades || []).some(t => t >= 4) },
   { id:"ach_grandmaster1",  name:"Legend Forged",       desc:"Upgrade a profession to Grandmaster",                check: s => (s.profUpgrades || []).some(t => t >= 5) },
   { id:"ach_apprentice_all",name:"The Whole Castle",    desc:"Every profession at Apprentice or higher",           check: s => (s.profUpgrades || []).length >= 10 && s.profUpgrades.every(t => t >= 1) },
-  // Sacrifice
-  { id:"ach_sacrifice1",    name:"First Offering",      desc:"Sacrifice an item at the altar",                     check: s => Object.values(s.consumedBuffs || {}).some(v => v > 0) },
-  { id:"ach_sacrifice_gold",name:"Altar of Power",      desc:"Accumulate +50% permanent gold from sacrifices",     check: s => (s.consumedBuffs?.goldMultiplier || 0) >= 0.50 },
+  // Sacrifice / Altar
+  { id:"ach_sacrifice1",    name:"First Offering",      desc:"Sacrifice an item at the altar",                     check: s => (s.lifetimeEssence || 0) > 0 || Object.values(s.consumedBuffs || {}).some(v => v > 0) },
+  { id:"ach_sacrifice_gold",name:"Altar of Power",      desc:"Buy 10 ranks across Altar buff nodes",               check: s => { const r = s.altarRanks || {}; return ((r.greed||0) + (r.haste||0) + (r.fortune||0) + (r.legendary_touch||0)) >= 10; } },
+  // Evolution (CoC-builder profession evolution)
+  { id:"ach_evolve1",       name:"Reborn",              desc:"Evolve any profession to Stage 1",                   check: s => (s.profEvolutions || []).some(e => (e || 0) >= 1) },
+  { id:"ach_evolve_triple", name:"Triple Mastered",     desc:"Evolve three professions to Stage 2 or higher",      check: s => (s.profEvolutions || []).filter(e => (e || 0) >= 2).length >= 3 },
+  { id:"ach_apotheosis",    name:"Apotheosis",          desc:"Evolve any profession to Stage 3 (Legendary)",       check: s => (s.profEvolutions || []).some(e => (e || 0) >= 3) },
 ];
 
 // Maps achievement id → icon number in /assets/achievements/. 30 hand-drawn
@@ -415,6 +435,8 @@ const ACH_ICONS = {
   ach_legendary:4, ach_all_legendary:5, ach_loot_all:6,
   // Sacrifice (altar offerings)
   ach_sacrifice1:7, ach_sacrifice_gold:8,
+  // Evolution (combat / ascension iconography)
+  ach_evolve1:28, ach_evolve_triple:29, ach_apotheosis:30,
   // Materials / alchemy
   ach_mat_tier3_any:9, ach_mat_tier3_all:10,
   // Ownership (shield set)
@@ -584,6 +606,81 @@ const getTransformPassives = (profTransforms) => {
   return p;
 };
 
+// ═══ PROFESSION EVOLUTION (Phase 3 — CoC-builder mechanic) ═══
+// A profession can be evolved up to 3 stages. While evolving, that profession
+// produces NO income for a real-time cooldown. After completion, it permanently
+// adopts a new name + a x4-per-stage revenue multiplier. Evolution stages
+// persist through prestige (intentional: gives prestige its own ramp accelerator).
+
+// Per-stage rules. Index 0 is the "Base" no-op stage; stages 1-3 are real evolutions.
+// `cost` describes what handleStartEvolution consumes. `cooldownMs` is wall-clock real time.
+const EVOLUTION_STAGES = [
+  { stage: 0, name: "Base",       revMult: 1,  cooldownMs: 0,                  cost: null },
+  { stage: 1, name: "Improved",   revMult: 4,  cooldownMs: 30 * 60 * 1000,     cost: { rarity: "uncommon", count: 5,  essence: 2500,  ownedReq: 50  } },
+  { stage: 2, name: "Mastered",   revMult: 16, cooldownMs: 2  * 60 * 60 * 1000, cost: { rarity: "rare",     count: 3,  essence: 10000, ownedReq: 200 } },
+  { stage: 3, name: "Legendary",  revMult: 64, cooldownMs: 8  * 60 * 60 * 1000, cost: { rarity: "epic",     count: 1,  extraRarity: "legendary", extraCount: 1, essence: 50000, ownedReq: 500 } },
+];
+
+// Display names per profession per stage. Index [ventureIdx][stage].
+// Stage 0 entry is the original venture name (kept for reference / fallback).
+const EVOLUTION_NAMES = [
+  ["Torch Scavenging",    "Torch Forging",      "Pyromancy",          "Inferno Mastery"],
+  ["Goblin Pickpocketing","Bandit Raiding",     "Phantom Theft",      "Shadow Heist"],
+  ["Mushroom Foraging",   "Fungal Cultivation", "Spore Witchcraft",   "Mycelial Empire"],
+  ["Skeleton Looting",    "Bone Collecting",    "Necromancy",         "Lich Ascendance"],
+  ["Trap Disarming",      "Trap Crafting",      "Siege Engineering",  "Warforge Mastery"],
+  ["Potion Brewing",      "Elixir Crafting",    "Alchemy",            "Transmutation"],
+  ["Dragon Taming",       "Dragon Riding",      "Dragon Lordship",    "Wyrmking"],
+  ["Dungeon Expansion",   "Realm Building",     "Domain Lordship",    "Worldforging"],
+  ["Demon Gate Siege",    "Hellgate Conquest",  "Infernal Dominion",  "Abyssal Sovereign"],
+  ["Elder God Pact",      "Eldritch Communion", "Cosmic Channeling",  "Apotheosis"],
+];
+
+const getEvolutionMult = (stage) => (EVOLUTION_STAGES[stage || 0] || EVOLUTION_STAGES[0]).revMult;
+const getEvolutionName = (ventureIdx, stage, fallback) => {
+  const row = EVOLUTION_NAMES[ventureIdx];
+  if (!row) return fallback;
+  return row[stage || 0] || fallback;
+};
+const isEvolvingNow = (endTs) => endTs && Date.now() < endTs;
+
+// Count copies of items at a given rarity available (not equipped) in inventory.
+const countAvailableByRarity = (inventory, equipped, rarity) => {
+  let total = 0;
+  for (const item of LOOT_TABLE) {
+    if (item.rarity !== rarity) continue;
+    const owned = inventory[item.id] || 0;
+    if (owned <= 0) continue;
+    let equippedCount = 0;
+    for (const id of equipped) if (id === item.id) equippedCount++;
+    total += Math.max(0, owned - equippedCount);
+  }
+  return total;
+};
+
+// Consume `count` items of `rarity` from inventory, prioritizing low-effect items so
+// players preserve their most useful drops. Returns the updated inventory object.
+const consumeItemsByRarity = (inventory, equipped, rarity, count) => {
+  const out = { ...inventory };
+  let need = count;
+  // Iterate items at this rarity in stable order — players who want to preserve
+  // a specific item can equip it (equipped copies are protected).
+  for (const item of LOOT_TABLE) {
+    if (item.rarity !== rarity || need <= 0) continue;
+    const owned = out[item.id] || 0;
+    if (owned <= 0) continue;
+    let equippedCount = 0;
+    for (const id of equipped) if (id === item.id) equippedCount++;
+    const available = owned - equippedCount;
+    const take = Math.min(available, need);
+    if (take <= 0) continue;
+    out[item.id] = owned - take;
+    if (out[item.id] <= 0) delete out[item.id];
+    need -= take;
+  }
+  return need === 0 ? out : null; // null = couldn't satisfy
+};
+
 // ═══ DUNGEON CLOCK ═══
 // Real local time → 4 watches. Each profession has a preferred watch.
 // During preferred watch: +25% revenue, +50% material drops.
@@ -626,9 +723,53 @@ const DROP_RATES = {
 };
 const DROP_LEVEL_BONUS = 0.005; // +0.5% per skill level, multiplicative
 
-// Fraction of an item's effect granted as a permanent buff when sacrificed.
-// Scales by rarity so rare sacrifices feel impactful.
-const CONSUME_FRACTIONS = { common: 0.20, uncommon: 0.25, rare: 0.30, epic: 0.40, legendary: 0.50 };
+// ═══ ALTAR (Phase 2.5 — loot consumption upgrades) ═══
+// Sacrificing a loot item credits Essence, a single shared currency.
+// Essence is spent on Altar nodes (rising-cost permanent buffs) and
+// one-time milestone unlocks. Legendary sacrifices also grant a tiny
+// legendary-essence pool for the gated Legendary Touch node.
+
+// Essence value per item rarity (geometric x4 — mirrors forge 3-to-1 ratio plus a small bonus).
+const ITEM_ESSENCE_VALUES = { common: 1, uncommon: 4, rare: 16, epic: 64, legendary: 256 };
+const LEG_ESSENCE_PER_LEGENDARY = 1; // separate scarce pool only for legendary-only nodes
+
+// Lifetime essence spent thresholds for one-time qualitative unlocks.
+const ALTAR_MILESTONES = [
+  { id: "auto_sacrifice", at: 100,    label: "Auto-Sacrifice",    desc: "Auto-convert duplicate items above your chosen threshold." },
+  { id: "stack_filters",  at: 500,    label: "Inventory Filters", desc: "Sort/filter loot by rarity and effect type." },
+  { id: "extra_slot",     at: 1000,   label: "Altar-Forged Slot", desc: "Unlock equipment slot #12 (no other path to it)." },
+  { id: "vault_preview",  at: 5000,   label: "Vault Preview",     desc: "See exactly what your next ascension will keep." },
+  { id: "loot_reroll",    at: 25000,  label: "Loot Re-Roll",      desc: "Spend 50 essence to re-roll any drop on demand." },
+  { id: "evo_materials",  at: 100000, label: "Evolution Stones",  desc: "Sacrifices begin yielding evolution stones (feeds Phase 3)." },
+];
+
+// Permanent buff nodes. Cost of next rank = baseCost * growth^currentRank.
+// Total stat = perRank * currentRank, capped at maxRank.
+const ALTAR_NODES = [
+  { id: "greed",           label: "Greed",            color: "#f0c030", desc: "+1% gold from all professions per rank",        baseCost: 5,   growth: 1.5, maxRank: 20, perRank: 0.01,  stat: "goldMultiplier" },
+  { id: "haste",           label: "Haste",            color: "#5eead4", desc: "+0.5% speed for all professions per rank",      baseCost: 5,   growth: 1.5, maxRank: 20, perRank: 0.005, stat: "speedBoost" },
+  { id: "fortune",         label: "Fortune",          color: "#a855f7", desc: "+1% drop rates per rank",                       baseCost: 8,   growth: 1.6, maxRank: 15, perRank: 0.01,  stat: "dropRateBoost" },
+  { id: "legendary_touch", label: "Legendary Touch",  color: "#ff8000", desc: "+5% gold AND +5% drops per rank (legendary essence only)", baseCost: 128, growth: 2.0, maxRank: 5,  perRank: 0.05,  stat: "legendary", legendaryOnly: true },
+];
+const ALTAR_NODE_BY_ID = {};
+for (const n of ALTAR_NODES) ALTAR_NODE_BY_ID[n.id] = n;
+
+const getAltarRankCost = (node, currentRank) => {
+  if (currentRank >= node.maxRank) return Infinity;
+  return Math.ceil(node.baseCost * Math.pow(node.growth, currentRank));
+};
+
+// Per-profession essence sink: revives weak professions so the power curve can shift mid-game.
+const PROF_INVEST_BASE = 20;
+const PROF_INVEST_GROWTH = 1.5;
+const PROF_INVEST_PER_RANK = 0.02; // +2% gold per rank to that specific profession (uncapped)
+const getProfInvestCost = (rank) => Math.ceil(PROF_INVEST_BASE * Math.pow(PROF_INVEST_GROWTH, rank));
+
+// Loot-Re-Roll milestone fixed cost.
+const LOOT_REROLL_COST = 50;
+
+// Loot drop rate baselines (kept for reference in plan).
+// CONSUME_FRACTIONS removed — replaced by the Altar essence currency above.
 
 const LOOT_TABLE = [
   // ── Common ── (16 items)
@@ -778,10 +919,11 @@ const getIncomingSynergy = (profUpgrades, targetIndex) => {
  * Revenue per cycle for a venture at given count and prestige multiplier.
  * `synergyMult` is the pre-computed (1 + incoming synergy) multiplier.
  */
-const getRevenue = (venture, count, prestigeMultiplier, upgradeTier = 0, transformPath = null, lootGoldMult = 1, synergyMult = 1) => {
+const getRevenue = (venture, count, prestigeMultiplier, upgradeTier = 0, transformPath = null, lootGoldMult = 1, synergyMult = 1, evolutionStage = 0) => {
   const upgradeBonus = 1 + UPGRADE_TIERS[upgradeTier].revBonus;
   const transformBonus = transformPath ? TRANSFORM_TREES[venture.id][transformPath].revMult : 1;
-  return venture.baseRevenue * count * getMilestoneMultiplier(count) * prestigeMultiplier * upgradeBonus * transformBonus * lootGoldMult * synergyMult;
+  const evolutionMult = getEvolutionMult(evolutionStage);
+  return venture.baseRevenue * count * getMilestoneMultiplier(count) * prestigeMultiplier * upgradeBonus * transformBonus * lootGoldMult * synergyMult * evolutionMult;
 };
 
 const getEffectiveCycleTime = (venture, upgradeTier = 0, transformPath = null, lootSpeedMult = 1) => {
@@ -918,18 +1060,50 @@ const getLootBonuses = (equippedArr, ventureIndex) => {
   };
 };
 
-/** Aggregate all permanent buffs from sacrificed items. Same shape as getLootBonuses. */
-const getConsumedBonuses = (consumed) => {
-  if (!consumed) return { goldMult:1, speedMult:1, dropRateMult:1, xpMult:1, critChance:0, instantChance:0, chainChance:0 };
+/** Aggregate permanent buffs from purchased Altar ranks. Same shape as getLootBonuses. */
+const getAltarBonuses = (altarRanks) => {
+  let goldBonus = 0, speedBonus = 0, dropBonus = 0;
+  if (altarRanks) {
+    for (const node of ALTAR_NODES) {
+      const rank = altarRanks[node.id] || 0;
+      if (rank <= 0) continue;
+      const total = node.perRank * rank;
+      if (node.stat === 'goldMultiplier') goldBonus += total;
+      else if (node.stat === 'speedBoost') speedBonus += total;
+      else if (node.stat === 'dropRateBoost') dropBonus += total;
+      else if (node.stat === 'legendary') { goldBonus += total; dropBonus += total; }
+    }
+  }
   return {
-    goldMult:     1 + (consumed.goldMultiplier  || 0),
-    speedMult:    1 + (consumed.speedBoost      || 0),
-    dropRateMult: 1 + (consumed.dropRateBoost   || 0),
-    xpMult:       1 + (consumed.xpBoost         || 0),
-    critChance:        consumed.critGold         || 0,
-    instantChance:     consumed.instantComplete  || 0,
-    chainChance:       consumed.chainRun         || 0,
+    goldMult: 1 + goldBonus,
+    speedMult: 1 + speedBonus,
+    dropRateMult: 1 + dropBonus,
+    xpMult: 1, critChance: 0, instantChance: 0, chainChance: 0,
   };
+};
+
+/** Per-profession gold multiplier from essence-invested ranks. */
+const getProfInvestMult = (profInvest, ventureIndex) => {
+  if (!profInvest) return 1;
+  return 1 + (profInvest[ventureIndex] || 0) * PROF_INVEST_PER_RANK;
+};
+
+/**
+ * One-time migration: convert legacy flat consumedBuffs into essence + altar ranks.
+ * Returns { essence, legEssence, ranks } where essence/leg are awarded as a refund
+ * the player can spend in the new system.
+ */
+const migrateConsumedBuffsToAltar = (consumed) => {
+  if (!consumed || typeof consumed !== 'object') return null;
+  // Convert each old flat buff back to its approximate "essence value" so the player
+  // gets a refund proportional to what they sacrificed before the rebalance.
+  // Old common gave +0.6%/sacrifice for ~1 essence equivalent. So 1% gold ≈ 1.7e refund.
+  const goldPct = (consumed.goldMultiplier  || 0) * 100;
+  const spdPct  = (consumed.speedBoost      || 0) * 100;
+  const drpPct  = (consumed.dropRateBoost   || 0) * 100;
+  const xpPct   = (consumed.xpBoost         || 0) * 100;
+  const refund = Math.floor(goldPct * 1.7 + spdPct * 3.4 + drpPct * 1.7 + xpPct * 1.7);
+  return { essence: Math.max(0, refund), legEssence: 0, ranks: {} };
 };
 
 
@@ -947,53 +1121,39 @@ const getConsumedBonuses = (consumed) => {
 const TUTORIAL_STEPS = [
   {
     title: "Welcome, Adventurer",
-    text: "Welcome to Castle Clicker! Build your dungeon empire by running professions, recruiting companions, and collecting loot.",
-    icon: "\u2694",
+    text: "Your dungeon empire awaits. Train professions, recruit allies, and amass a fortune in gold.",
+    icon: <TorchIcon size={52} />,
+    accent: "#f0c030",
   },
   {
-    title: "Professions",
-    text: "Tap a profession to start a cycle. When the progress bar fills, you earn gold. Buy more to increase revenue and unlock new tiers.",
-    icon: "\u2692",
+    title: "Earn Gold",
+    text: "Tap a profession to start it. When the bar fills, you earn gold. Buy more levels to boost your earnings.",
+    icon: <GearIcon size={52} />,
+    accent: "#e85d3a",
   },
   {
-    title: "Companions",
-    text: "Recruit companions in the Allies tab to auto-run professions for you. They keep earning gold even while you're away.",
-    icon: "\uD83D\uDEE1",
+    title: "Recruit Allies",
+    text: "Hire companions in the Allies tab — they auto-run professions and earn gold even while you're away.",
+    icon: <CrownIcon size={52} color="#7aa2f7" />,
+    accent: "#7aa2f7",
   },
   {
-    title: "Equipment & Loot",
-    text: "Completing professions has a chance to drop loot. Equip items in the Loot tab to boost your gold income, speed, and drop rates.",
-    icon: "\uD83C\uDF81",
+    title: "Collect Loot",
+    text: "Professions drop equipment. Equip gear for bonuses, forge duplicates into rarer items, or sacrifice extras for permanent buffs.",
+    icon: <ChestIcon size={52} />,
+    accent: "#a855f7",
   },
   {
-    title: "Forging",
-    text: "Collect 10 of the same item and forge them into a random item of the next rarity tier. Common \u2192 Uncommon \u2192 Rare \u2192 Epic \u2192 Legendary.",
-    icon: "\u2728",
-  },
-  {
-    title: "Sacrifice",
-    text: "Destroy a loot item to gain a permanent buff that survives ascension. Rarer items grant a larger fraction of their effect. Equip, forge, or sacrifice \u2014 choose wisely.",
-    icon: "\uD83D\uDD25",
-  },
-  {
-    title: "Upgrades & Mastery",
-    text: "In the Upgrades tab, spend specialty materials to advance your professions through mastery tiers \u2014 each tier unlocks powerful bonuses.",
-    icon: "\u2B06",
-  },
-  {
-    title: "Ascending",
-    text: "When you've earned enough gold, ascend to reset your progress in exchange for Soul Gems. Gems give permanent multipliers to all earnings.",
-    icon: "\u2726",
-  },
-  {
-    title: "Dungeon Clock",
-    text: "The dungeon runs on a day/night cycle. Each profession gets bonus gold and material drops during its preferred time window.",
-    icon: "\u231A",
+    title: "Grow Stronger",
+    text: "Spend materials on mastery upgrades. When you've earned enough, ascend to trade progress for Soul Gems — permanent multipliers.",
+    icon: <DragonIcon size={52} />,
+    accent: "#ef4444",
   },
   {
     title: "Ready to Begin",
-    text: "Start by tapping Torch Scavenging to earn your first gold. Then buy more torches and work toward unlocking the next profession. Good luck!",
-    icon: "\uD83D\uDD25",
+    text: "Tap Torch Scavenging to earn your first gold. Then level up and unlock the next profession. Good luck!",
+    icon: <SkullIcon size={52} />,
+    accent: "#8bb8d0",
   },
 ];
 
@@ -1020,6 +1180,9 @@ export default function CastleCapitalist() {
   const [materials, setMaterials] = useState({});
   const [profUpgrades, setProfUpgrades] = useState(Array(10).fill(0));
   const [profTransforms, setProfTransforms] = useState(Array(10).fill(null));
+  const [profEvolutions, setProfEvolutions] = useState(Array(10).fill(0));
+  const [evolveEndTs, setEvolveEndTs] = useState(Array(10).fill(0));
+  const [evolveTick, setEvolveTick] = useState(0); // forces 1Hz re-render so countdowns animate
   const [equipped, setEquipped] = useState(Array(12).fill(null));
   const [mtxSlots, setMtxSlots] = useState(0);
   const [showWatchInfo, setShowWatchInfo] = useState(false);
@@ -1037,7 +1200,14 @@ export default function CastleCapitalist() {
   const [showFirstAllyModal, setShowFirstAllyModal] = useState(null);
   const [firstSacrificeSeen, setFirstSacrificeSeen] = useState(false);
   const [showFirstSacrificeModal, setShowFirstSacrificeModal] = useState(null);
-  const [consumedBuffs, setConsumedBuffs] = useState({});
+  const [consumedBuffs, setConsumedBuffs] = useState({}); // legacy, kept for one-cycle migration only
+  const [essence, setEssence] = useState(0);
+  const [legendaryEssence, setLegendaryEssence] = useState(0);
+  const [lifetimeEssence, setLifetimeEssence] = useState(0); // total essence ever spent (drives milestone unlocks)
+  const [altarRanks, setAltarRanks] = useState({});           // { greed:n, haste:n, fortune:n, legendary_touch:n }
+  const [altarUnlocks, setAltarUnlocks] = useState({});       // { auto_sacrifice:true, ... }
+  const [profInvest, setProfInvest] = useState(Array(10).fill(0)); // per-profession ranks
+  const [autoSacThresh, setAutoSacThresh] = useState(3);      // auto-sac duplicates above N copies
   const [equipPickerSlot, setEquipPickerSlot] = useState(null);
   const [offlineEarnings, setOfflineEarnings] = useState(null);
   const [showTutorial, setShowTutorial] = useState(false);
@@ -1054,6 +1224,7 @@ export default function CastleCapitalist() {
   const [prestSub, setPrestSub] = useState('ascend');
   const [milestoneToast, setMilestoneToast] = useState(null);
   const [brightness, setBrightness] = useState(() => parseFloat(localStorage.getItem('cc-brightness') || '1'));
+  const [saveRecovery, setSaveRecovery] = useState(null);
 
   const lastTick = useRef(Date.now());
   const animRef = useRef(null);
@@ -1065,11 +1236,19 @@ export default function CastleCapitalist() {
   const materialsRef = useRef(materials);
   const profUpgradesRef = useRef(profUpgrades);
   const profTransformsRef = useRef(profTransforms);
+  const profEvolutionsRef = useRef(profEvolutions);
+  const evolveEndTsRef = useRef(evolveEndTs);
   const equippedRef = useRef(equipped);
   const unlockedSkillsRef = useRef(unlockedSkills);
   const activeEventRef = useRef(activeEvent);
   const firstForgeSeenRef = useRef(firstForgeSeen);
   const consumedBuffsRef = useRef(consumedBuffs);
+  const altarRanksRef = useRef(altarRanks);
+  const profInvestRef = useRef(profInvest);
+  const essenceRef = useRef(essence);
+  const legendaryEssenceRef = useRef(legendaryEssence);
+  const lifetimeEssenceRef = useRef(lifetimeEssence);
+  const altarUnlocksRef = useRef(altarUnlocks);
   const eventTimerRef = useRef(null);
   const pendingDropsRef = useRef([]);
   const pendingMatsRef = useRef([]);
@@ -1083,6 +1262,8 @@ export default function CastleCapitalist() {
   const goldenDraughtLastRef = useRef(0); // Golden Draught: timestamp of last trigger
   const scorchedUntilRef = useRef(0);     // Scorched Earth: timestamp buff expires
   const lastParticleTimeRef = useRef(new Array(VENTURES.length).fill(0));
+  const ccRef = useRef(null);
+  const goldPulseRef = useRef(null);
   // Toasts (achievements/loot) queued while an event is on-screen so they don't steal focus.
   const pendingToastsRef = useRef({ ach: [], loot: [] });
 
@@ -1094,11 +1275,19 @@ export default function CastleCapitalist() {
   materialsRef.current = materials;
   profUpgradesRef.current = profUpgrades;
   profTransformsRef.current = profTransforms;
+  profEvolutionsRef.current = profEvolutions;
+  evolveEndTsRef.current = evolveEndTs;
   equippedRef.current = equipped;
   unlockedSkillsRef.current = unlockedSkills;
   activeEventRef.current = activeEvent;
   firstForgeSeenRef.current = firstForgeSeen;
   consumedBuffsRef.current = consumedBuffs;
+  altarRanksRef.current = altarRanks;
+  profInvestRef.current = profInvest;
+  essenceRef.current = essence;
+  legendaryEssenceRef.current = legendaryEssence;
+  lifetimeEssenceRef.current = lifetimeEssence;
+  altarUnlocksRef.current = altarUnlocks;
 
   // Derived skill tree values
   const skillBonuses = getSkillBonuses(unlockedSkills);
@@ -1150,6 +1339,28 @@ export default function CastleCapitalist() {
     spawnParticle('gold-text', x, y, '#ffcfa8', `+${formatNumber(amount)}`);
   }, [spawnParticle]);
 
+  // ═══ SCREEN SHAKE & HAPTICS ═══
+  const triggerShake = useCallback((intensity = 'light') => {
+    const el = ccRef.current;
+    if (!el) return;
+    el.classList.remove('shake-light', 'shake-medium', 'shake-heavy');
+    void el.offsetWidth; // force reflow to restart animation
+    el.classList.add(`shake-${intensity}`);
+    el.addEventListener('animationend', () => el.classList.remove(`shake-${intensity}`), { once: true });
+  }, []);
+
+  const haptic = useCallback((ms = 15) => {
+    if (navigator.vibrate) navigator.vibrate(ms);
+  }, []);
+
+  const pulseGold = useCallback(() => {
+    const el = goldPulseRef.current;
+    if (!el) return;
+    el.classList.remove('gold-pulse');
+    void el.offsetWidth;
+    el.classList.add('gold-pulse');
+  }, []);
+
   // ═══ SAVE / LOAD ═══
   useEffect(() => { localStorage.setItem('cc-brightness', brightness); }, [brightness]);
 
@@ -1168,8 +1379,14 @@ export default function CastleCapitalist() {
 
   useEffect(() => {
     let hasSave = false;
+    let raw = null;
+    let loadedKey = null;
     try {
-      const raw = localStorage.getItem(SAVE_KEY) || localStorage.getItem("castle_clicker_v8") || localStorage.getItem("castle_clicker_v7") || localStorage.getItem("castle_clicker_v6") || localStorage.getItem("castle_clicker_v5");
+      const candidates = [SAVE_KEY, "castle_clicker_v11", "castle_clicker_v10", "castle_clicker_v9", "castle_clicker_v8", "castle_clicker_v7", "castle_clicker_v6", "castle_clicker_v5"];
+      for (const k of candidates) {
+        const v = localStorage.getItem(k);
+        if (v) { raw = v; loadedKey = k; break; }
+      }
       if (raw) {
         hasSave = true;
         const save = JSON.parse(raw);
@@ -1184,6 +1401,8 @@ export default function CastleCapitalist() {
         if (save.materials) setMaterials(save.materials);
         if (save.profUpgrades) setProfUpgrades(save.profUpgrades);
         if (save.profTransforms) setProfTransforms(save.profTransforms);
+        if (save.profEvolutions) setProfEvolutions(save.profEvolutions);
+        if (save.evolveEndTs) setEvolveEndTs(save.evolveEndTs);
         if (save.equipped) setEquipped(save.equipped);
         if (save.mtxSlots != null) setMtxSlots(save.mtxSlots);
         if (save.unlockedSkills) setUnlockedSkills(save.unlockedSkills);
@@ -1197,7 +1416,24 @@ export default function CastleCapitalist() {
         if (save.firstEquipSeen) setFirstEquipSeen(true);
         if (save.firstAllySeen) setFirstAllySeen(true);
         if (save.firstSacrificeSeen) setFirstSacrificeSeen(true);
-        if (save.consumedBuffs) setConsumedBuffs(save.consumedBuffs);
+
+        // ── Altar (essence) state — load if present, otherwise migrate from legacy consumedBuffs.
+        if (save.essence != null || save.altarRanks) {
+          if (save.essence != null) setEssence(save.essence);
+          if (save.legendaryEssence != null) setLegendaryEssence(save.legendaryEssence);
+          if (save.lifetimeEssence != null) setLifetimeEssence(save.lifetimeEssence);
+          if (save.altarRanks) setAltarRanks(save.altarRanks);
+          if (save.altarUnlocks) setAltarUnlocks(save.altarUnlocks);
+          if (save.profInvest) setProfInvest(save.profInvest);
+          if (save.autoSacThresh != null) setAutoSacThresh(save.autoSacThresh);
+        } else if (save.consumedBuffs) {
+          const m = migrateConsumedBuffsToAltar(save.consumedBuffs);
+          if (m) {
+            setEssence(m.essence);
+            setLifetimeEssence(0);
+            setAltarRanks({});
+          }
+        }
         if (save.tutorialDone) hasSave = true;
 
         // Offline earnings
@@ -1214,17 +1450,40 @@ export default function CastleCapitalist() {
             const savedUpg = save.profUpgrades || Array(10).fill(0);
             const savedTrans = save.profTransforms || Array(10).fill(null);
             const savedEquipped = save.equipped || Array(12).fill(null);
-            const savedConsumed = getConsumedBonuses(save.consumedBuffs);
+            // Prefer migrated altar state for offline calc; fall back to legacy buffs.
+            let savedAltarRanks = save.altarRanks || {};
+            if (!save.altarRanks && save.consumedBuffs) {
+              // Translate legacy flat buffs into an equivalent altar bonus shape inline.
+              savedAltarRanks = {
+                greed:   Math.round((save.consumedBuffs.goldMultiplier || 0) * 100),
+                haste:   Math.round((save.consumedBuffs.speedBoost     || 0) * 200),
+                fortune: Math.round((save.consumedBuffs.dropRateBoost  || 0) * 100),
+              };
+            }
+            const savedConsumed = getAltarBonuses(savedAltarRanks);
+            const savedProfInvest = save.profInvest || Array(10).fill(0);
+            const savedEvo = save.profEvolutions || Array(10).fill(0);
+            const savedEvolveEnd = save.evolveEndTs || Array(10).fill(0);
             const savedWatch = getCurrentWatch();
             save.ventures.forEach((vs, i) => {
               if (vs.hasCompanion && vs.owned > 0) {
+                // Evolving professions produce no income while the cooldown is active.
+                const endTs = savedEvolveEnd[i] || 0;
+                let activeMs = elapsed;
+                if (endTs && endTs > save.lastSave) {
+                  const overlapEnd = Math.min(endTs, Date.now());
+                  const evolveOverlap = Math.max(0, overlapEnd - save.lastSave);
+                  activeMs = Math.max(0, activeMs - evolveOverlap);
+                }
+                if (activeMs <= 0) return;
                 const loot = getLootBonuses(savedEquipped, i);
-                const comboGold = loot.goldMult + (savedConsumed.goldMult - 1);
+                const profInvMult = getProfInvestMult(savedProfInvest, i);
+                const comboGold = (loot.goldMult + (savedConsumed.goldMult - 1)) * profInvMult;
                 const comboSpeed = loot.speedMult + (savedConsumed.speedMult - 1);
                 const synergyMult = 1 + getIncomingSynergy(savedUpg, i);
-                const rev = getRevenue(VENTURES[i], vs.owned, pm, savedUpg[i] || 0, savedTrans[i] || null, comboGold, synergyMult);
+                const rev = getRevenue(VENTURES[i], vs.owned, pm, savedUpg[i] || 0, savedTrans[i] || null, comboGold, synergyMult, savedEvo[i] || 0);
                 const ct = getEffectiveCycleTime(VENTURES[i], savedUpg[i] || 0, savedTrans[i] || null, comboSpeed * (1 + savedSkillB.speedMult));
-                const cycles = Math.floor(elapsed / ct);
+                const cycles = Math.floor(activeMs / ct);
                 const inWatch = isProfInWatch(i, savedWatch);
                 offlineGold += rev * cycles * (inWatch ? 1.25 : 1) * offEff;
               }
@@ -1237,7 +1496,25 @@ export default function CastleCapitalist() {
           }
         }
       }
-    } catch (e) { /* corrupted save, start fresh */ }
+    } catch (e) {
+      hasSave = false;
+      try {
+        const backupKey = `cc-save-backup-${Date.now()}`;
+        if (raw) localStorage.setItem(backupKey, raw);
+        localStorage.setItem('cc-save-corruption-log', JSON.stringify({
+          message: e?.message || String(e),
+          stack: e?.stack || '',
+          ts: new Date().toISOString(),
+          sourceKey: loadedKey,
+          backupKey: raw ? backupKey : null,
+        }));
+        setSaveRecovery({
+          message: e?.message || 'Unknown parse error',
+          backupKey: raw ? backupKey : null,
+          sourceKey: loadedKey,
+        });
+      } catch {}
+    }
 
     if (!hasSave) setShowTutorial(true);
     setTimeout(() => setLoading(false), 1800);
@@ -1257,6 +1534,8 @@ export default function CastleCapitalist() {
           materials: materialsRef.current,
           profUpgrades: profUpgradesRef.current,
           profTransforms: profTransformsRef.current,
+          profEvolutions: profEvolutionsRef.current,
+          evolveEndTs: evolveEndTsRef.current,
           equipped: equippedRef.current,
           mtxSlots,
           unlockedSkills: unlockedSkillsRef.current,
@@ -1271,12 +1550,19 @@ export default function CastleCapitalist() {
           firstAllySeen,
           firstSacrificeSeen,
           consumedBuffs,
+          essence: essenceRef.current,
+          legendaryEssence: legendaryEssenceRef.current,
+          lifetimeEssence: lifetimeEssenceRef.current,
+          altarRanks: altarRanksRef.current,
+          altarUnlocks: altarUnlocksRef.current,
+          profInvest: profInvestRef.current,
+          autoSacThresh,
           lastSave: Date.now(),
         }));
       } catch (e) {}
     }, 5000);
     return () => clearInterval(interval);
-  }, [totalGems, lifetimeGold, mtxSlots]);
+  }, [totalGems, lifetimeGold, mtxSlots, autoSacThresh]);
 
   // Save immediately on page close
   useEffect(() => {
@@ -1293,6 +1579,8 @@ export default function CastleCapitalist() {
           materials: materialsRef.current,
           profUpgrades: profUpgradesRef.current,
           profTransforms: profTransformsRef.current,
+          profEvolutions: profEvolutionsRef.current,
+          evolveEndTs: evolveEndTsRef.current,
           equipped: equippedRef.current,
           mtxSlots,
           unlockedSkills: unlockedSkillsRef.current,
@@ -1307,17 +1595,24 @@ export default function CastleCapitalist() {
           firstAllySeen,
           firstSacrificeSeen,
           consumedBuffs,
+          essence: essenceRef.current,
+          legendaryEssence: legendaryEssenceRef.current,
+          lifetimeEssence: lifetimeEssenceRef.current,
+          altarRanks: altarRanksRef.current,
+          altarUnlocks: altarUnlocksRef.current,
+          profInvest: profInvestRef.current,
+          autoSacThresh,
           lastSave: Date.now(),
         }));
       } catch (e) {}
     };
     window.addEventListener('beforeunload', saveNow);
     return () => window.removeEventListener('beforeunload', saveNow);
-  }, [totalGems, lifetimeGold, mtxSlots]);
+  }, [totalGems, lifetimeGold, mtxSlots, autoSacThresh]);
 
   // ═══ ACHIEVEMENT CHECKER ═══
   useEffect(() => {
-    const state = { gold, lifetimeGold, ventures, inventory, hasFoundRare, totalGems, totalAscensions, profUpgrades, profTransforms, materials, unlockedSkills, mtxSlots, manualClicks, eventsActivated, consumedBuffs };
+    const state = { gold, lifetimeGold, ventures, inventory, hasFoundRare, totalGems, totalAscensions, profUpgrades, profTransforms, profEvolutions, materials, unlockedSkills, mtxSlots, manualClicks, eventsActivated, consumedBuffs, essence, lifetimeEssence, altarRanks };
     let newUnlocks = null;
     for (const ach of ACHIEVEMENTS) {
       if (achievements[ach.id]) continue;
@@ -1332,7 +1627,7 @@ export default function CastleCapitalist() {
       }
     }
     if (newUnlocks) setAchievements(newUnlocks);
-  }, [gold, lifetimeGold, ventures, inventory, hasFoundRare, totalGems, totalAscensions, profUpgrades, profTransforms, materials, unlockedSkills, mtxSlots, manualClicks, eventsActivated, consumedBuffs]);
+  }, [gold, lifetimeGold, ventures, inventory, hasFoundRare, totalGems, totalAscensions, profUpgrades, profTransforms, profEvolutions, materials, unlockedSkills, mtxSlots, manualClicks, eventsActivated, consumedBuffs, essence, lifetimeEssence, altarRanks]);
 
   useEffect(() => {
     if (!achievementToast) return;
@@ -1403,7 +1698,7 @@ export default function CastleCapitalist() {
         vs.forEach((v, i) => {
           if (v.owned > 0) {
             const synergyMult = 1 + getIncomingSynergy(profUpgradesRef.current, i);
-            totalRev += getRevenue(VENTURES[i], v.owned, prestigeMultiplier, profUpgradesRef.current[i] || 0, profTransformsRef.current[i] || null, 1, synergyMult);
+            totalRev += getRevenue(VENTURES[i], v.owned, prestigeMultiplier, profUpgradesRef.current[i] || 0, profTransformsRef.current[i] || null, 1, synergyMult, profEvolutionsRef.current[i] || 0);
           }
         });
         const reward = Math.min(clicks, 60) * Math.max(totalRev, 1) * 0.1;
@@ -1428,6 +1723,8 @@ export default function CastleCapitalist() {
   const handleBossClick = () => {
     if (!activeEvent || activeEvent.state !== 'boss') return;
     setActiveEvent(prev => prev ? { ...prev, bossClicks: (prev.bossClicks || 0) + 1 } : null);
+    haptic(10);
+    triggerShake('light');
   };
 
   // ═══ GAME LOOP ═══
@@ -1439,6 +1736,34 @@ export default function CastleCapitalist() {
     lastTick.current = now;
 
     const currentWatch = getCurrentWatch();
+
+    // ── Evolution completion check (cheap; runs every frame) ──
+    {
+      const ends = evolveEndTsRef.current;
+      let anyDone = false;
+      for (let i = 0; i < ends.length; i++) {
+        if (ends[i] && now >= ends[i]) { anyDone = true; break; }
+      }
+      if (anyDone) {
+        const completedNames = [];
+        const newEvos = profEvolutionsRef.current.slice();
+        const newEnds = ends.slice();
+        for (let i = 0; i < ends.length; i++) {
+          if (ends[i] && now >= ends[i]) {
+            newEvos[i] = Math.min(EVOLUTION_STAGES.length - 1, (newEvos[i] || 0) + 1);
+            newEnds[i] = 0;
+            completedNames.push(getEvolutionName(i, newEvos[i], VENTURES[i].name));
+          }
+        }
+        profEvolutionsRef.current = newEvos;
+        evolveEndTsRef.current = newEnds;
+        setProfEvolutions(newEvos);
+        setEvolveEndTs(newEnds);
+        if (completedNames.length) {
+          setMilestoneToast({ name: `Evolution complete: ${completedNames[0]}`, at: Date.now() });
+        }
+      }
+    }
 
     setVentures(prev => {
       // Reset accumulators each invocation so StrictMode double-calls don't duplicate
@@ -1455,7 +1780,8 @@ export default function CastleCapitalist() {
       const evtMat = (evt?.state === 'active' && evt.effect.matMult) ? evt.effect.matMult : 1;
       const unlockedSet = new Set();
       for (let u = 0; u < prev.length; u++) if (prev[u].owned > 0) unlockedSet.add(u);
-      const con = getConsumedBonuses(consumedBuffsRef.current);
+      const con = getAltarBonuses(altarRanksRef.current);
+      const profInv = profInvestRef.current;
       const tp = getTransformPassives(profTransformsRef.current);
       const isNight = currentWatch === 2 || currentWatch === 3; // Dusk or Abyss
       const isAbyss = currentWatch === 3;
@@ -1466,7 +1792,7 @@ export default function CastleCapitalist() {
         for (let j = 0; j < prev.length; j++) {
           if (prev[j].owned > 0) {
             const sM = 1 + getIncomingSynergy(profUpgradesRef.current, j);
-            const r = getRevenue(VENTURES[j], prev[j].owned, prestigeMultiplier, profUpgradesRef.current[j] || 0, profTransformsRef.current[j] || null, 1, sM);
+            const r = getRevenue(VENTURES[j], prev[j].owned, prestigeMultiplier, profUpgradesRef.current[j] || 0, profTransformsRef.current[j] || null, 1, sM, profEvolutionsRef.current[j] || 0);
             if (r > manaSiphonBaseRev) manaSiphonBaseRev = r;
           }
         }
@@ -1475,13 +1801,18 @@ export default function CastleCapitalist() {
       const freeOwnedGains = []; // Raise Dead: [{ventureIdx, count}]
       const next = prev.map((vs, i) => {
         if (vs.owned === 0 || (!vs.running && !vs.hasCompanion)) return vs;
+        // Profession is mid-evolution — no progress, no income, no drops.
+        if (isEvolvingNow(evolveEndTsRef.current[i])) {
+          return vs.progress === 0 ? vs : { ...vs, progress: 0 };
+        }
 
         const upgTier = profUpgradesRef.current[i] || 0;
         const tPath = profTransformsRef.current[i] || null;
         const loot = getLootBonuses(eq, i);
         const tierDropMult = 1 + UPGRADE_TIERS[upgTier].dropBonus;
         // Combine equipped + consumed + transform passive bonuses
-        const comboGold = loot.goldMult + (con.goldMult - 1) + tp.globalGoldMult;
+        const profInvMult = getProfInvestMult(profInv, i);
+        const comboGold = (loot.goldMult + (con.goldMult - 1) + tp.globalGoldMult) * profInvMult;
         const comboSpeed = loot.speedMult + (con.speedMult - 1) + tp.globalSpeedMult
           + (isNight ? tp.nightSpeedBonus : 0);
         const comboDrop = loot.dropRateMult + (con.dropRateMult - 1) + tp.globalDropMult;
@@ -1505,7 +1836,7 @@ export default function CastleCapitalist() {
           const synergyMult = 1 + getIncomingSynergy(profUpgradesRef.current, i);
           // Brood Mother: accumulated permanent revenue bonus for Dragon
           const broodMult = (i === 6 && profTransformsRef.current[6] === 'b') ? (1 + broodBonusRef.current) : 1;
-          const baseRev = getRevenue(VENTURES[i], vs.owned, prestigeMultiplier, upgTier, tPath, comboGold * broodMult, synergyMult);
+          const baseRev = getRevenue(VENTURES[i], vs.owned, prestigeMultiplier, upgTier, tPath, comboGold * broodMult, synergyMult, profEvolutionsRef.current[i] || 0);
           let rev = baseRev * cycles * (inWatch ? 1.25 : 1) * evtGold;
 
           // ── Transform passive procs ──
@@ -1646,6 +1977,7 @@ export default function CastleCapitalist() {
       const earned = earnedRef.current;
       setGold(g => g + earned);
       setLifetimeGold(l => l + earned);
+      pulseGold();
     }
 
     // Process loot drops after state update
@@ -1697,6 +2029,8 @@ export default function CastleCapitalist() {
       }
       if (["rare", "epic", "legendary"].includes(rarest.rarity)) {
         setHasFoundRare(true);
+        triggerShake(rarest.rarity === 'legendary' ? 'heavy' : 'light');
+        haptic(rarest.rarity === 'legendary' ? 40 : 20);
       }
     }
 
@@ -1715,26 +2049,33 @@ export default function CastleCapitalist() {
       });
     }
 
-    // Process completion particles
+    // Process completion particles + row flash
     if (pendingCompletionsRef.current.length > 0) {
       const now2 = Date.now();
       for (const comp of pendingCompletionsRef.current) {
         if (now2 - lastParticleTimeRef.current[comp.ventureIndex] < 2000) continue;
         lastParticleTimeRef.current[comp.ventureIndex] = now2;
         const row = document.querySelector(`[data-venture="${comp.ventureIndex}"]`);
-        if (row && particleContainerRef.current) {
-          const cr = particleContainerRef.current.getBoundingClientRect();
-          const rr = row.getBoundingClientRect();
-          const x = rr.left - cr.left + rr.width * 0.4;
-          const y = rr.top - cr.top + rr.height * 0.3;
-          emitGoldParticles(x, y, comp.color);
-          emitGoldText(x + rr.width * 0.1, y - 5, comp.revenue);
+        if (row) {
+          // Flash the row on completion
+          row.classList.remove('vrow-complete');
+          void row.offsetWidth;
+          row.classList.add('vrow-complete');
+          row.addEventListener('animationend', () => row.classList.remove('vrow-complete'), { once: true });
+          if (particleContainerRef.current) {
+            const cr = particleContainerRef.current.getBoundingClientRect();
+            const rr = row.getBoundingClientRect();
+            const x = rr.left - cr.left + rr.width * 0.4;
+            const y = rr.top - cr.top + rr.height * 0.3;
+            emitGoldParticles(x, y, comp.color);
+            emitGoldText(x + rr.width * 0.1, y - 5, comp.revenue);
+          }
         }
       }
     }
 
     animRef.current = requestAnimationFrame(tick);
-  }, [prestigeMultiplier, totalGems, mtxSlots, emitGoldParticles, emitGoldText]);
+  }, [prestigeMultiplier, totalGems, mtxSlots, emitGoldParticles, emitGoldText, pulseGold, triggerShake, haptic]);
 
   useEffect(() => {
     animRef.current = requestAnimationFrame(tick);
@@ -1757,6 +2098,14 @@ export default function CastleCapitalist() {
     return () => { clearTimeout(fade); clearTimeout(remove); };
   }, [milestoneToast?.name, milestoneToast?.at]);
 
+  // 1Hz tick to refresh evolution countdown displays only when something is evolving.
+  useEffect(() => {
+    const anyActive = evolveEndTs.some(t => t && t > 0);
+    if (!anyActive) return;
+    const id = setInterval(() => setEvolveTick(n => n + 1), 1000);
+    return () => clearInterval(id);
+  }, [evolveEndTs]);
+
   // ═══ ACTIONS ═══
   const handleBuyVenture = (idx) => {
     const v = VENTURES[idx];
@@ -1767,18 +2116,45 @@ export default function CastleCapitalist() {
     setGold(g => g - cost);
     const oldOwned = vs.owned;
     const newOwned = vs.owned + qty;
+    const wasLocked = vs.owned === 0;
     setVentures(prev => prev.map((s, i) => i === idx ? { ...s, owned: s.owned + qty } : s));
+    haptic(wasLocked ? 30 : 12);
+    pulseGold();
+    // Flash the buy button
+    const btn = document.querySelector(`[data-venture="${idx}"] .buy-btn`);
+    if (btn) { btn.classList.remove('buy-flash'); void btn.offsetWidth; btn.classList.add('buy-flash'); }
+    // Unlock celebration — new profession!
+    if (wasLocked) {
+      triggerShake('medium');
+      const row = document.querySelector(`[data-venture="${idx}"]`);
+      if (row) { row.classList.add('vrow-unlock'); row.addEventListener('animationend', () => row.classList.remove('vrow-unlock'), { once: true }); }
+      // Burst particles from the row
+      if (particleContainerRef.current) {
+        const cr = particleContainerRef.current.getBoundingClientRect();
+        const rr = row?.getBoundingClientRect();
+        if (rr) {
+          const cx = rr.left - cr.left + rr.width / 2;
+          const cy = rr.top - cr.top + rr.height / 2;
+          emitGoldParticles(cx, cy, v.color, 10);
+        }
+      }
+    }
     // Check if a milestone was crossed
     const crossed = MILESTONES.filter(m => oldOwned < m.at && newOwned >= m.at);
     if (crossed.length > 0) {
       const highest = crossed[crossed.length - 1];
       setMilestoneToast({ name: v.name, at: highest.at, mult: highest.mult, fadeOut: false });
+      triggerShake('light');
+      haptic(20);
     }
   };
 
   const handleStartVenture = (idx, e) => {
     const vs = ventures[idx];
-    if (vs && vs.owned > 0 && !vs.running) setManualClicks(c => c + 1);
+    if (vs && vs.owned > 0 && !vs.running) {
+      setManualClicks(c => c + 1);
+      haptic(8);
+    }
     setVentures(prev => prev.map((s, i) =>
       i === idx && s.owned > 0 && !s.running ? { ...s, running: true, progress: 0 } : s
     ));
@@ -1797,6 +2173,9 @@ export default function CastleCapitalist() {
     setVentures(prev => prev.map((s, i) =>
       i === idx ? { ...s, hasCompanion: true, running: true } : s
     ));
+    haptic(25);
+    triggerShake('light');
+    pulseGold();
     if (!firstAllySeen) {
       setFirstAllySeen(true);
       setShowFirstAllyModal({ ventureIdx: idx });
@@ -1923,6 +2302,8 @@ export default function CastleCapitalist() {
     setMaterials({});
     setProfUpgrades(Array(10).fill(0));
     setProfTransforms(Array(10).fill(null));
+    setProfEvolutions(Array(10).fill(0));
+    setEvolveEndTs(Array(10).fill(0));
     setEquipped(Array(12).fill(null));
     setMtxSlots(0);
     setUnlockedSkills({});
@@ -1932,6 +2313,13 @@ export default function CastleCapitalist() {
     setEventsActivated(0);
     setActiveEvent(null);
     setConsumedBuffs({});
+    setEssence(0);
+    setLegendaryEssence(0);
+    setLifetimeEssence(0);
+    setAltarRanks({});
+    setAltarUnlocks({});
+    setProfInvest(Array(10).fill(0));
+    setAutoSacThresh(3);
   };
 
   const handleBuySkill = (skillId) => {
@@ -1998,6 +2386,8 @@ export default function CastleCapitalist() {
       return next;
     });
     setLootToast({ item: result, fused: true });
+    triggerShake('medium');
+    haptic(25);
     setTimeout(() => setLootToast(null), 3000);
   };
 
@@ -2007,22 +2397,115 @@ export default function CastleCapitalist() {
     const owned = (inventory[itemId] || 0) - getEquippedCount(equipped, itemId);
     const n = Math.min(count, owned);
     if (n < 1) return;
-    const frac = CONSUME_FRACTIONS[item.rarity] || 0.20;
+    const essenceGain = (ITEM_ESSENCE_VALUES[item.rarity] || 1) * n;
+    const legGain = item.rarity === 'legendary' ? LEG_ESSENCE_PER_LEGENDARY * n : 0;
     setInventory(prev => {
       const next = { ...prev };
       next[itemId] = (next[itemId] || 0) - n;
       if (next[itemId] <= 0) delete next[itemId];
       return next;
     });
-    setConsumedBuffs(prev => {
-      const next = { ...prev };
-      for (const e of item.effects) {
-        next[e.type] = (next[e.type] || 0) + e.value * frac * n;
-      }
+    setEssence(e => e + essenceGain);
+    if (legGain > 0) setLegendaryEssence(e => e + legGain);
+    setLootToast({ item, sacrificed: true, count: n, essence: essenceGain, legEssence: legGain });
+    triggerShake('light');
+    haptic(20);
+    setTimeout(() => setLootToast(null), 3000);
+  };
+
+  // Buy one rank of an Altar node. Auto-credits the lifetime-essence counter
+  // (which drives milestone unlocks) and triggers any newly-crossed milestones.
+  const handleBuyAltarRank = (nodeId) => {
+    const node = ALTAR_NODE_BY_ID[nodeId];
+    if (!node) return;
+    const cur = altarRanks[nodeId] || 0;
+    if (cur >= node.maxRank) return;
+    const cost = getAltarRankCost(node, cur);
+    if (node.legendaryOnly) {
+      if (legendaryEssence < cost) return;
+      setLegendaryEssence(e => e - cost);
+    } else {
+      if (essence < cost) return;
+      setEssence(e => e - cost);
+      setLifetimeEssence(prev => {
+        const next = prev + cost;
+        // Check for newly-unlocked milestones in the same tick.
+        setAltarUnlocks(unl => {
+          let changed = false;
+          const out = { ...unl };
+          for (const m of ALTAR_MILESTONES) {
+            if (!out[m.id] && next >= m.at) { out[m.id] = true; changed = true; }
+          }
+          return changed ? out : unl;
+        });
+        return next;
+      });
+    }
+    setAltarRanks(prev => ({ ...prev, [nodeId]: cur + 1 }));
+    haptic(15);
+  };
+
+  // Spend essence on a per-profession +gold rank.
+  const handleProfInvest = (ventureIdx) => {
+    const cur = profInvest[ventureIdx] || 0;
+    const cost = getProfInvestCost(cur);
+    if (essence < cost) return;
+    setEssence(e => e - cost);
+    setLifetimeEssence(prev => {
+      const next = prev + cost;
+      setAltarUnlocks(unl => {
+        let changed = false;
+        const out = { ...unl };
+        for (const m of ALTAR_MILESTONES) {
+          if (!out[m.id] && next >= m.at) { out[m.id] = true; changed = true; }
+        }
+        return changed ? out : unl;
+      });
       return next;
     });
-    setLootToast({ item, sacrificed: true, count: n });
-    setTimeout(() => setLootToast(null), 3000);
+    setProfInvest(prev => prev.map((r, i) => i === ventureIdx ? r + 1 : r));
+    haptic(15);
+  };
+
+  // ── Profession evolution ──
+  const handleStartEvolution = (idx) => {
+    const curStage = profEvolutions[idx] || 0;
+    const nextStage = curStage + 1;
+    if (nextStage >= EVOLUTION_STAGES.length) return;
+    if (isEvolvingNow(evolveEndTs[idx])) return;
+    const cfg = EVOLUTION_STAGES[nextStage];
+    const cost = cfg.cost;
+    if (!cost) return;
+    const vs = ventures[idx];
+    if (!vs || vs.owned < cost.ownedReq) return;
+    if (essence < cost.essence) return;
+    if (countAvailableByRarity(inventory, equipped, cost.rarity) < cost.count) return;
+    if (cost.extraRarity && countAvailableByRarity(inventory, equipped, cost.extraRarity) < cost.extraCount) return;
+
+    let inv = consumeItemsByRarity(inventory, equipped, cost.rarity, cost.count);
+    if (!inv) return;
+    if (cost.extraRarity) {
+      inv = consumeItemsByRarity(inv, equipped, cost.extraRarity, cost.extraCount);
+      if (!inv) return;
+    }
+    setInventory(inv);
+    setEssence(e => e - cost.essence);
+    const endTs = Date.now() + cfg.cooldownMs;
+    setEvolveEndTs(prev => prev.map((t, i) => i === idx ? endTs : t));
+    setVentures(prev => prev.map((s, i) => i === idx ? { ...s, progress: 0 } : s));
+    haptic(35);
+    setMilestoneToast({ name: `Evolving: ${getEvolutionName(idx, curStage, VENTURES[idx].name)} → ${getEvolutionName(idx, nextStage, VENTURES[idx].name)}`, at: Date.now() });
+  };
+
+  const handleSkipEvolution = (idx) => {
+    const endTs = evolveEndTs[idx] || 0;
+    if (!endTs || Date.now() >= endTs) return;
+    const remainingMs = endTs - Date.now();
+    const gemCost = Math.max(1, Math.ceil(remainingMs / (60 * 60 * 1000)));
+    if (prestigeGems < gemCost) return;
+    setPrestigeGems(g => g - gemCost);
+    setEvolveEndTs(prev => prev.map((t, i) => i === idx ? Date.now() : t));
+    haptic(20);
   };
 
   const handleTutorialClose = () => {
@@ -2054,32 +2537,43 @@ export default function CastleCapitalist() {
   }
 
   return (
-    <div className="cc">
+    <div className="cc" ref={ccRef}>
       <style>{STYLES}</style>
 
       {/* ── TUTORIAL OVERLAY ── */}
       {showTutorial && (
         <div className="tut-overlay">
-          <div className="tut-card">
+          <div className="tut-card" key={tutorialStep} style={{ '--tut-accent': TUTORIAL_STEPS[tutorialStep].accent }}>
+            <div className="tut-corner tut-corner-tl" />
+            <div className="tut-corner tut-corner-tr" />
+            <div className="tut-corner tut-corner-bl" />
+            <div className="tut-corner tut-corner-br" />
             <div className="tut-progress">
               {TUTORIAL_STEPS.map((_, i) => (
-                <div key={i} className={`tut-dot ${i === tutorialStep ? 'tut-dot-on' : ''} ${i < tutorialStep ? 'tut-dot-done' : ''}`} />
+                <div key={i} className={`tut-dot ${i === tutorialStep ? 'tut-dot-on' : ''} ${i < tutorialStep ? 'tut-dot-done' : ''}`}
+                  style={i === tutorialStep ? { background: TUTORIAL_STEPS[tutorialStep].accent, boxShadow: `0 0 10px ${TUTORIAL_STEPS[tutorialStep].accent}60` } : undefined}
+                />
               ))}
             </div>
-            <div className="tut-icon">{TUTORIAL_STEPS[tutorialStep].icon}</div>
-            <div className="tut-title">{TUTORIAL_STEPS[tutorialStep].title}</div>
+            <div className="tut-icon-wrap">
+              <div className="tut-icon-ring" />
+              <div className="tut-icon">{TUTORIAL_STEPS[tutorialStep].icon}</div>
+            </div>
+            <div className="tut-title" style={{ color: TUTORIAL_STEPS[tutorialStep].accent }}>{TUTORIAL_STEPS[tutorialStep].title}</div>
             <div className="tut-text">{TUTORIAL_STEPS[tutorialStep].text}</div>
+            <div className="tut-step-num">{tutorialStep + 1} / {TUTORIAL_STEPS.length}</div>
             <div className="tut-actions">
               {tutorialStep > 0 && (
                 <button className="tut-btn tut-btn-back" onClick={() => setTutorialStep(s => s - 1)}>Back</button>
               )}
               {tutorialStep < TUTORIAL_STEPS.length - 1 ? (
-                <button className="tut-btn tut-btn-next" onClick={() => setTutorialStep(s => s + 1)}>Next</button>
+                <button className="tut-btn tut-btn-next" style={{ background: `linear-gradient(180deg, ${TUTORIAL_STEPS[tutorialStep].accent}, ${TUTORIAL_STEPS[tutorialStep].accent}99)`, borderColor: TUTORIAL_STEPS[tutorialStep].accent + '60' }}
+                  onClick={() => setTutorialStep(s => s + 1)}>Next</button>
               ) : (
                 <button className="tut-btn tut-btn-start" onClick={handleTutorialClose}>Begin Adventure</button>
               )}
             </div>
-            <button className="tut-skip" onClick={handleTutorialClose}>Skip Tutorial</button>
+            <button className="tut-skip" onClick={handleTutorialClose}>Skip</button>
           </div>
         </div>
       )}
@@ -2102,14 +2596,13 @@ export default function CastleCapitalist() {
           </div>
         </div>
         <div className="hd-stats">
-          <div className="hd-gold-box">
+          <div className="hd-gold-box" ref={goldPulseRef}>
             <GoldCoinIcon size={18} />
             <span className="hd-amount">{formatNumber(gold)}</span>
           </div>
-          <span className="hd-watch">
+          <button className="hd-watch" onClick={() => setShowWatchInfo(true)}>
             {WATCHES[getCurrentWatch()].icon} {WATCHES[getCurrentWatch()].name}
-            <button className="watch-info-btn" onClick={() => setShowWatchInfo(true)}>?</button>
-          </span>
+          </button>
           <span className="hd-gems" onClick={() => setTab("prestige")}>
             <SoulGemIcon /> {prestigeGems} ({prestigeMultiplier.toFixed(2)}x)
           </span>
@@ -2169,6 +2662,7 @@ export default function CastleCapitalist() {
       {/* ── BUY QTY ── */}
       {tab === "ventures" && (
         <div className="qty-row">
+          <span className="qty-label">Buy</span>
           {[1, 10, 100, -1].map(q => (
             <button key={q}
               className={`qty ${buyQty === q ? 'qty-on' : ''}`}
@@ -2190,8 +2684,9 @@ export default function CastleCapitalist() {
             const upgTier = profUpgrades[i] || 0;
             const tPath = profTransforms[i] || null;
             const loot = getLootBonuses(equipped, i);
-            const con = getConsumedBonuses(consumedBuffs);
-            const comboGold = loot.goldMult + (con.goldMult - 1);
+            const con = getAltarBonuses(altarRanks);
+            const profInvMult = getProfInvestMult(profInvest, i);
+            const comboGold = (loot.goldMult + (con.goldMult - 1)) * profInvMult;
             const comboSpeed = loot.speedMult + (con.speedMult - 1);
             const effCycle = getEffectiveCycleTime(v, upgTier, tPath, comboSpeed);
             const pct = unlocked ? Math.min(100, (vs.progress / effCycle) * 100) : 0;
@@ -2199,7 +2694,7 @@ export default function CastleCapitalist() {
             const inWatch = unlocked && isProfInWatch(i, getCurrentWatch());
             const incomingSynergy = getIncomingSynergy(profUpgrades, i);
             const synergyMult = 1 + incomingSynergy;
-            const revPerCycle = unlocked ? getRevenue(v, vs.owned, prestigeMultiplier, upgTier, tPath, comboGold, synergyMult) * (inWatch ? 1.25 : 1) : 0;
+            const revPerCycle = unlocked ? getRevenue(v, vs.owned, prestigeMultiplier, upgTier, tPath, comboGold, synergyMult, profEvolutions[i] || 0) * (inWatch ? 1.25 : 1) : 0;
 
             // Hide far-away ventures
             if (!unlocked && gold < v.unlockCost * 0.05 && i > 2) return null;
@@ -2227,13 +2722,19 @@ export default function CastleCapitalist() {
                   >
                     <VentureIcon index={i} color={v.color} size={56} />
                   </div>
-                  <span className="badge-ct">Lvl {vs.owned}</span>
+                  <span className="badge-ct">{unlocked ? `Lvl ${vs.owned}` : '🔒'}</span>
                 </div>
 
                 {/* Info */}
                 <div className="vmid" onClick={(e) => unlocked && handleStartVenture(i, e)}>
                   <div className="vname">
-                    {v.name}
+                    {getEvolutionName(i, profEvolutions[i] || 0, v.name)}
+                    {(profEvolutions[i] || 0) > 0 && (
+                      <span className="evo-badge" title={`Evolution stage ${profEvolutions[i]}`} style={{borderColor: v.color, color: v.color}}>
+                        E{profEvolutions[i]}
+                      </span>
+                    )}
+                    {isEvolvingNow(evolveEndTs[i]) && <span className="evo-badge evo-badge-active" style={{borderColor: v.color, color: v.color}}>EVOLVING</span>}
                     {upgTier > 0 && TIER_BADGE_STYLES[upgTier] && (
                       <span
                         className="tier-badge"
@@ -2249,18 +2750,25 @@ export default function CastleCapitalist() {
                     {vs.hasCompanion && <span className="auto-tag">AUTO</span>}
                     {inWatch && <span className="watch-tag">{WATCHES[getCurrentWatch()].icon}</span>}
                   </div>
-                  <div className="bar-out">
-                    <div className="bar-in"
-                      style={{
-                        width: `${pct}%`,
-                        background: `linear-gradient(90deg, ${v.colorDark}, ${v.color})`,
-                      }}
-                    />
-                    <span className="bar-time">{formatTime(remaining)}</span>
-                  </div>
+                  {unlocked ? (
+                    <div className="bar-out">
+                      <div className="bar-in"
+                        style={{
+                          width: `${pct}%`,
+                          background: `linear-gradient(90deg, ${v.colorDark}, ${v.color})`,
+                        }}
+                      />
+                      <span className="bar-time">{formatTime(remaining)}</span>
+                    </div>
+                  ) : (
+                    <div className="vrow-locked-req">
+                      <svg width="10" height="10" viewBox="0 0 16 16" fill="#7982a9" style={{flexShrink:0}}><path d="M8 1a4 4 0 0 0-4 4v3H3a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V9a1 1 0 0 0-1-1h-1V5a4 4 0 0 0-4-4zm-2 4a2 2 0 1 1 4 0v3H6V5z"/></svg>
+                      <GoldCoinIcon size={10} /> {formatNumber(v.unlockCost)} to unlock
+                    </div>
+                  )}
                   {unlocked && (
                     <div className="vms">
-                      <GoldCoinIcon size={10} /> <span className="vms-n">{formatNumber(revPerCycle)}</span> / fill
+                      <GoldCoinIcon size={10} /> <span className="vms-n">{formatNumber(revPerCycle)}</span> / cycle
                       {incomingSynergy > 0 && (
                         <span className="vms-syn" title="Bonus from lower-tier profession upgrades (synergy)">
                           +{Math.round(incomingSynergy * 100)}% synergy
@@ -2417,27 +2925,115 @@ export default function CastleCapitalist() {
             </div>
           </div>
 
-          {/* ── PERMANENT SACRIFICE BUFFS ── */}
-          {Object.keys(consumedBuffs).length > 0 && (() => {
-            const labels = [];
-            if (consumedBuffs.goldMultiplier)  labels.push({ label: `+${(consumedBuffs.goldMultiplier * 100).toFixed(1)}% gold`,       color: '#f0c030' });
-            if (consumedBuffs.speedBoost)      labels.push({ label: `+${(consumedBuffs.speedBoost * 100).toFixed(1)}% speed`,           color: '#5eead4' });
-            if (consumedBuffs.dropRateBoost)   labels.push({ label: `+${(consumedBuffs.dropRateBoost * 100).toFixed(1)}% drop rates`,   color: '#a855f7' });
-            if (consumedBuffs.xpBoost)         labels.push({ label: `+${(consumedBuffs.xpBoost * 100).toFixed(1)}% XP bonus`,           color: '#60a5fa' });
-            if (consumedBuffs.critGold)        labels.push({ label: `+${(consumedBuffs.critGold * 100).toFixed(2)}% crit chance`,        color: '#fbbf24' });
-            if (consumedBuffs.instantComplete) labels.push({ label: `+${(consumedBuffs.instantComplete * 100).toFixed(2)}% bonus cycle`, color: '#f472b6' });
-            if (consumedBuffs.chainRun)        labels.push({ label: `+${(consumedBuffs.chainRun * 100).toFixed(2)}% chain chance`,       color: '#fb923c' });
-            return labels.length > 0 ? (
-              <div className="sacrifice-summary">
-                <div className="sacrifice-hdr">Sacrifice Buffs <span className="sacrifice-sub">(permanent)</span></div>
-                <div className="sacrifice-tags">
-                  {labels.map((l, idx) => (
-                    <span key={idx} className="sacrifice-tag" style={{ color: l.color, borderColor: l.color + '40' }}>{l.label}</span>
-                  ))}
+          {/* ── ALTAR PANEL ── */}
+          {(essence > 0 || lifetimeEssence > 0 || Object.keys(altarRanks).length > 0) && (
+            <div className="altar-panel">
+              <div className="altar-hdr-row">
+                <div className="altar-hdr">The Altar</div>
+                <div className="altar-balance">
+                  <span className="altar-essence">{essence.toLocaleString()}</span>
+                  <span className="altar-essence-label">essence</span>
+                  {legendaryEssence > 0 && (
+                    <>
+                      <span className="altar-essence altar-leg-essence">{legendaryEssence}</span>
+                      <span className="altar-essence-label" style={{color:'#ff8000'}}>leg.</span>
+                    </>
+                  )}
                 </div>
               </div>
-            ) : null;
-          })()}
+              <div className="altar-sub">Spend essence on permanent buffs (capped). Lifetime spent: {lifetimeEssence.toLocaleString()}.</div>
+
+              {/* Buff nodes */}
+              <div className="altar-nodes">
+                {ALTAR_NODES.map(node => {
+                  const rank = altarRanks[node.id] || 0;
+                  const atMax = rank >= node.maxRank;
+                  const cost = atMax ? Infinity : getAltarRankCost(node, rank);
+                  const pool = node.legendaryOnly ? legendaryEssence : essence;
+                  const canAfford = !atMax && pool >= cost;
+                  const totalPct = (node.perRank * rank * 100);
+                  return (
+                    <div key={node.id} className="altar-node" style={{borderColor: node.color + '50'}}>
+                      <div className="altar-node-hdr">
+                        <span className="altar-node-name" style={{color: node.color}}>{node.label}</span>
+                        <span className="altar-node-rank">{rank}/{node.maxRank}</span>
+                      </div>
+                      <div className="altar-node-desc">{node.desc}</div>
+                      <div className="altar-node-current">
+                        Current: <strong style={{color: node.color}}>+{totalPct.toFixed(1)}%</strong>
+                        {node.stat === 'legendary' && ' gold & drops'}
+                      </div>
+                      {atMax ? (
+                        <div className="altar-node-max">MAX RANK</div>
+                      ) : (
+                        <button className="altar-node-btn" disabled={!canAfford}
+                          style={{borderColor: node.color, color: canAfford ? node.color : '#666'}}
+                          onClick={() => handleBuyAltarRank(node.id)}>
+                          Rank {rank + 1} &rarr; {cost.toLocaleString()}{node.legendaryOnly ? ' leg' : 'e'}
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Milestones */}
+              <div className="altar-milestones-hdr">Milestone Unlocks <span className="altar-sub-tag">(lifetime essence spent)</span></div>
+              <div className="altar-milestones">
+                {ALTAR_MILESTONES.map(m => {
+                  const unlocked = altarUnlocks[m.id];
+                  const pct = Math.min(100, lifetimeEssence / m.at * 100);
+                  return (
+                    <div key={m.id} className={`altar-milestone ${unlocked ? 'altar-milestone-on' : ''}`}>
+                      <div className="altar-milestone-hdr">
+                        <span className="altar-milestone-name">{m.label}</span>
+                        <span className="altar-milestone-cost">{unlocked ? 'UNLOCKED' : `${lifetimeEssence.toLocaleString()} / ${m.at.toLocaleString()}`}</span>
+                      </div>
+                      <div className="altar-milestone-desc">{m.desc}</div>
+                      {!unlocked && <div className="altar-milestone-bar"><div className="altar-milestone-fill" style={{width: pct + '%'}} /></div>}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Per-profession investment */}
+              <details className="altar-prof-details">
+                <summary className="altar-prof-summary">Per-Profession Investment <span className="altar-sub-tag">(spend essence to revive weak professions)</span></summary>
+                <div className="altar-prof-grid">
+                  {VENTURES.map((v, i) => {
+                    const vs = ventures[i];
+                    if (vs.owned === 0) return null;
+                    const rank = profInvest[i] || 0;
+                    const cost = getProfInvestCost(rank);
+                    const canAfford = essence >= cost;
+                    const totalPct = (rank * PROF_INVEST_PER_RANK * 100);
+                    return (
+                      <div key={i} className="altar-prof-card" style={{borderColor: v.color + '50'}}>
+                        <div className="altar-prof-name" style={{color: v.color}}>{v.name}</div>
+                        <div className="altar-prof-rank">Rank {rank} &middot; <strong style={{color: v.color}}>+{totalPct.toFixed(0)}%</strong> gold</div>
+                        <button className="altar-prof-btn" disabled={!canAfford}
+                          style={{borderColor: v.color, color: canAfford ? v.color : '#666'}}
+                          onClick={() => handleProfInvest(i)}>
+                          +1 Rank &rarr; {cost.toLocaleString()}e
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </details>
+
+              {/* Auto-sacrifice control (only if unlocked) */}
+              {altarUnlocks.auto_sacrifice && (
+                <div className="altar-auto-row">
+                  <span className="altar-auto-label">Auto-sacrifice duplicates above</span>
+                  <input type="number" min="1" max="99" value={autoSacThresh}
+                    onChange={e => setAutoSacThresh(Math.max(1, Math.min(99, parseInt(e.target.value) || 3)))}
+                    className="altar-auto-input" />
+                  <span className="altar-auto-label">copies</span>
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="inv-hdr">Dungeon Loot</div>
           <p className="inv-sub">Equip items to activate their effects.</p>
@@ -2490,24 +3086,20 @@ export default function CastleCapitalist() {
                               <span className="inv-combine-progress">{available}/{COMBINE_COST} to forge</span>
                             )}
                             {available > 0 && (() => {
-                              const frac = CONSUME_FRACTIONS[item.rarity] || 0.20;
-                              const fmtBuff = (mult) => item.effects.map(e => {
-                                const pct = (e.value * frac * mult * 100);
-                                const label = e.type === 'goldMultiplier' ? 'gold' : e.type === 'speedBoost' ? 'speed' : e.type === 'dropRateBoost' ? 'drops' : e.type === 'xpBoost' ? 'XP' : e.type === 'critGold' ? 'crit' : e.type === 'instantComplete' ? 'bonus cycle' : e.type === 'chainRun' ? 'chain' : e.type;
-                                return `+${pct >= 1 ? pct.toFixed(1) : pct.toFixed(2)}% ${label}`;
-                              }).join(', ');
-                              const oneBuff = fmtBuff(1);
-                              const allBuff = fmtBuff(available);
+                              const perItem = ITEM_ESSENCE_VALUES[item.rarity] || 1;
+                              const isLeg = item.rarity === 'legendary';
+                              const oneLabel = `+${perItem}e${isLeg ? ` +${LEG_ESSENCE_PER_LEGENDARY} leg` : ''}`;
+                              const allLabel = `+${(perItem * available).toLocaleString()}e${isLeg ? ` +${LEG_ESSENCE_PER_LEGENDARY * available} leg` : ''}`;
                               return (
                                 <div className="inv-sacrifice-row">
                                   <button className="inv-sacrifice-btn" onClick={() => handleConsumeItem(item.id, 1)}
-                                    title={`Sacrifice 1 for permanent: ${oneBuff}`}>
-                                    Sacrifice &rarr; {oneBuff}
+                                    title={`Sacrifice 1 for ${oneLabel}`}>
+                                    Sacrifice &rarr; {oneLabel}
                                   </button>
                                   {available > 1 && (
                                     <button className="inv-sacrifice-btn inv-sacrifice-all-btn" onClick={() => handleConsumeItem(item.id, available)}
-                                      title={`Sacrifice all ${available} copies for permanent: ${allBuff}`}>
-                                      Sacrifice All &times;{available} &rarr; {allBuff}
+                                      title={`Sacrifice all ${available} copies for ${allLabel}`}>
+                                      Sacrifice All &times;{available} &rarr; {allLabel}
                                     </button>
                                   )}
                                 </div>
@@ -2633,6 +3225,81 @@ export default function CastleCapitalist() {
                       })}
                     </div>
                   )}
+                  {/* Evolution section */}
+                  {(() => {
+                    const curStage = profEvolutions[i] || 0;
+                    const endTs = evolveEndTs[i] || 0;
+                    const evolving = isEvolvingNow(endTs);
+                    const nextStage = curStage + 1;
+                    const hasNext = nextStage < EVOLUTION_STAGES.length;
+                    const stageName = getEvolutionName(i, curStage, v.name);
+                    return (
+                      <div className="up-evo">
+                        <div className="up-evo-hdr">
+                          <span className="up-evo-label">Evolution</span>
+                          <span className="up-evo-stage" style={{color: v.color}}>
+                            {curStage > 0 ? `${stageName} · Stage ${curStage}` : 'Base'}
+                          </span>
+                        </div>
+                        {evolving ? (
+                          (() => {
+                            const remMs = Math.max(0, endTs - Date.now());
+                            const totalCd = EVOLUTION_STAGES[Math.min(curStage + 1, EVOLUTION_STAGES.length - 1)].cooldownMs || 1;
+                            const pct = Math.max(0, Math.min(100, (1 - remMs / totalCd) * 100));
+                            const hrs = Math.floor(remMs / 3600000);
+                            const mins = Math.floor((remMs % 3600000) / 60000);
+                            const secs = Math.floor((remMs % 60000) / 1000);
+                            const timeStr = hrs > 0 ? `${hrs}h ${mins}m` : (mins > 0 ? `${mins}m ${secs}s` : `${secs}s`);
+                            const skipGems = Math.max(1, Math.ceil(remMs / 3600000));
+                            return (
+                              <div className="up-evo-active">
+                                <div className="up-evo-msg">Evolving — no income from this profession.</div>
+                                <div className="up-evo-bar"><div className="up-evo-bar-fill" style={{width: `${pct}%`, background: v.color}}/></div>
+                                <div className="up-evo-bar-meta">
+                                  <span>{timeStr} remaining</span>
+                                  <button className="up-evo-skip" disabled={prestigeGems < skipGems} onClick={() => handleSkipEvolution(i)}>
+                                    Skip · <SoulGemIcon size={11}/> {skipGems}
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })()
+                        ) : hasNext ? (() => {
+                          const cfg = EVOLUTION_STAGES[nextStage];
+                          const cost = cfg.cost;
+                          const nextName = getEvolutionName(i, nextStage, v.name);
+                          const haveOwned = vs.owned >= cost.ownedReq;
+                          const haveItems = countAvailableByRarity(inventory, equipped, cost.rarity) >= cost.count;
+                          const haveExtra = !cost.extraRarity || countAvailableByRarity(inventory, equipped, cost.extraRarity) >= cost.extraCount;
+                          const haveEss = essence >= cost.essence;
+                          const canEvo = haveOwned && haveItems && haveExtra && haveEss;
+                          const cdH = Math.round(cfg.cooldownMs / 3600000 * 10) / 10;
+                          return (
+                            <div className="up-evo-next">
+                              <div className="up-evo-next-row">
+                                <span>Next: <strong style={{color: v.color}}>{nextName}</strong></span>
+                                <span className="up-evo-mult">×{cfg.revMult} rev</span>
+                              </div>
+                              <div className="up-cost-row">
+                                <span className={`up-cost ${haveOwned ? 'up-cost-ok' : 'up-cost-no'}`}>{vs.owned}/{cost.ownedReq} owned</span>
+                                <span className={`up-cost ${haveItems ? 'up-cost-ok' : 'up-cost-no'}`}>{cost.count} {cost.rarity}</span>
+                                {cost.extraRarity && (
+                                  <span className={`up-cost ${haveExtra ? 'up-cost-ok' : 'up-cost-no'}`}>{cost.extraCount} {cost.extraRarity}</span>
+                                )}
+                                <span className={`up-cost ${haveEss ? 'up-cost-ok' : 'up-cost-no'}`}>{Math.floor(essence)}/{cost.essence} essence</span>
+                                <span className="up-cost up-cost-no" style={{color:'var(--txd)'}}>cooldown {cdH < 1 ? `${Math.round(cfg.cooldownMs/60000)}m` : `${cdH}h`}</span>
+                              </div>
+                              <button className={`up-btn ${canEvo ? 'up-btn-evo' : ''}`} disabled={!canEvo} onClick={() => handleStartEvolution(i)}>
+                                {canEvo ? `Begin Evolution` : "Requirements Not Met"}
+                              </button>
+                            </div>
+                          );
+                        })() : (
+                          <div className="up-card-max">FULLY EVOLVED</div>
+                        )}
+                      </div>
+                    );
+                  })()}
                   {/* Normal upgrade path */}
                   {next ? (
                     <div className="up-card-next">
@@ -2860,7 +3527,7 @@ export default function CastleCapitalist() {
           style={{ borderColor: getRarityStyle(lootToast.item.rarity).color }}>
           {lootToast.item.icon && <img src={lootToast.item.icon} alt="" className="loot-toast-icon" style={{ imageRendering: 'pixelated' }} />}
           {lootToast.fused && <span className="loot-toast-fused">Forged!</span>}
-          {lootToast.sacrificed && <span className="loot-toast-fused" style={{color:'#ef4444'}}>Sacrificed{lootToast.count > 1 ? ` ×${lootToast.count}` : ''}!</span>}
+          {lootToast.sacrificed && <span className="loot-toast-fused" style={{color:'#ef4444'}}>Sacrificed{lootToast.count > 1 ? ` ×${lootToast.count}` : ''} &rarr; +{lootToast.essence}e{lootToast.legEssence > 0 ? ` +${lootToast.legEssence} leg` : ''}</span>}
           <span className="loot-toast-rarity"
             style={{ color: getRarityStyle(lootToast.item.rarity).color }}>
             {getRarityStyle(lootToast.item.rarity).label}
@@ -3079,34 +3746,30 @@ export default function CastleCapitalist() {
       {showFirstSacrificeModal && (() => {
         const item = showFirstSacrificeModal.item;
         const rarityStyle = getRarityStyle(item.rarity);
-        const frac = CONSUME_FRACTIONS[item.rarity] || 0.20;
-        const buffPreview = item.effects.map(e => {
-          const pct = (e.value * frac * 100);
-          const label = e.type === 'goldMultiplier' ? 'gold' : e.type === 'speedBoost' ? 'speed' : e.type === 'dropRateBoost' ? 'drops' : e.type;
-          return `+${pct >= 1 ? pct.toFixed(1) : pct.toFixed(2)}% ${label}`;
-        }).join(', ');
+        const ess = ITEM_ESSENCE_VALUES[item.rarity] || 1;
+        const isLeg = item.rarity === 'legendary';
         return (
           <div className="watch-modal-overlay" onClick={() => setShowFirstSacrificeModal(null)}>
             <div className="watch-modal first-app-modal" onClick={e => e.stopPropagation()} style={{borderColor: '#ef4444'}}>
               <div className="first-app-hdr" style={{background: 'linear-gradient(135deg, rgba(239,68,68,.25), rgba(168,85,247,.2))'}}>
-                <div className="first-app-badge" style={{background: 'linear-gradient(135deg,#ef4444,#a855f7)', boxShadow: '0 0 20px rgba(239,68,68,.5)'}}>SACRIFICE UNLOCKED</div>
+                <div className="first-app-badge" style={{background: 'linear-gradient(135deg,#ef4444,#a855f7)', boxShadow: '0 0 20px rgba(239,68,68,.5)'}}>ALTAR UNLOCKED</div>
                 <div className="first-app-title">The Altar Awaits</div>
-                <div className="first-app-sub">You have enough duplicates to sacrifice one for a permanent bonus.</div>
+                <div className="first-app-sub">Sacrifice duplicates for Essence — a currency you spend on permanent buffs.</div>
               </div>
               <div className="first-app-body">
                 <div className="first-app-reward">
                   {item.icon && <img src={item.icon} alt="" style={{width:32, height:32, imageRendering:'pixelated', flexShrink:0}} />}
                   <div className="first-app-reward-text">
-                    Sacrificing <strong style={{color: rarityStyle.color}}>{item.name}</strong> would permanently grant <strong style={{color:'#ef4444'}}>{buffPreview}</strong>.
+                    Sacrificing <strong style={{color: rarityStyle.color}}>{item.name}</strong> would grant <strong style={{color:'#f0c030'}}>+{ess} essence</strong>{isLeg ? <> and <strong style={{color:'#ff8000'}}>+{LEG_ESSENCE_PER_LEGENDARY} legendary essence</strong></> : null}.
                   </div>
                 </div>
                 <div className="first-app-teach">
-                  <div className="first-app-teach-title">How Sacrifice Works</div>
+                  <div className="first-app-teach-title">How the Altar Works</div>
                   <ul className="first-app-teach-list">
-                    <li><strong>Destroy 1 item</strong> to gain a fraction of its effect as a <strong>permanent buff</strong> that survives ascension.</li>
-                    <li>Rarer items grant a <strong>larger fraction</strong> — common 20%, uncommon 25%, rare 30%, epic 40%, legendary 50%.</li>
-                    <li>Sacrifice stacks — feed the altar 10 commons and those tiny buffs add up.</li>
-                    <li>Choose wisely: <strong>Equip</strong> for full power, <strong>Forge</strong> to gamble for upgrades, or <strong>Sacrifice</strong> for permanent growth.</li>
+                    <li><strong>Sacrifice an item</strong> to gain Essence: common 1, uncommon 4, rare 16, epic 64, legendary 256.</li>
+                    <li><strong>Spend Essence</strong> on Altar nodes — Greed (+gold), Haste (+speed), Fortune (+drops). Each node has a rank cap and rising cost.</li>
+                    <li><strong>Lifetime essence spent</strong> unlocks milestones: auto-sacrifice, extra slot, vault preview, evolution stones.</li>
+                    <li>Choose wisely: <strong>Equip</strong> for raw power, <strong>Forge</strong> to gamble for rarer items, or <strong>Sacrifice</strong> to fuel the Altar.</li>
                   </ul>
                 </div>
               </div>
@@ -3231,6 +3894,38 @@ export default function CastleCapitalist() {
         );
       })()}
 
+      {/* ── SAVE RECOVERY MODAL ── */}
+      {saveRecovery && (
+        <div className="watch-modal-overlay" onClick={() => setSaveRecovery(null)}>
+          <div className="watch-modal" onClick={e => e.stopPropagation()}>
+            <div className="watch-modal-header">
+              <span className="watch-modal-title">Save Recovery</span>
+              <button className="watch-modal-close" onClick={() => setSaveRecovery(null)}>X</button>
+            </div>
+            <div className="settings-section">
+              <div style={{ fontSize: 13, color: '#f87171', marginBottom: 10, lineHeight: 1.5 }}>
+                We couldn't read your previous save. A backup of the raw save data has been kept so nothing is destroyed.
+              </div>
+              <div style={{ fontSize: 11, fontFamily: 'monospace', color: '#cbd5e1', background: 'rgba(0,0,0,.35)', padding: '8px 10px', borderRadius: 6, marginBottom: 10, wordBreak: 'break-word' }}>
+                {saveRecovery.message}
+              </div>
+              {saveRecovery.backupKey && (
+                <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 10, lineHeight: 1.5 }}>
+                  Backup saved under localStorage key:
+                  <div style={{ fontFamily: 'monospace', color: '#fbbf24', marginTop: 4, wordBreak: 'break-all' }}>{saveRecovery.backupKey}</div>
+                </div>
+              )}
+              <div style={{ fontSize: 11, color: '#94a3b8', lineHeight: 1.5 }}>
+                A new game has been started. If you'd like help recovering your old progress, contact support with the backup key above.
+              </div>
+              <button className="settings-tutorial-btn" style={{ marginTop: 12 }} onClick={() => setSaveRecovery(null)}>
+                Dismiss
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── SETTINGS MODAL ── */}
       {showSettings && (
         <div className="watch-modal-overlay" onClick={() => setShowSettings(false)}>
@@ -3255,15 +3950,21 @@ export default function CastleCapitalist() {
                 <span className="settings-slider-val">{Math.round(brightness * 100)}%</span>
               </div>
             </div>
+
+            <div className="settings-section" style={{ textAlign: 'center', borderTop: '1px solid var(--bd)', paddingTop: 10 }}>
+              <a href="/privacy.html" target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: '#94a3b8', textDecoration: 'underline' }}>
+                Privacy Policy
+              </a>
+            </div>
+
+            <div className="settings-section" style={{ borderTop: '1px solid var(--bd)', paddingTop: 10 }}>
+              <button className="ft-reset" style={{ width: '100%' }} onClick={() => { setShowSettings(false); handleHardReset(); }}>
+                Hard Reset
+              </button>
+            </div>
           </div>
         </div>
       )}
-
-      {/* ── FOOTER ── */}
-      <div className="ft">
-        <span className="ft-text">Castle Clicker v0.3</span>
-        <button className="ft-reset" onClick={handleHardReset}>Reset</button>
-      </div>
 
       {/* Particle overlay */}
       <div ref={particleContainerRef} className="particle-container" />
@@ -3316,9 +4017,9 @@ const STYLES = `
 .hd-stats { display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:8px; }
 .hd-stats > .hd-gold-box { justify-self:start; }
 .hd-stats > .hd-gems { justify-self:end; }
-.hd-watch { font-family:'Fira Code',monospace; font-size:10px; color:var(--txd); padding:3px 8px; border-radius:10px; background:rgba(255,255,255,.05); border:1px solid var(--bd); display:inline-flex; align-items:center; gap:5px; }
-.watch-info-btn { width:16px; height:16px; border-radius:50%; border:1px solid rgba(255,255,255,.4); background:rgba(255,255,255,.15); color:#fff; font-size:10px; font-family:'Inter',sans-serif; font-style:normal; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; padding:0 0 1px 0; line-height:1; transition:all .2s; }
-.watch-info-btn:hover { background:rgba(255,255,255,.3); color:#fff; border-color:var(--gold); }
+.hd-watch { font-family:'Fira Code',monospace; font-size:10px; color:var(--txd); padding:4px 10px; border-radius:10px; background:rgba(255,255,255,.05); border:1px solid var(--bd); display:inline-flex; align-items:center; gap:5px; cursor:pointer; transition:all .2s; }
+.hd-watch:hover { border-color:var(--gold); color:var(--txb); }
+.hd-watch:active { transform:scale(.95); }
 .trophy-btn { position:absolute; right:12px; top:50%; transform:translateY(-50%); background:none; border:none; color:#c0a040; cursor:pointer; padding:4px; display:flex; align-items:center; gap:4px; z-index:21; transition:all .2s; min-width:32px; min-height:32px; justify-content:center; }
 .trophy-btn:hover { color:#fbbf24; filter:drop-shadow(0 0 6px #fbbf24); }
 .trophy-btn:active { transform:translateY(-50%) scale(.9); }
@@ -3326,7 +4027,7 @@ const STYLES = `
 .ach-modal { max-width:480px; max-height:80vh; overflow-y:auto; }
 
 @media (max-width:400px) {
-  .hd-amount { font-size:18px; }
+  .hd-amount { font-size:22px; }
   .hd-title-clicker { font-size:34px; }
   .hd-watch { font-size:8px; padding:2px 6px; }
   .hd-stats { gap:4px; }
@@ -3383,7 +4084,7 @@ const STYLES = `
 
 
 .hd-gold-box { display:flex; align-items:baseline; gap:6px; }
-.hd-amount { font-family:'Cinzel',serif; font-size:24px; font-weight:900; color:var(--gdl); text-shadow:0 2px 8px rgba(251,191,36,.3); }
+.hd-amount { font-family:'Cinzel',serif; font-size:28px; font-weight:900; color:var(--gdl); text-shadow:0 2px 8px rgba(251,191,36,.3), 0 0 12px rgba(251,191,36,.15); }
 .hd-gems { font-family:'Fira Code',monospace; font-size:11px; color:var(--gm); padding:4px 10px; border-radius:12px; background:rgba(192,132,252,.12); border:1px solid rgba(192,132,252,.25); cursor:pointer; display:flex; align-items:center; gap:4px; transition:all .2s; }
 .hd-gems:active { background:rgba(192,132,252,.2); }
 
@@ -3395,7 +4096,8 @@ const STYLES = `
 .bnav-icon { font-size:20px; line-height:1; }
 .bnav-label { font-family:'Cinzel',serif; font-size:9px; font-weight:700; letter-spacing:.5px; text-shadow:0 1px 2px rgba(0,0,0,.4); }
 .bnav-on { color:inherit; }
-.bnav-on .bnav-icon { filter:drop-shadow(0 0 8px currentColor); }
+.bnav-on::before { content:''; position:absolute; top:4px; left:50%; transform:translateX(-50%); width:36px; height:36px; border-radius:50%; background:currentColor; opacity:.12; pointer-events:none; }
+.bnav-on .bnav-icon { filter:drop-shadow(0 0 8px currentColor); transform:scale(1.15); transition:transform .2s; }
 .bnav-on .bnav-label { text-shadow:0 0 8px currentColor; font-weight:900; border-bottom:2px solid currentColor; padding-bottom:1px; }
 .bnav-pulse { color:var(--mod-allies) !important; animation:bnav-pulse 1.4s ease-in-out infinite; }
 .bnav-pulse .bnav-icon { filter:drop-shadow(0 0 6px var(--mod-allies)) drop-shadow(0 0 12px var(--mod-allies)); }
@@ -3406,7 +4108,8 @@ const STYLES = `
 }
 
 /* Buy Quantity */
-.qty-row { display:flex; gap:6px; padding:8px 12px; justify-content:flex-end; background:var(--bg2); }
+.qty-row { display:flex; gap:6px; padding:8px 12px; justify-content:flex-end; align-items:center; background:var(--bg2); border-bottom:1px solid var(--bd); }
+.qty-label { font-family:'Fira Code',monospace; font-size:10px; font-weight:600; color:var(--txd); letter-spacing:.5px; text-transform:uppercase; margin-right:auto; }
 .qty { padding:8px 16px; font-family:'Fira Code',monospace; font-size:12px; font-weight:700; background:linear-gradient(180deg,#222,#151515); color:#c0c0c0; border:2px solid #444; border-radius:8px; cursor:pointer; transition:all .15s; min-height:36px; -webkit-tap-highlight-color:transparent; box-shadow:0 2px 4px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.08); text-shadow:0 1px 2px rgba(0,0,0,.5); }
 .qty:hover { border-color:#666; color:#e0e0e0; }
 .qty:active { transform:scale(.95); }
@@ -3437,6 +4140,9 @@ const STYLES = `
 .auto-tag { font-family:'Fira Code',monospace; font-size:8px; font-weight:700; color:var(--gn); margin-left:6px; padding:1px 5px; border-radius:3px; background:rgba(52,211,153,.12); }
 .watch-tag { font-size:10px; margin-left:4px; filter:drop-shadow(0 0 3px rgba(255,200,50,.5)); }
 .tier-badge { font-family:'Cinzel',serif; font-size:9px; font-weight:700; letter-spacing:.5px; text-transform:uppercase; margin-left:6px; padding:2px 7px; border-radius:10px; border:1px solid rgba(0,0,0,.35); text-shadow:0 1px 1px rgba(0,0,0,.5); vertical-align:middle; }
+
+/* Locked venture requirement */
+.vrow-locked-req { font-family:'Fira Code',monospace; font-size:9px; color:var(--txd); display:flex; align-items:center; gap:4px; padding:3px 0; margin-bottom:3px; }
 
 /* Progress Bar */
 .bar-out { height:14px; background:#1a1b26; border-radius:7px; overflow:hidden; border:1px solid var(--bd); box-shadow:inset 0 2px 4px rgba(0,0,0,.4); margin-bottom:3px; position:relative; }
@@ -3527,6 +4233,23 @@ const STYLES = `
 .up-tf-passive { font-size:9px; color:var(--txd); margin-bottom:6px; line-height:1.4; }
 .up-tf-passive strong { color:var(--txb); }
 .up-btn-transform { background:linear-gradient(180deg,#ff9e64,#cc7a3f); color:#1a1b26; border-color:#4a2a10; box-shadow:0 2px 10px rgba(255,158,100,.25); }
+.up-evo { margin-top:8px; padding:8px 10px; border-radius:8px; background:linear-gradient(135deg,rgba(187,154,247,.08),rgba(122,162,247,.04)); border:1px solid rgba(187,154,247,.25); }
+.up-evo-hdr { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
+.up-evo-label { font-family:'Cinzel',serif; font-size:10px; font-weight:700; color:#bb9af7; letter-spacing:1.5px; }
+.up-evo-stage { font-family:'Cinzel',serif; font-size:11px; font-weight:700; }
+.up-evo-next-row { display:flex; justify-content:space-between; align-items:center; font-size:10px; color:var(--txb); margin-bottom:4px; }
+.up-evo-mult { font-family:'Fira Code',monospace; font-size:10px; color:#bb9af7; font-weight:700; }
+.up-btn-evo { background:linear-gradient(180deg,#bb9af7,#7a5cc8); color:#1a1b26; border-color:#3a2a5a; box-shadow:0 2px 10px rgba(187,154,247,.3); }
+.up-evo-active { padding:4px 0; }
+.up-evo-msg { font-size:9px; color:#f7768e; margin-bottom:4px; font-style:italic; text-align:center; }
+.up-evo-bar { width:100%; height:8px; background:rgba(255,255,255,.06); border-radius:4px; overflow:hidden; border:1px solid rgba(187,154,247,.2); }
+.up-evo-bar-fill { height:100%; transition:width .5s linear; box-shadow:0 0 8px rgba(187,154,247,.4); }
+.up-evo-bar-meta { display:flex; justify-content:space-between; align-items:center; margin-top:4px; font-size:9px; color:var(--txd); }
+.up-evo-skip { font-family:'Cinzel',serif; font-size:9px; padding:2px 8px; border-radius:5px; background:rgba(255,158,100,.15); border:1px solid rgba(255,158,100,.4); color:var(--gd); cursor:pointer; display:inline-flex; align-items:center; gap:3px; }
+.up-evo-skip:disabled { opacity:.4; cursor:default; }
+.evo-badge { display:inline-block; margin-left:6px; font-family:'Fira Code',monospace; font-size:8px; font-weight:700; padding:1px 5px; border:1px solid; border-radius:3px; letter-spacing:.5px; }
+.evo-badge-active { animation:evoPulse 1.4s ease-in-out infinite; background:rgba(187,154,247,.18); }
+@keyframes evoPulse { 0%,100% { opacity:.6; } 50% { opacity:1; } }
 .up-btn-transform:active { transform:scale(.97); }
 
 /* Prestige */
@@ -3552,9 +4275,8 @@ const STYLES = `
 .prest-break-preview span:last-child { font-family:'Cinzel',serif; font-size:14px; }
 
 /* Footer */
-.ft { display:flex; justify-content:space-between; align-items:center; padding:8px 16px; border-top:1px solid var(--bd); background:var(--bg2); }
-.ft-text { font-family:'Fira Code',monospace; font-size:9px; color:var(--txd); }
-.ft-reset { font-family:'Fira Code',monospace; font-size:9px; color:var(--rd); background:none; border:1px solid rgba(239,68,68,.2); border-radius:4px; padding:6px 14px; cursor:pointer; min-height:36px; }
+.ft-reset { font-family:'Fira Code',monospace; font-size:9px; color:var(--rd); background:none; border:1px solid rgba(239,68,68,.2); border-radius:4px; padding:6px 14px; cursor:pointer; min-height:36px; transition:all .2s; }
+.ft-reset:hover { border-color:rgba(239,68,68,.5); color:#ff6b6b; }
 
 /* Focus & Accessibility */
 .cc button:focus-visible, .cc .eq-slot:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
@@ -3628,6 +4350,58 @@ const STYLES = `
 .inv-sacrifice-btn:hover { background:rgba(239,68,68,.25); color:#fca5a5; border-color:#f87171; }
 .inv-sacrifice-all-btn { border-color:#b91c1c; color:#fca5a5; background:linear-gradient(135deg,rgba(185,28,28,.25),rgba(239,68,68,.15)); }
 .inv-sacrifice-all-btn:hover { background:linear-gradient(135deg,rgba(185,28,28,.45),rgba(239,68,68,.3)); color:#fee2e2; border-color:#ef4444; }
+/* ── ALTAR PANEL ── */
+.altar-panel { background:linear-gradient(135deg,rgba(168,85,247,.08),rgba(239,68,68,.05)); border:1px solid rgba(168,85,247,.25); border-radius:12px; padding:14px; margin-bottom:14px; }
+.altar-hdr-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; }
+.altar-hdr { font-family:'Cinzel',serif; font-size:16px; font-weight:700; color:#c084fc; letter-spacing:1px; text-transform:uppercase; }
+.altar-balance { display:flex; align-items:baseline; gap:4px; }
+.altar-essence { font-family:'Fira Code',monospace; font-size:18px; font-weight:700; color:#f0c030; }
+.altar-leg-essence { color:#ff8000; margin-left:8px; }
+.altar-essence-label { font-family:'Fira Code',monospace; font-size:9px; color:var(--txd); text-transform:uppercase; }
+.altar-sub { font-family:'Fira Code',monospace; font-size:10px; color:var(--txd); margin-bottom:12px; }
+.altar-sub-tag { font-family:'Fira Code',monospace; font-size:9px; color:var(--txd); font-weight:400; margin-left:6px; text-transform:none; }
+
+.altar-nodes { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; margin-bottom:14px; }
+@media (max-width:480px) { .altar-nodes { grid-template-columns:1fr; } }
+.altar-node { background:rgba(0,0,0,.25); border:1px solid; border-radius:8px; padding:8px 10px; }
+.altar-node-hdr { display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; }
+.altar-node-name { font-family:'Cinzel',serif; font-size:12px; font-weight:700; }
+.altar-node-rank { font-family:'Fira Code',monospace; font-size:10px; color:var(--txd); }
+.altar-node-desc { font-family:'Fira Code',monospace; font-size:9px; color:var(--txd); margin-bottom:4px; line-height:1.3; }
+.altar-node-current { font-family:'Fira Code',monospace; font-size:10px; color:var(--txm); margin-bottom:6px; }
+.altar-node-btn { width:100%; font-family:'Cinzel',serif; font-size:10px; font-weight:700; padding:6px 8px; border-radius:6px; border:1px solid; background:rgba(0,0,0,.3); cursor:pointer; transition:all .2s; }
+.altar-node-btn:hover:not(:disabled) { background:rgba(255,255,255,.05); }
+.altar-node-btn:disabled { cursor:not-allowed; opacity:.5; }
+.altar-node-max { text-align:center; font-family:'Cinzel',serif; font-size:10px; font-weight:700; color:#f0c030; padding:6px 8px; background:rgba(240,192,48,.1); border-radius:6px; }
+
+.altar-milestones-hdr { font-family:'Cinzel',serif; font-size:12px; font-weight:700; color:#c084fc; margin-bottom:6px; text-transform:uppercase; letter-spacing:1px; }
+.altar-milestones { display:flex; flex-direction:column; gap:6px; margin-bottom:14px; }
+.altar-milestone { background:rgba(0,0,0,.2); border:1px solid rgba(168,85,247,.15); border-radius:6px; padding:6px 10px; }
+.altar-milestone-on { background:rgba(168,85,247,.1); border-color:rgba(168,85,247,.4); }
+.altar-milestone-hdr { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:2px; }
+.altar-milestone-name { font-family:'Cinzel',serif; font-size:11px; font-weight:700; color:#e8e0d0; }
+.altar-milestone-on .altar-milestone-name { color:#c084fc; }
+.altar-milestone-cost { font-family:'Fira Code',monospace; font-size:9px; color:var(--txd); }
+.altar-milestone-on .altar-milestone-cost { color:#a855f7; font-weight:700; }
+.altar-milestone-desc { font-family:'Fira Code',monospace; font-size:9px; color:var(--txd); margin-bottom:3px; line-height:1.3; }
+.altar-milestone-bar { height:3px; background:rgba(0,0,0,.4); border-radius:2px; overflow:hidden; }
+.altar-milestone-fill { height:100%; background:linear-gradient(90deg,#a855f7,#c084fc); transition:width .3s; }
+
+.altar-prof-details { background:rgba(0,0,0,.15); border:1px solid rgba(168,85,247,.15); border-radius:8px; padding:8px 10px; }
+.altar-prof-summary { font-family:'Cinzel',serif; font-size:11px; font-weight:700; color:#c084fc; cursor:pointer; user-select:none; text-transform:uppercase; letter-spacing:1px; }
+.altar-prof-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:6px; margin-top:8px; }
+@media (max-width:480px) { .altar-prof-grid { grid-template-columns:1fr; } }
+.altar-prof-card { background:rgba(0,0,0,.25); border:1px solid; border-radius:6px; padding:6px 8px; }
+.altar-prof-name { font-family:'Cinzel',serif; font-size:11px; font-weight:700; margin-bottom:2px; }
+.altar-prof-rank { font-family:'Fira Code',monospace; font-size:10px; color:var(--txm); margin-bottom:4px; }
+.altar-prof-btn { width:100%; font-family:'Fira Code',monospace; font-size:10px; padding:4px 6px; border-radius:4px; border:1px solid; background:rgba(0,0,0,.3); cursor:pointer; transition:all .2s; }
+.altar-prof-btn:hover:not(:disabled) { background:rgba(255,255,255,.05); }
+.altar-prof-btn:disabled { cursor:not-allowed; opacity:.5; }
+
+.altar-auto-row { display:flex; align-items:center; gap:8px; margin-top:10px; padding:8px 10px; background:rgba(0,0,0,.2); border:1px solid rgba(168,85,247,.15); border-radius:6px; }
+.altar-auto-label { font-family:'Fira Code',monospace; font-size:10px; color:var(--txd); }
+.altar-auto-input { width:50px; font-family:'Fira Code',monospace; font-size:11px; padding:3px 6px; background:rgba(0,0,0,.4); color:#e8e0d0; border:1px solid rgba(168,85,247,.3); border-radius:4px; text-align:center; }
+
 .sacrifice-summary { background:rgba(239,68,68,.06); border:1px solid rgba(239,68,68,.15); border-radius:10px; padding:10px 14px; margin-bottom:12px; }
 .sacrifice-hdr { font-family:'Cinzel',serif; font-size:13px; font-weight:700; color:#ef4444; margin-bottom:6px; }
 .sacrifice-sub { font-family:'Fira Code',monospace; font-size:9px; color:var(--txd); font-weight:400; margin-left:4px; }
@@ -3728,6 +4502,69 @@ const STYLES = `
   100% { transform: translateX(-50%) translateY(-50px) scale(0.9); opacity: 0; }
 }
 
+/* ── Screen Shake ── */
+.shake-light { animation: shake-light .3s ease; }
+.shake-medium { animation: shake-medium .35s ease; }
+.shake-heavy { animation: shake-heavy .4s ease; }
+@keyframes shake-light {
+  0%,100% { transform:translateX(0); }
+  20% { transform:translateX(-2px); }
+  40% { transform:translateX(2px); }
+  60% { transform:translateX(-1px); }
+  80% { transform:translateX(1px); }
+}
+@keyframes shake-medium {
+  0%,100% { transform:translate(0); }
+  15% { transform:translate(-3px, 1px); }
+  30% { transform:translate(3px, -1px); }
+  45% { transform:translate(-2px, 1px); }
+  60% { transform:translate(2px, -1px); }
+  75% { transform:translate(-1px, 0); }
+}
+@keyframes shake-heavy {
+  0%,100% { transform:translate(0); }
+  10% { transform:translate(-5px, 2px); }
+  20% { transform:translate(5px, -2px); }
+  30% { transform:translate(-4px, 1px); }
+  40% { transform:translate(4px, -1px); }
+  50% { transform:translate(-3px, 1px); }
+  60% { transform:translate(3px, 0); }
+  70% { transform:translate(-2px, 0); }
+  80% { transform:translate(1px, 0); }
+}
+
+/* ── Gold Pulse ── */
+.gold-pulse { animation: gold-bump .35s cubic-bezier(.34,1.56,.64,1); }
+@keyframes gold-bump {
+  0%   { transform:scale(1); }
+  40%  { transform:scale(1.18); filter:brightness(1.3); }
+  100% { transform:scale(1); filter:brightness(1); }
+}
+
+/* ── Buy Success Flash ── */
+.buy-flash { animation: buy-pop .3s cubic-bezier(.34,1.56,.64,1); }
+@keyframes buy-pop {
+  0%   { transform:scale(1); }
+  50%  { transform:scale(1.08); }
+  100% { transform:scale(1); }
+}
+
+/* ── Row Completion Flash ── */
+.vrow-complete { animation: row-complete-flash .6s ease-out; }
+@keyframes row-complete-flash {
+  0%   { box-shadow:inset 0 0 0 rgba(255,207,168,0), 0 2px 8px rgba(0,0,0,.2); }
+  30%  { box-shadow:inset 0 0 20px rgba(255,207,168,.25), 0 0 16px rgba(255,207,168,.3); }
+  100% { box-shadow:inset 0 0 0 rgba(255,207,168,0), 0 2px 8px rgba(0,0,0,.2); }
+}
+
+/* ── Unlock Celebration ── */
+.vrow-unlock { animation: unlock-burst .6s cubic-bezier(.34,1.56,.64,1); }
+@keyframes unlock-burst {
+  0%   { transform:scale(1); box-shadow:0 0 0 rgba(52,211,153,0); }
+  30%  { transform:scale(1.03); box-shadow:0 0 30px rgba(52,211,153,.5),0 0 60px rgba(52,211,153,.2); }
+  100% { transform:scale(1); box-shadow:0 0 0 rgba(52,211,153,0); }
+}
+
 /* ── Loading Screen ── */
 .load-screen { position:fixed; inset:0; background:#0c0e14; z-index:200; animation:load-fade 0.4s ease 1.5s forwards; overflow:hidden; }
 @keyframes load-fade { to { opacity:0; pointer-events:none; } }
@@ -3744,25 +4581,51 @@ const STYLES = `
 .load-sub { font-family:'Fira Code',monospace; font-size:10px; color:#6a7090; margin-top:14px; letter-spacing:1.5px; animation:load-title-in .8s ease-out .5s both; }
 
 /* ── Tutorial ── */
-.tut-overlay { position:fixed; inset:0; background:rgba(0,0,0,.85); z-index:150; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(4px); animation:fadeIn .3s ease; }
-.tut-card { background:linear-gradient(180deg,#1a1f30,#0e1018); border:1px solid #2a3050; border-radius:16px; padding:32px 28px 24px; max-width:360px; width:90%; text-align:center; box-shadow:0 12px 48px rgba(0,0,0,.7); animation:tut-slide .4s ease; }
-@keyframes tut-slide { from { opacity:0; transform:translateY(20px) scale(.95); } to { opacity:1; transform:translateY(0) scale(1); } }
-.tut-progress { display:flex; gap:6px; justify-content:center; margin-bottom:20px; }
-.tut-dot { width:8px; height:8px; border-radius:50%; background:#2a3050; transition:all .3s; }
-.tut-dot-on { background:#f0b000; box-shadow:0 0 8px rgba(240,176,0,.4); transform:scale(1.3); }
-.tut-dot-done { background:#6fa33e; }
-.tut-icon { font-size:40px; margin-bottom:12px; line-height:1; }
-.tut-title { font-family:'Cinzel',serif; font-size:20px; font-weight:900; color:#e2e8ff; margin-bottom:10px; letter-spacing:1px; }
-.tut-text { font-size:13px; color:#a0aac0; line-height:1.7; margin-bottom:24px; }
+.tut-overlay { position:fixed; inset:0; background:rgba(0,0,0,.88); z-index:150; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(6px); animation:fadeIn .3s ease; }
+.tut-card { background:linear-gradient(180deg,#1c2135,#0e1018); border:2px solid #3a3020; border-radius:20px; padding:36px 28px 24px; max-width:360px; width:90%; text-align:center; box-shadow:0 16px 64px rgba(0,0,0,.8),0 0 80px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,200,100,.08); animation:tut-slide .45s cubic-bezier(.22,.68,.36,1.2); overflow:hidden; outline:1px solid rgba(255,180,60,.1); outline-offset:4px; }
+.tut-card::before { content:''; position:absolute; inset:6px; border:1px solid rgba(255,180,60,.12); border-radius:14px; pointer-events:none; z-index:1; }
+.tut-card::after { content:''; position:absolute; top:-40%; left:-20%; width:140%; height:100%; background:radial-gradient(ellipse at center, var(--tut-accent,#f0b000)08, transparent 70%); pointer-events:none; z-index:0; }
+@keyframes tut-slide { from { opacity:0; transform:translateY(30px) scale(.92); } to { opacity:1; transform:translateY(0) scale(1); } }
+.tut-progress { display:flex; gap:8px; justify-content:center; margin-bottom:24px; }
+.tut-dot { width:10px; height:10px; border-radius:50%; background:#2a3050; transition:all .4s cubic-bezier(.34,1.56,.64,1); border:1px solid #3a4466; }
+.tut-dot-on { transform:scale(1.4); border-color:transparent; }
+.tut-dot-done { background:#6fa33e; border-color:#4a7a2a; }
+.tut-icon-wrap { position:relative; display:flex; align-items:center; justify-content:center; width:100px; height:100px; margin:0 auto 16px; }
+.tut-icon-ring { position:absolute; inset:0; border-radius:50%; border:2px solid var(--tut-accent,#f0b000); opacity:.3; animation:tut-ring-pulse 2s ease-in-out infinite; }
+.tut-icon-ring::after { content:''; position:absolute; inset:-6px; border-radius:50%; border:1px solid var(--tut-accent,#f0b000); opacity:.15; }
+@keyframes tut-ring-pulse { 0%,100% { transform:scale(1); opacity:.3; } 50% { transform:scale(1.08); opacity:.5; } }
+.tut-icon { animation:tut-icon-enter .5s cubic-bezier(.34,1.56,.64,1) .15s both; filter:drop-shadow(0 4px 12px rgba(0,0,0,.6)); }
+@keyframes tut-icon-enter { from { opacity:0; transform:scale(.5) rotate(-8deg); } to { opacity:1; transform:scale(1) rotate(0); } }
+.tut-title { font-family:'Cinzel',serif; font-size:22px; font-weight:900; margin-bottom:10px; letter-spacing:1.5px; animation:tut-text-in .4s ease .2s both; text-shadow:0 2px 8px rgba(0,0,0,.5); }
+.tut-text { font-size:14px; color:#b0bad5; line-height:1.7; margin-bottom:12px; animation:tut-text-in .4s ease .3s both; }
+@keyframes tut-text-in { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+.tut-step-num { font-family:'Fira Code',monospace; font-size:10px; color:#565f89; margin-bottom:20px; letter-spacing:2px; }
 .tut-actions { display:flex; gap:10px; justify-content:center; }
-.tut-btn { font-family:'Cinzel',serif; font-size:13px; font-weight:700; padding:10px 24px; border-radius:8px; cursor:pointer; transition:all .2s; min-width:100px; }
+.tut-btn { font-family:'Cinzel',serif; font-size:13px; font-weight:700; padding:12px 28px; border-radius:10px; cursor:pointer; transition:all .2s; min-width:100px; }
+.tut-btn:active { transform:scale(.95); }
 .tut-btn-back { background:transparent; border:1px solid #3a4466; color:#8090b0; }
 .tut-btn-back:hover { border-color:#5a6690; color:#c0caf5; }
-.tut-btn-next { background:linear-gradient(180deg,#3a5080,#2a3860); border:1px solid #4a6090; color:#e2e8ff; }
-.tut-btn-next:hover { background:linear-gradient(180deg,#4a60a0,#3a4880); box-shadow:0 0 12px rgba(122,162,247,.2); }
-.tut-btn-start { background:linear-gradient(180deg,#9ece6a,#6fa33e); border:1px solid #2a3a15; color:#1a2a0a; }
-.tut-btn-start:hover { filter:brightness(1.1); box-shadow:0 0 16px rgba(158,206,106,.3); }
-.tut-skip { display:block; margin:16px auto 0; background:none; border:none; color:#565f89; font-family:'Fira Code',monospace; font-size:10px; cursor:pointer; transition:color .2s; }
+.tut-btn-next { border:1px solid transparent; color:#fff; text-shadow:0 1px 2px rgba(0,0,0,.4); box-shadow:0 4px 16px rgba(0,0,0,.3); }
+.tut-btn-next:hover { filter:brightness(1.15); box-shadow:0 4px 20px rgba(0,0,0,.4); }
+.tut-btn-start { background:linear-gradient(180deg,#9ece6a,#6fa33e); border:1px solid #2a3a15; color:#1a2a0a; box-shadow:0 4px 16px rgba(158,206,106,.25); }
+.tut-btn-start:hover { filter:brightness(1.1); box-shadow:0 4px 24px rgba(158,206,106,.4); }
+.tut-corner { position:absolute; width:20px; height:20px; z-index:2; pointer-events:none; }
+.tut-corner::before, .tut-corner::after { content:''; position:absolute; background:rgba(255,180,60,.35); }
+.tut-corner::before { width:12px; height:2px; }
+.tut-corner::after { width:2px; height:12px; }
+.tut-corner-tl { top:10px; left:10px; }
+.tut-corner-tl::before { top:0; left:0; }
+.tut-corner-tl::after { top:0; left:0; }
+.tut-corner-tr { top:10px; right:10px; }
+.tut-corner-tr::before { top:0; right:0; }
+.tut-corner-tr::after { top:0; right:0; }
+.tut-corner-bl { bottom:10px; left:10px; }
+.tut-corner-bl::before { bottom:0; left:0; }
+.tut-corner-bl::after { bottom:0; left:0; }
+.tut-corner-br { bottom:10px; right:10px; }
+.tut-corner-br::before { bottom:0; right:0; }
+.tut-corner-br::after { bottom:0; right:0; }
+.tut-skip { display:block; margin:14px auto 0; background:none; border:none; color:#565f89; font-family:'Fira Code',monospace; font-size:10px; cursor:pointer; transition:color .2s; letter-spacing:.5px; }
 .tut-skip:hover { color:#8090b0; }
 
 /* Settings tutorial button */
