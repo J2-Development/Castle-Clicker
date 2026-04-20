@@ -642,7 +642,7 @@ const getEvolutionName = (ventureIdx, stage, fallback) => {
   if (!row) return fallback;
   return row[stage || 0] || fallback;
 };
-const isEvolvingNow = (endTs) => endTs && Date.now() < endTs;
+const isEvolvingNow = (endTs) => !!endTs && Date.now() < endTs;
 
 // Count copies of items at a given rarity available (not equipped) in inventory.
 const countAvailableByRarity = (inventory, equipped, rarity) => {
