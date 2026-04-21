@@ -266,7 +266,7 @@ const OFFLINE_EFFICIENCY = 0.25;
 const OFFLINE_CAP = 8 * 60 * 60 * 1000;
 
 // Save key for localStorage / AsyncStorage
-const SAVE_KEY = "castle_clicker_v13"; // bumped: dungeon expeditions
+const SAVE_KEY = "castle_clicker_v14"; // bumped: daily tribute + weekly challenge
 
 // ═══ EXPEDITIONS ═══
 // Medium-clock (~5h) check-in cycle. Send a companion on a dungeon run for a
@@ -1085,6 +1085,61 @@ const rollExpeditionReward = (dungeon, gpsBaseline, unlockedSet, seed) => {
   return { gold, lootItemId, materialTier };
 };
 
+// ═══ DAILY TRIBUTE & WEEKLY CHALLENGE ═══
+
+// Streak day index → multiplier on baseline (1h of best venture's gps)
+const DAILY_TRIBUTE_MULTIPLIERS = [1.0, 1.3, 1.6, 2.0, 2.5, 3.5, 5.0];
+const DAILY_BASELINE_SECONDS = 3600;
+
+// Local-day boundary so timezone drift doesn't punish the player.
+const todayYmd = (d = new Date()) => {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+};
+
+const ymdToDate = (ymd) => {
+  if (!ymd) return null;
+  const [y, m, d] = ymd.split('-').map(Number);
+  return new Date(y, m - 1, d);
+};
+
+const daysBetweenYmd = (a, b) => {
+  const da = ymdToDate(a); const db = ymdToDate(b);
+  if (!da || !db) return Infinity;
+  return Math.round((db - da) / 86400000);
+};
+
+// ISO-8601 week-key, e.g. "2026-W17". Used so a single key change triggers re-roll.
+const weekKey = (d = new Date()) => {
+  const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const dayNum = (t.getUTCDay() + 6) % 7;          // Mon=0..Sun=6
+  t.setUTCDate(t.getUTCDate() - dayNum + 3);       // shift to Thursday of this week
+  const firstThu = new Date(Date.UTC(t.getUTCFullYear(), 0, 4));
+  const weekNum = 1 + Math.round(((t - firstThu) / 86400000 - 3 + ((firstThu.getUTCDay() + 6) % 7)) / 7);
+  return `${t.getUTCFullYear()}-W${String(weekNum).padStart(2, '0')}`;
+};
+
+const WEEKLY_QUEST_POOL = [
+  { id: 'expeditions5', text: 'Complete 5 expeditions',          target: 5,    counter: 'expeditions' },
+  { id: 'gold10b',      text: 'Earn 10B gold this week',         target: 1e10, counter: 'gold' },
+  { id: 'tier_up',      text: 'Upgrade any profession one tier', target: 1,    counter: 'tierUps' },
+  { id: 'rares3',       text: 'Find 3 rare-or-better items',     target: 3,    counter: 'rares' },
+  { id: 'evolve1',      text: 'Evolve any profession one stage', target: 1,    counter: 'evolutions' },
+  { id: 'essence500',   text: 'Spend 500 essence at the Altar',  target: 500,  counter: 'essenceSpent' },
+];
+const WEEKLY_QUEST_BY_ID = {};
+for (const q of WEEKLY_QUEST_POOL) WEEKLY_QUEST_BY_ID[q.id] = q;
+
+// Hash a week-key string → integer to deterministically pick a quest.
+const hashWeekKey = (k) => {
+  let h = 0;
+  for (let i = 0; i < k.length; i++) h = ((h << 5) - h + k.charCodeAt(i)) | 0;
+  return Math.abs(h);
+};
+const pickQuestForWeek = (k) => WEEKLY_QUEST_POOL[hashWeekKey(k) % WEEKLY_QUEST_POOL.length];
+
 /** Aggregate all loot bonuses from inventory for a given venture. */
 const getLootBonuses = (equippedArr, ventureIndex) => {
   let goldMult = 0, speedBonus = 0, dropRateBonus = 0, xpBonus = 0;
@@ -1264,6 +1319,10 @@ export default function CastleCapitalist() {
   const [expeditionPickerIdx, setExpeditionPickerIdx] = useState(null); // venture idx whose dungeon picker is open
   const [expeditionRewardToast, setExpeditionRewardToast] = useState(null);
   const [expeditionTick, setExpeditionTick] = useState(0); // 1Hz countdown re-render
+  const [dailyTribute, setDailyTribute] = useState({ lastClaimYmd: null, streak: 0 });
+  const [showDailyModal, setShowDailyModal] = useState(false);
+  const [weeklyChallenge, setWeeklyChallenge] = useState({ weekKey: null, questId: null, progress: 0, claimed: false });
+  const [weeklyCounters, setWeeklyCounters] = useState({ expeditions: 0, gold: 0, tierUps: 0, rares: 0, evolutions: 0, essenceSpent: 0 });
   const [consumedBuffs, setConsumedBuffs] = useState({}); // legacy, kept for one-cycle migration only
   const [essence, setEssence] = useState(0);
   const [legendaryEssence, setLegendaryEssence] = useState(0);
@@ -1313,6 +1372,9 @@ export default function CastleCapitalist() {
   const legendaryEssenceRef = useRef(legendaryEssence);
   const lifetimeEssenceRef = useRef(lifetimeEssence);
   const altarUnlocksRef = useRef(altarUnlocks);
+  const dailyTributeRef = useRef(dailyTribute);
+  const weeklyChallengeRef = useRef(weeklyChallenge);
+  const weeklyCountersRef = useRef(weeklyCounters);
   const eventTimerRef = useRef(null);
   const pendingDropsRef = useRef([]);
   const pendingMatsRef = useRef([]);
@@ -1352,6 +1414,9 @@ export default function CastleCapitalist() {
   legendaryEssenceRef.current = legendaryEssence;
   lifetimeEssenceRef.current = lifetimeEssence;
   altarUnlocksRef.current = altarUnlocks;
+  dailyTributeRef.current = dailyTribute;
+  weeklyChallengeRef.current = weeklyChallenge;
+  weeklyCountersRef.current = weeklyCounters;
 
   // Derived skill tree values
   const skillBonuses = getSkillBonuses(unlockedSkills);
@@ -1446,7 +1511,7 @@ export default function CastleCapitalist() {
     let raw = null;
     let loadedKey = null;
     try {
-      const candidates = [SAVE_KEY, "castle_clicker_v12", "castle_clicker_v11", "castle_clicker_v10", "castle_clicker_v9", "castle_clicker_v8", "castle_clicker_v7", "castle_clicker_v6", "castle_clicker_v5"];
+      const candidates = [SAVE_KEY, "castle_clicker_v13", "castle_clicker_v12", "castle_clicker_v11", "castle_clicker_v10", "castle_clicker_v9", "castle_clicker_v8", "castle_clicker_v7", "castle_clicker_v6", "castle_clicker_v5"];
       for (const k of candidates) {
         const v = localStorage.getItem(k);
         if (v) { raw = v; loadedKey = k; break; }
@@ -1481,6 +1546,9 @@ export default function CastleCapitalist() {
         if (save.firstAllySeen) setFirstAllySeen(true);
         if (save.firstSacrificeSeen) setFirstSacrificeSeen(true);
         if (save.firstExpeditionSeen) setFirstExpeditionSeen(true);
+        if (save.dailyTribute) setDailyTribute(save.dailyTribute);
+        if (save.weeklyChallenge) setWeeklyChallenge(save.weeklyChallenge);
+        if (save.weeklyCounters) setWeeklyCounters({ expeditions: 0, gold: 0, tierUps: 0, rares: 0, evolutions: 0, essenceSpent: 0, ...save.weeklyCounters });
 
         // ── Altar (essence) state — load if present, otherwise migrate from legacy consumedBuffs.
         if (save.essence != null || save.altarRanks) {
@@ -1625,6 +1693,9 @@ export default function CastleCapitalist() {
           altarUnlocks: altarUnlocksRef.current,
           profInvest: profInvestRef.current,
           autoSacThresh,
+          dailyTribute: dailyTributeRef.current,
+          weeklyChallenge: weeklyChallengeRef.current,
+          weeklyCounters: weeklyCountersRef.current,
           lastSave: Date.now(),
         }));
       } catch (e) {}
@@ -1671,6 +1742,9 @@ export default function CastleCapitalist() {
           altarUnlocks: altarUnlocksRef.current,
           profInvest: profInvestRef.current,
           autoSacThresh,
+          dailyTribute: dailyTributeRef.current,
+          weeklyChallenge: weeklyChallengeRef.current,
+          weeklyCounters: weeklyCountersRef.current,
           lastSave: Date.now(),
         }));
       } catch (e) {}
@@ -1830,6 +1904,7 @@ export default function CastleCapitalist() {
         setEvolveEndTs(newEnds);
         if (completedNames.length) {
           setMilestoneToast({ name: `Evolution complete: ${completedNames[0]}`, at: Date.now() });
+          setWeeklyCounters(prev => ({ ...prev, evolutions: (prev.evolutions || 0) + completedNames.length }));
         }
       }
     }
@@ -2050,6 +2125,7 @@ export default function CastleCapitalist() {
       const earned = earnedRef.current;
       setGold(g => g + earned);
       setLifetimeGold(l => l + earned);
+      setWeeklyCounters(prev => ({ ...prev, gold: (prev.gold || 0) + earned }));
       pulseGold();
     }
 
@@ -2063,6 +2139,10 @@ export default function CastleCapitalist() {
         }
         return next;
       });
+      const rareCount = drops.filter(d => d.rarity === 'rare' || d.rarity === 'epic' || d.rarity === 'legendary').length;
+      if (rareCount > 0) {
+        setWeeklyCounters(prev => ({ ...prev, rares: (prev.rares || 0) + rareCount }));
+      }
       // First-forge teaching moment: any non-legendary item crossing 10 for the first time.
       if (!firstForgeSeenRef.current) {
         const pre = inventoryRef.current || {};
@@ -2287,6 +2367,7 @@ export default function CastleCapitalist() {
       }
     }));
     setProfUpgrades(prev => prev.map((t, i) => i === ventureIdx ? t + 1 : t));
+    setWeeklyCounters(prev => ({ ...prev, tierUps: (prev.tierUps || 0) + 1 }));
     // First-Apprentice teaching moment: the very first tier-0 → tier-1 upgrade
     // triggers an explainer modal so players understand the rebalanced economy.
     if (currentTier === 0 && !firstApprenticeSeen) {
@@ -2531,6 +2612,9 @@ export default function CastleCapitalist() {
       });
     }
     setAltarRanks(prev => ({ ...prev, [nodeId]: cur + 1 }));
+    if (!node.legendaryOnly) {
+      setWeeklyCounters(prev => ({ ...prev, essenceSpent: (prev.essenceSpent || 0) + cost }));
+    }
     haptic(15);
   };
 
@@ -2553,6 +2637,7 @@ export default function CastleCapitalist() {
       return next;
     });
     setProfInvest(prev => prev.map((r, i) => i === ventureIdx ? r + 1 : r));
+    setWeeklyCounters(prev => ({ ...prev, essenceSpent: (prev.essenceSpent || 0) + cost }));
     haptic(15);
   };
 
@@ -2667,6 +2752,16 @@ export default function CastleCapitalist() {
       });
     }
     setVentures(prev => prev.map((s, i) => i === ventureIdx ? { ...s, expedition: null, progress: 0 } : s));
+    setWeeklyCounters(prev => {
+      const next = { ...prev, expeditions: (prev.expeditions || 0) + 1, gold: (prev.gold || 0) + reward.gold };
+      if (reward.lootItemId) {
+        const item = LOOT_BY_ID[reward.lootItemId];
+        if (item && (item.rarity === 'rare' || item.rarity === 'epic' || item.rarity === 'legendary')) {
+          next.rares = (next.rares || 0) + 1;
+        }
+      }
+      return next;
+    });
     setExpeditionRewardToast({
       ventureIdx,
       dungeonName: dungeon.name,
@@ -2676,6 +2771,113 @@ export default function CastleCapitalist() {
       at: Date.now(),
     });
     haptic(40);
+  };
+
+  // ── Daily Tribute & Weekly Challenge derived helpers ──
+  const today = todayYmd();
+  const currentWeekKey = weekKey();
+
+  const dailyClaimable = dailyTribute.lastClaimYmd !== today;
+  const dailyStreakIndex = (() => {
+    // Determine which day of streak the *next* claim will land on (0..6).
+    if (!dailyTribute.lastClaimYmd) return 0;
+    const gap = daysBetweenYmd(dailyTribute.lastClaimYmd, today);
+    if (gap >= 2) return 0;       // missed a day → reset
+    if (gap === 0) return Math.min(dailyTribute.streak - 1, 6); // already claimed today, show last reward
+    return Math.min(dailyTribute.streak, 6); // gap === 1 → next day in chain
+  })();
+
+  // Best-earning venture's gps (used as baseline for daily reward)
+  const bestVentureGps = (() => {
+    let best = 0;
+    for (let i = 0; i < VENTURES.length; i++) {
+      const g = getVentureGps(i);
+      if (g > best) best = g;
+    }
+    return best;
+  })();
+
+  const dailyRewardGold = Math.max(1, Math.floor(bestVentureGps * DAILY_BASELINE_SECONDS * DAILY_TRIBUTE_MULTIPLIERS[dailyStreakIndex]));
+  const dailyIsBonus = dailyStreakIndex === 6; // day 7 → soul gem + rare loot
+
+  const handleClaimDailyTribute = () => {
+    if (!dailyClaimable) return;
+    const idx = dailyStreakIndex;
+    setGold(g => g + dailyRewardGold);
+    setLifetimeGold(l => l + dailyRewardGold);
+    let bonusToast = null;
+    if (dailyIsBonus) {
+      // +1 Soul Gem (totalGems is permanent prestige currency stand-in here)
+      setTotalGems(g => g + 1);
+      // Guaranteed rare-or-better loot
+      const unlockedSet = new Set();
+      ventures.forEach((v, i) => { if (v.owned > 0) unlockedSet.add(i); });
+      const rarities = ['legendary', 'epic', 'rare'];
+      const tierWeights = { legendary: 0.10, epic: 0.30, rare: 0.60 };
+      const r = Math.random();
+      let pickedRarity = 'rare';
+      let acc = 0;
+      for (const rar of rarities) { acc += tierWeights[rar]; if (r < acc) { pickedRarity = rar; break; } }
+      const pool = LOOT_TABLE.filter(it => it.rarity === pickedRarity && isItemRelevant(it, unlockedSet));
+      if (pool.length) {
+        const item = pool[Math.floor(Math.random() * pool.length)];
+        setInventory(inv => ({ ...inv, [item.id]: (inv[item.id] || 0) + 1 }));
+        bonusToast = { lootItemId: item.id };
+      }
+    }
+    setDailyTribute(prev => {
+      const newStreak = idx >= 6 ? 0 : (prev.streak >= 6 ? 0 : prev.streak + 1);
+      // Note: idx already accounts for streak reset on missed day; if idx was 0
+      // because they missed, we still want to set streak to 1 (claimed today is day 1).
+      // Use a simpler model: streak = idx + 1, then mod 7 (so day-7 claim wraps to 0).
+      return { lastClaimYmd: today, streak: (idx + 1) % 7 };
+    });
+    setShowDailyModal(false);
+    haptic(40);
+  };
+
+  // ── Weekly challenge: detect rollover and re-roll quest ──
+  useEffect(() => {
+    if (weeklyChallenge.weekKey !== currentWeekKey) {
+      const quest = pickQuestForWeek(currentWeekKey);
+      setWeeklyChallenge({ weekKey: currentWeekKey, questId: quest.id, progress: 0, claimed: false });
+      setWeeklyCounters({ expeditions: 0, gold: 0, tierUps: 0, rares: 0, evolutions: 0, essenceSpent: 0 });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentWeekKey]);
+
+  // Sync progress on counter changes
+  useEffect(() => {
+    if (!weeklyChallenge.questId || weeklyChallenge.claimed) return;
+    const quest = WEEKLY_QUEST_BY_ID[weeklyChallenge.questId];
+    if (!quest) return;
+    const current = weeklyCounters[quest.counter] || 0;
+    const clamped = Math.min(current, quest.target);
+    if (clamped !== weeklyChallenge.progress) {
+      setWeeklyChallenge(prev => ({ ...prev, progress: clamped }));
+    }
+  }, [weeklyCounters, weeklyChallenge.questId, weeklyChallenge.claimed]);
+
+  const weeklyQuest = weeklyChallenge.questId ? WEEKLY_QUEST_BY_ID[weeklyChallenge.questId] : null;
+  const weeklyComplete = weeklyQuest && weeklyChallenge.progress >= weeklyQuest.target;
+
+  const handleClaimWeeklyChallenge = () => {
+    if (!weeklyComplete || weeklyChallenge.claimed) return;
+    // Reward: 2 Soul Gems + epic-or-better loot + 500 essence
+    setTotalGems(g => g + 2);
+    setEssence(e => e + 500);
+    const unlockedSet = new Set();
+    ventures.forEach((v, i) => { if (v.owned > 0) unlockedSet.add(i); });
+    const rarities = ['legendary', 'epic'];
+    const r = Math.random();
+    const pickedRarity = r < 0.20 ? 'legendary' : 'epic';
+    const pool = LOOT_TABLE.filter(it => it.rarity === pickedRarity && isItemRelevant(it, unlockedSet));
+    if (pool.length) {
+      const item = pool[Math.floor(Math.random() * pool.length)];
+      setInventory(inv => ({ ...inv, [item.id]: (inv[item.id] || 0) + 1 }));
+    }
+    setWeeklyChallenge(prev => ({ ...prev, claimed: true }));
+    haptic(50);
   };
 
   const handleTutorialClose = () => {
@@ -2758,6 +2960,10 @@ export default function CastleCapitalist() {
         <button className="trophy-btn" onClick={() => setShowAchievements(true)} title="Achievements">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M4 1h8v1.5h2.5v3A2.5 2.5 0 0 1 12 8V9a4 4 0 0 1-3.25 3.93V14H11v1.5H5V14h2.25v-1.07A4 4 0 0 1 4 9V8a2.5 2.5 0 0 1-2.5-2.5v-3H4V1zm0 2.5H3v2a1 1 0 0 0 1 1v-3zm8 0v3a1 1 0 0 0 1-1v-2h-1z"/></svg>
           <span className="trophy-count">{achievementCount}</span>
+        </button>
+        <button className={`daily-btn ${dailyClaimable ? 'daily-btn-ready' : ''}`} onClick={() => setShowDailyModal(true)} title="Daily Tribute">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M3 2h10v1H3V2zm-1 2h12v11H2V4zm2 2v2h2V6H4zm3 0v2h2V6H7zm3 0v2h2V6h-2zM4 9v2h2V9H4zm3 0v2h2V9H7zm3 0v2h2V9h-2z"/></svg>
+          {dailyClaimable && <span className="daily-dot" />}
         </button>
         <div className="hd-brand">
           <div className="hd-title-wrap">
@@ -2976,6 +3182,32 @@ export default function CastleCapitalist() {
       {/* ── COMPANIONS TAB ── */}
       {tab === "companions" && (
         <div className="comp-list">
+          {weeklyQuest && (
+            <div className={`weekly-card ${weeklyComplete ? 'weekly-card-done' : ''} ${weeklyChallenge.claimed ? 'weekly-card-claimed' : ''}`}>
+              <div className="weekly-hdr">
+                <span className="weekly-label">Weekly Challenge</span>
+                <span className="weekly-week">{weeklyChallenge.weekKey}</span>
+              </div>
+              <div className="weekly-quest">{weeklyQuest.text}</div>
+              <div className="weekly-progress-track">
+                <div className="weekly-progress-fill" style={{ width: `${Math.min(100, (weeklyChallenge.progress / weeklyQuest.target) * 100)}%` }} />
+                <div className="weekly-progress-text">
+                  {weeklyQuest.counter === 'gold'
+                    ? `${formatNumber(weeklyChallenge.progress)} / ${formatNumber(weeklyQuest.target)}`
+                    : `${weeklyChallenge.progress} / ${weeklyQuest.target}`}
+                </div>
+              </div>
+              <div className="weekly-reward">
+                Reward: <SoulGemIcon /> ×2 + Epic+ Loot + 500 Essence
+              </div>
+              {weeklyComplete && !weeklyChallenge.claimed && (
+                <button className="weekly-claim-btn" onClick={handleClaimWeeklyChallenge}>Claim</button>
+              )}
+              {weeklyChallenge.claimed && (
+                <div className="weekly-claimed-msg">Claimed — new challenge next week.</div>
+              )}
+            </div>
+          )}
           <div className="comp-hdr">🛡 Recruit Dungeon Companions</div>
           <p className="comp-sub">Companions auto-run skills so you earn gold even while away.</p>
           {VENTURES.map((v, i) => {
@@ -4248,6 +4480,48 @@ export default function CastleCapitalist() {
         </div>
       )}
 
+      {/* ── DAILY TRIBUTE MODAL ── */}
+      {showDailyModal && (
+        <div className="watch-modal-overlay" onClick={() => setShowDailyModal(false)}>
+          <div className="watch-modal daily-modal" onClick={e => e.stopPropagation()}>
+            <div className="watch-modal-header">
+              <span className="watch-modal-title">Daily Tribute</span>
+              <button className="watch-modal-close" onClick={() => setShowDailyModal(false)}>X</button>
+            </div>
+            <div className="daily-body">
+              <div className="daily-streak-row">
+                {DAILY_TRIBUTE_MULTIPLIERS.map((mult, i) => {
+                  const isToday = i === dailyStreakIndex && dailyClaimable;
+                  const isPast = !dailyClaimable ? i <= dailyStreakIndex : i < dailyStreakIndex;
+                  return (
+                    <div key={i} className={`daily-dot-cell ${isToday ? 'daily-dot-today' : ''} ${isPast ? 'daily-dot-past' : ''}`}>
+                      <div className="daily-dot-num">{i + 1}</div>
+                      <div className="daily-dot-mult">{mult}x</div>
+                      {i === 6 && <div className="daily-dot-bonus">+gem</div>}
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="daily-reward">
+                <div className="daily-reward-label">{dailyClaimable ? 'Today\'s Reward' : 'Already Claimed'}</div>
+                <div className="daily-reward-gold">
+                  <GoldCoinIcon size={20} />
+                  <span>{formatNumber(dailyRewardGold)}</span>
+                </div>
+                {dailyIsBonus && dailyClaimable && (
+                  <div className="daily-reward-bonus">+ 1 Soul Gem + Rare-or-better Loot</div>
+                )}
+              </div>
+              {dailyClaimable ? (
+                <button className="daily-claim-btn" onClick={handleClaimDailyTribute}>Claim</button>
+              ) : (
+                <div className="daily-next">Next claim available tomorrow.</div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── SETTINGS MODAL ── */}
       {showSettings && (
         <div className="watch-modal-overlay" onClick={() => setShowSettings(false)}>
@@ -5053,5 +5327,45 @@ const STYLES = `
 .event-boss { animation:boss-shake 0.08s ease-in-out infinite; user-select:none; -webkit-user-select:none; }
 @keyframes boss-shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-2px)} 75%{transform:translateX(2px)} }
 .event-active { cursor:default; }
+
+/* Daily Tribute button + modal */
+.daily-btn { position:absolute; top:14px; right:96px; background:rgba(20,20,30,0.5); border:1px solid rgba(251,191,36,0.4); color:#fbbf24; width:32px; height:32px; border-radius:6px; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all .15s; }
+.daily-btn:hover { background:rgba(40,30,10,0.7); border-color:#fbbf24; }
+.daily-btn-ready { animation:daily-pulse 1.6s ease-in-out infinite; box-shadow:0 0 12px rgba(251,191,36,0.4); }
+.daily-dot { position:absolute; top:3px; right:3px; width:8px; height:8px; border-radius:50%; background:#fbbf24; box-shadow:0 0 6px rgba(251,191,36,0.9); }
+@keyframes daily-pulse { 0%,100% { box-shadow:0 0 12px rgba(251,191,36,0.4); } 50% { box-shadow:0 0 20px rgba(251,191,36,0.85); } }
+
+.daily-modal { max-width:420px; }
+.daily-body { padding:14px 18px; display:flex; flex-direction:column; gap:14px; }
+.daily-streak-row { display:grid; grid-template-columns:repeat(7,1fr); gap:6px; }
+.daily-dot-cell { background:rgba(40,30,20,0.4); border:1px solid rgba(120,90,50,0.4); border-radius:6px; padding:6px 2px; text-align:center; opacity:.55; transition:all .15s; }
+.daily-dot-past { opacity:.85; background:rgba(60,45,25,0.5); }
+.daily-dot-today { opacity:1; background:rgba(251,191,36,0.18); border-color:#fbbf24; box-shadow:0 0 10px rgba(251,191,36,0.35); }
+.daily-dot-num { font-family:'Cinzel',serif; font-size:11px; color:#fbbf24; font-weight:700; }
+.daily-dot-mult { font-family:'Fira Code',monospace; font-size:10px; color:var(--txb); margin-top:2px; }
+.daily-dot-bonus { font-size:8px; color:#bb9af7; margin-top:1px; }
+.daily-reward { background:rgba(20,15,8,0.5); border:1px solid rgba(120,90,50,0.4); border-radius:6px; padding:10px; text-align:center; }
+.daily-reward-label { font-family:'Cinzel',serif; font-size:11px; color:var(--txb); text-transform:uppercase; letter-spacing:1px; margin-bottom:6px; }
+.daily-reward-gold { display:flex; align-items:center; justify-content:center; gap:6px; font-family:'Cinzel',serif; font-size:20px; font-weight:700; color:#fbbf24; }
+.daily-reward-bonus { font-size:11px; color:#bb9af7; margin-top:6px; }
+.daily-claim-btn { background:linear-gradient(135deg,#fbbf24,#d97706); color:#1a1208; border:none; padding:10px 20px; border-radius:6px; font-family:'Cinzel',serif; font-size:14px; font-weight:700; letter-spacing:1px; cursor:pointer; transition:all .15s; }
+.daily-claim-btn:hover { filter:brightness(1.1); box-shadow:0 4px 14px rgba(251,191,36,0.45); }
+.daily-next { text-align:center; color:var(--txb); font-size:12px; padding:6px; }
+
+/* Weekly Challenge card on Companions tab */
+.weekly-card { background:linear-gradient(135deg,rgba(40,30,60,0.6),rgba(20,15,30,0.7)); border:1px solid rgba(187,154,247,0.45); border-radius:8px; padding:12px 14px; margin-bottom:14px; }
+.weekly-card-done { border-color:#9ece6a; box-shadow:0 0 14px rgba(158,206,106,0.25); }
+.weekly-card-claimed { opacity:.55; }
+.weekly-hdr { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
+.weekly-label { font-family:'Cinzel',serif; font-size:12px; color:#bb9af7; text-transform:uppercase; letter-spacing:1.5px; font-weight:700; }
+.weekly-week { font-family:'Fira Code',monospace; font-size:10px; color:var(--txb); }
+.weekly-quest { font-size:14px; color:var(--tx); margin-bottom:8px; }
+.weekly-progress-track { position:relative; background:rgba(0,0,0,0.4); height:18px; border-radius:9px; overflow:hidden; margin-bottom:8px; }
+.weekly-progress-fill { position:absolute; top:0; left:0; bottom:0; background:linear-gradient(90deg,#bb9af7,#9d7cd8); transition:width .3s; }
+.weekly-progress-text { position:relative; text-align:center; font-family:'Fira Code',monospace; font-size:11px; color:#fff; line-height:18px; text-shadow:0 1px 2px rgba(0,0,0,0.7); }
+.weekly-reward { font-size:11px; color:var(--txb); display:flex; align-items:center; gap:4px; flex-wrap:wrap; }
+.weekly-claim-btn { display:block; width:100%; margin-top:10px; background:linear-gradient(135deg,#9ece6a,#73a342); color:#0d1610; border:none; padding:10px; border-radius:6px; font-family:'Cinzel',serif; font-size:13px; font-weight:700; letter-spacing:1px; cursor:pointer; transition:all .15s; }
+.weekly-claim-btn:hover { filter:brightness(1.1); box-shadow:0 4px 14px rgba(158,206,106,0.4); }
+.weekly-claimed-msg { text-align:center; font-size:11px; color:#9ece6a; margin-top:8px; font-style:italic; }
 `;
 
