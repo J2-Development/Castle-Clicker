@@ -330,91 +330,110 @@ const getGemsSpent = (skills) => Object.keys(skills).reduce((sum, sid) => {
 
 // ═══ ACHIEVEMENTS ═══
 const ACHIEVEMENT_BONUS = 0.01; // +1% all gold per achievement
+const ACH_CATEGORIES = [
+  { key:"gold",       label:"Gold",          icon:"\u2B50" },
+  { key:"ownership",  label:"Ownership",     icon:"\u2694\uFE0F" },
+  { key:"companions", label:"Companions",    icon:"\uD83E\uDDD1\u200D\uD83E\uDD1D\u200D\uD83E\uDDD1" },
+  { key:"loot",       label:"Loot",          icon:"\uD83D\uDC8E" },
+  { key:"prestige",   label:"Prestige",      icon:"\uD83D\uDD2E" },
+  { key:"upgrades",   label:"Upgrades",      icon:"\u2B06\uFE0F" },
+  { key:"activity",   label:"Activity",      icon:"\uD83D\uDCAA" },
+  { key:"sacrifice",  label:"Sacrifice",     icon:"\uD83D\uDD25" },
+  { key:"evolution",  label:"Evolution",     icon:"\uD83E\uDDEC" },
+];
 const ACHIEVEMENTS = [
-  // Gold milestones
-  { id:"ach_gold1",   name:"Pocket Change",     desc:"Earn 1,000 lifetime gold",              check: s => s.lifetimeGold >= 1e3 },
-  { id:"ach_gold2",   name:"Small Fortune",      desc:"Earn 1,000,000 lifetime gold",          check: s => s.lifetimeGold >= 1e6 },
-  { id:"ach_gold3",   name:"Dragon's Hoard",     desc:"Earn 1 billion lifetime gold",          check: s => s.lifetimeGold >= 1e9 },
-  { id:"ach_gold4",   name:"Infinite Wealth",    desc:"Earn 1 trillion lifetime gold",         check: s => s.lifetimeGold >= 1e12 },
-  // Venture ownership
-  { id:"ach_own25",   name:"Getting Started",    desc:"Own 25 of any profession",              check: s => s.ventures.some(v => v.owned >= 25) },
-  { id:"ach_own100",  name:"Committed",          desc:"Own 100 of any profession",             check: s => s.ventures.some(v => v.owned >= 100) },
-  { id:"ach_own500",  name:"Obsessed",           desc:"Own 500 of any profession",             check: s => s.ventures.some(v => v.owned >= 500) },
-  { id:"ach_all10",   name:"Diversified",        desc:"Own all 10 professions",                check: s => s.ventures.filter(v => v.owned > 0).length >= 10 },
-  // Companions
-  { id:"ach_comp1",   name:"First Ally",         desc:"Recruit 1 companion",                   check: s => s.ventures.filter(v => v.hasCompanion).length >= 1 },
-  { id:"ach_comp5",   name:"Party Leader",       desc:"Recruit 5 companions",                  check: s => s.ventures.filter(v => v.hasCompanion).length >= 5 },
-  { id:"ach_comp10",  name:"Army Commander",     desc:"Recruit all 10 companions",             check: s => s.ventures.filter(v => v.hasCompanion).length >= 10 },
-  // Loot
-  { id:"ach_loot10",  name:"Collector",          desc:"Find 10 unique items",                  check: s => Object.keys(s.inventory).length >= 10 },
-  { id:"ach_loot25",  name:"Hoarder",            desc:"Find 25 unique items",                  check: s => Object.keys(s.inventory).length >= 25 },
-  { id:"ach_rare",    name:"Rare Find",          desc:"Find a rare or better item",            check: s => s.hasFoundRare },
-  // Prestige
-  { id:"ach_asc1",    name:"First Ascension",    desc:"Ascend once",                           check: s => s.totalAscensions >= 1 },
-  { id:"ach_asc5",    name:"Seasoned Ascender",  desc:"Ascend 5 times",                        check: s => s.totalAscensions >= 5 },
-  { id:"ach_asc10",   name:"Eternal Returner",   desc:"Ascend 10 times",                       check: s => s.totalAscensions >= 10 },
-  { id:"ach_gems10",  name:"Gem Collector",      desc:"Earn 10 total Soul Gems",               check: s => s.totalGems >= 10 },
-  { id:"ach_gems50",  name:"Gem Lord",           desc:"Earn 50 total Soul Gems",               check: s => s.totalGems >= 50 },
-  // Upgrades
-  { id:"ach_upg1",    name:"Apprentice",         desc:"Reach Apprentice in any profession",    check: s => s.profUpgrades.some(t => t >= 1) },
-  { id:"ach_upg5",    name:"Master Craftsman",   desc:"Reach Master in any profession",        check: s => s.profUpgrades.some(t => t >= 4) },
-  { id:"ach_upgall",  name:"Jack of All",        desc:"Reach Journeyman in all professions",   check: s => s.profUpgrades.every(t => t >= 2) },
-  // Activity
-  { id:"ach_click100",name:"Restless Fingers",   desc:"Manually start 100 cycles",             check: s => s.manualClicks >= 100 },
-  { id:"ach_click1k", name:"Carpal Tunnel",      desc:"Manually start 1,000 cycles",           check: s => s.manualClicks >= 1000 },
-  { id:"ach_event5",  name:"Event Hunter",       desc:"Activate 5 dungeon events",             check: s => s.eventsActivated >= 5 },
-  { id:"ach_event20", name:"Thrill Seeker",      desc:"Activate 20 dungeon events",            check: s => s.eventsActivated >= 20 },
+  // ── Gold ──
+  { id:"ach_gold1",   cat:"gold", name:"Pocket Change",     desc:"Earn 1,000 lifetime gold",       hint:"Earn more gold",     check: s => s.lifetimeGold >= 1e3, progress: s => ({ cur: s.lifetimeGold, max: 1e3 }) },
+  { id:"ach_gold2",   cat:"gold", name:"Small Fortune",      desc:"Earn 1,000,000 lifetime gold",   hint:"Keep earning gold",  check: s => s.lifetimeGold >= 1e6, progress: s => ({ cur: s.lifetimeGold, max: 1e6 }) },
+  { id:"ach_gold3",   cat:"gold", name:"Dragon's Hoard",     desc:"Earn 1 billion lifetime gold",   hint:"Amass a fortune",    check: s => s.lifetimeGold >= 1e9, progress: s => ({ cur: s.lifetimeGold, max: 1e9 }) },
+  { id:"ach_gold4",   cat:"gold", name:"Infinite Wealth",    desc:"Earn 1 trillion lifetime gold",  hint:"Unimaginable riches",check: s => s.lifetimeGold >= 1e12, progress: s => ({ cur: s.lifetimeGold, max: 1e12 }) },
+  { id:"ach_gold5",   cat:"gold", name:"Pocket Pharaoh",     desc:"Earn 100 trillion lifetime gold", hint:"Wealth beyond measure", check: s => s.lifetimeGold >= 1e14, progress: s => ({ cur: s.lifetimeGold, max: 1e14 }) },
+  { id:"ach_gold6",   cat:"gold", name:"Digital Godhood",    desc:"Earn 1 quadrillion lifetime gold", hint:"Transcend wealth itself", check: s => s.lifetimeGold >= 1e15, progress: s => ({ cur: s.lifetimeGold, max: 1e15 }) },
+  { id:"ach_hoard_1b", cat:"gold", name:"Midas Touch",       desc:"Hold 1 billion gold at once",    hint:"Hoard your gold",    check: s => s.gold >= 1e9, progress: s => ({ cur: s.gold, max: 1e9 }) },
+  { id:"ach_hoard_1t", cat:"gold", name:"Dragon Hoard",      desc:"Hold 1 trillion gold at once",   hint:"Don't spend it all", check: s => s.gold >= 1e12, progress: s => ({ cur: s.gold, max: 1e12 }) },
 
-  // ── HARD / ENDGAME ──
-  // Gold milestones (extreme)
-  { id:"ach_gold5",         name:"Pocket Pharaoh",      desc:"Earn 100 trillion lifetime gold",                    check: s => s.lifetimeGold >= 1e14 },
-  { id:"ach_gold6",         name:"Digital Godhood",     desc:"Earn 1 quadrillion lifetime gold",                   check: s => s.lifetimeGold >= 1e15 },
-  // Gold-at-once
-  { id:"ach_hoard_1b",      name:"Midas Touch",         desc:"Hold 1 billion gold at once",                        check: s => s.gold >= 1e9 },
-  { id:"ach_hoard_1t",      name:"Dragon Hoard",        desc:"Hold 1 trillion gold at once",                       check: s => s.gold >= 1e12 },
-  // Ownership
-  { id:"ach_own1k",         name:"Legion",              desc:"Own 1,000 of any profession",                        check: s => s.ventures.some(v => v.owned >= 1000) },
-  { id:"ach_ownall100",     name:"Thousand Strong",     desc:"Own 100 of every profession",                        check: s => s.ventures.every(v => v.owned >= 100) },
-  { id:"ach_ownall500",     name:"Host of Heroes",      desc:"Own 500 of every profession",                        check: s => s.ventures.every(v => v.owned >= 500) },
-  // Profession mastery
-  { id:"ach_upg_gm",        name:"Grandmaster",         desc:"Reach Grandmaster in any profession",                check: s => s.profUpgrades.some(t => t >= 5) },
-  { id:"ach_upg_master_all",name:"Master of Trades",    desc:"Reach Master in every profession",                   check: s => s.profUpgrades.every(t => t >= 4) },
-  { id:"ach_upg_gm_all",    name:"Peerless",            desc:"Reach Grandmaster in every profession",              check: s => s.profUpgrades.every(t => t >= 5) },
-  // Prestige (extreme)
-  { id:"ach_gems100",       name:"Gem Baron",           desc:"Earn 100 total Soul Gems",                           check: s => s.totalGems >= 100 },
-  { id:"ach_gems500",       name:"Gem Emperor",         desc:"Earn 500 total Soul Gems",                           check: s => s.totalGems >= 500 },
-  { id:"ach_asc25",         name:"Ascension Addict",    desc:"Ascend 25 times",                                    check: s => s.totalAscensions >= 25 },
-  { id:"ach_asc50",         name:"Cycle of Eternity",   desc:"Ascend 50 times",                                    check: s => s.totalAscensions >= 50 },
-  // Loot completionist
-  { id:"ach_legendary",     name:"First Legendary",     desc:"Find a legendary item",                              check: s => Object.keys(s.inventory).some(id => LOOT_BY_ID[id]?.rarity === "legendary") },
-  { id:"ach_all_legendary", name:"Legendary Hoarder",   desc:"Find every legendary item",                          check: s => LOOT_TABLE.filter(i => i.rarity === "legendary").every(i => s.inventory[i.id]) },
-  { id:"ach_loot_all",      name:"Completionist",       desc:"Find every item in the loot table",                  check: s => LOOT_TABLE.every(i => s.inventory[i.id]) },
-  // Transformation
-  { id:"ach_transform_any", name:"Metamorphosis",       desc:"Transform any profession",                           check: s => s.profTransforms.some(t => t != null) },
-  { id:"ach_transform_all", name:"Ultimate Evolution",  desc:"Transform every profession",                         check: s => s.profTransforms.every(t => t != null) },
-  // Skill tree
-  { id:"ach_skill_all",     name:"Scholar Supreme",     desc:"Unlock every skill tree node",                       check: s => Object.keys(s.unlockedSkills).length >= SKILL_TREE.length },
-  // Misc extreme
-  { id:"ach_mtx_all",       name:"Deep Pockets",        desc:"Purchase all 4 bonus equipment slots",               check: s => s.mtxSlots >= 4 },
-  { id:"ach_click10k",      name:"Click Machine",       desc:"Manually start 10,000 cycles",                       check: s => s.manualClicks >= 10000 },
-  { id:"ach_event50",       name:"Festival Goer",       desc:"Activate 50 dungeon events",                         check: s => s.eventsActivated >= 50 },
-  { id:"ach_event200",      name:"Event Devotee",       desc:"Activate 200 dungeon events",                        check: s => s.eventsActivated >= 200 },
-  { id:"ach_mat_tier3_any", name:"Catalyst Collector",  desc:"Earn 10 of any tier-3 specialty material",           check: s => Object.values(s.materials).some(m => m && (m.t3 || 0) >= 10) },
-  { id:"ach_mat_tier3_all", name:"Master Alchemist",    desc:"Earn a tier-3 specialty material from every profession", check: s => Array.from({length:10}, (_,i) => i).every(i => ((s.materials[i] || {}).t3 || 0) >= 1) },
-  // Tier upgrades
-  { id:"ach_apprentice1",   name:"First Rank",          desc:"Upgrade a profession to Apprentice",                 check: s => (s.profUpgrades || []).some(t => t >= 1) },
-  { id:"ach_journeyman1",   name:"Skilled Tradesman",   desc:"Upgrade a profession to Journeyman",                 check: s => (s.profUpgrades || []).some(t => t >= 2) },
-  { id:"ach_expert1",       name:"Master of the Craft", desc:"Upgrade a profession to Expert",                     check: s => (s.profUpgrades || []).some(t => t >= 3) },
-  { id:"ach_master1",       name:"Sovereign",           desc:"Upgrade a profession to Master",                     check: s => (s.profUpgrades || []).some(t => t >= 4) },
-  { id:"ach_grandmaster1",  name:"Legend Forged",       desc:"Upgrade a profession to Grandmaster",                check: s => (s.profUpgrades || []).some(t => t >= 5) },
-  { id:"ach_apprentice_all",name:"The Whole Castle",    desc:"Every profession at Apprentice or higher",           check: s => (s.profUpgrades || []).length >= 10 && s.profUpgrades.every(t => t >= 1) },
-  // Sacrifice / Altar
-  { id:"ach_sacrifice1",    name:"First Offering",      desc:"Sacrifice an item at the altar",                     check: s => (s.lifetimeEssence || 0) > 0 || Object.values(s.consumedBuffs || {}).some(v => v > 0) },
-  { id:"ach_sacrifice_gold",name:"Altar of Power",      desc:"Buy 10 ranks across Altar buff nodes",               check: s => { const r = s.altarRanks || {}; return ((r.greed||0) + (r.haste||0) + (r.fortune||0) + (r.legendary_touch||0)) >= 10; } },
-  // Evolution (CoC-builder profession evolution)
-  { id:"ach_evolve1",       name:"Reborn",              desc:"Evolve any profession to Stage 1",                   check: s => (s.profEvolutions || []).some(e => (e || 0) >= 1) },
-  { id:"ach_evolve_triple", name:"Triple Mastered",     desc:"Evolve three professions to Stage 2 or higher",      check: s => (s.profEvolutions || []).filter(e => (e || 0) >= 2).length >= 3 },
-  { id:"ach_apotheosis",    name:"Apotheosis",          desc:"Evolve any profession to Stage 3 (Legendary)",       check: s => (s.profEvolutions || []).some(e => (e || 0) >= 3) },
+  // ── Ownership ──
+  { id:"ach_own25",      cat:"ownership", name:"Getting Started",  desc:"Own 25 of any profession",       hint:"Buy more professions",  check: s => s.ventures.some(v => v.owned >= 25), progress: s => ({ cur: Math.max(...s.ventures.map(v => v.owned)), max: 25 }) },
+  { id:"ach_own100",     cat:"ownership", name:"Committed",        desc:"Own 100 of any profession",      hint:"Keep investing",        check: s => s.ventures.some(v => v.owned >= 100), progress: s => ({ cur: Math.max(...s.ventures.map(v => v.owned)), max: 100 }) },
+  { id:"ach_own500",     cat:"ownership", name:"Obsessed",         desc:"Own 500 of any profession",      hint:"Go deeper",             check: s => s.ventures.some(v => v.owned >= 500), progress: s => ({ cur: Math.max(...s.ventures.map(v => v.owned)), max: 500 }) },
+  { id:"ach_own1k",      cat:"ownership", name:"Legion",           desc:"Own 1,000 of any profession",    hint:"Build an empire",       check: s => s.ventures.some(v => v.owned >= 1000), progress: s => ({ cur: Math.max(...s.ventures.map(v => v.owned)), max: 1000 }) },
+  { id:"ach_all10",      cat:"ownership", name:"Diversified",      desc:"Own all 10 professions",         hint:"Try every profession",  check: s => s.ventures.filter(v => v.owned > 0).length >= 10, progress: s => ({ cur: s.ventures.filter(v => v.owned > 0).length, max: 10 }) },
+  { id:"ach_ownall100",  cat:"ownership", name:"Thousand Strong",  desc:"Own 100 of every profession",    hint:"Level them all up",     check: s => s.ventures.every(v => v.owned >= 100), progress: s => ({ cur: s.ventures.filter(v => v.owned >= 100).length, max: 10 }) },
+  { id:"ach_ownall500",  cat:"ownership", name:"Host of Heroes",   desc:"Own 500 of every profession",    hint:"Max out your forces",   check: s => s.ventures.every(v => v.owned >= 500), progress: s => ({ cur: s.ventures.filter(v => v.owned >= 500).length, max: 10 }) },
+
+  // ── Companions ──
+  { id:"ach_comp1",   cat:"companions", name:"First Ally",      desc:"Recruit 1 companion",       hint:"Hire a companion",    check: s => s.ventures.filter(v => v.hasCompanion).length >= 1, progress: s => ({ cur: s.ventures.filter(v => v.hasCompanion).length, max: 1 }) },
+  { id:"ach_comp5",   cat:"companions", name:"Party Leader",    desc:"Recruit 5 companions",      hint:"Build your party",    check: s => s.ventures.filter(v => v.hasCompanion).length >= 5, progress: s => ({ cur: s.ventures.filter(v => v.hasCompanion).length, max: 5 }) },
+  { id:"ach_comp10",  cat:"companions", name:"Army Commander",  desc:"Recruit all 10 companions", hint:"Recruit everyone",    check: s => s.ventures.filter(v => v.hasCompanion).length >= 10, progress: s => ({ cur: s.ventures.filter(v => v.hasCompanion).length, max: 10 }) },
+
+  // ── Loot ──
+  { id:"ach_loot10",        cat:"loot", name:"Collector",         desc:"Find 10 unique items",          hint:"Find more loot",       check: s => Object.keys(s.inventory).length >= 10, progress: s => ({ cur: Object.keys(s.inventory).length, max: 10 }) },
+  { id:"ach_loot25",        cat:"loot", name:"Hoarder",           desc:"Find 25 unique items",          hint:"Keep exploring",       check: s => Object.keys(s.inventory).length >= 25, progress: s => ({ cur: Object.keys(s.inventory).length, max: 25 }) },
+  { id:"ach_rare",          cat:"loot", name:"Rare Find",         desc:"Find a rare or better item",    hint:"Seek rarer treasures", check: s => s.hasFoundRare },
+  { id:"ach_legendary",     cat:"loot", name:"First Legendary",   desc:"Find a legendary item",         hint:"The rarest of the rare", check: s => Object.keys(s.inventory).some(id => LOOT_BY_ID[id]?.rarity === "legendary") },
+  { id:"ach_all_legendary", cat:"loot", name:"Legendary Hoarder", desc:"Find every legendary item",     hint:"Collect all legendaries", check: s => LOOT_TABLE.filter(i => i.rarity === "legendary").every(i => s.inventory[i.id]),
+    progress: s => { const legs = LOOT_TABLE.filter(i => i.rarity === "legendary"); return { cur: legs.filter(i => s.inventory[i.id]).length, max: legs.length }; } },
+  { id:"ach_loot_all",      cat:"loot", name:"Completionist",     desc:"Find every item in the loot table", hint:"Gotta catch 'em all", check: s => LOOT_TABLE.every(i => s.inventory[i.id]),
+    progress: s => ({ cur: Object.keys(s.inventory).length, max: LOOT_TABLE.length }) },
+  { id:"ach_mat_tier3_any", cat:"loot", name:"Catalyst Collector", desc:"Earn 10 of any tier-3 specialty material", hint:"Craft tier-3 materials", check: s => Object.values(s.materials).some(m => m && (m.t3 || 0) >= 10),
+    progress: s => ({ cur: Math.max(0, ...Object.values(s.materials).map(m => m ? (m.t3 || 0) : 0)), max: 10 }) },
+  { id:"ach_mat_tier3_all", cat:"loot", name:"Master Alchemist",  desc:"Earn a tier-3 specialty material from every profession", hint:"All professions need tier-3", check: s => Array.from({length:10}, (_,i) => i).every(i => ((s.materials[i] || {}).t3 || 0) >= 1),
+    progress: s => ({ cur: Array.from({length:10}, (_,i) => i).filter(i => ((s.materials[i] || {}).t3 || 0) >= 1).length, max: 10 }) },
+
+  // ── Prestige ──
+  { id:"ach_asc1",    cat:"prestige", name:"First Ascension",    desc:"Ascend once",              hint:"Try ascending",       check: s => s.totalAscensions >= 1, progress: s => ({ cur: s.totalAscensions, max: 1 }) },
+  { id:"ach_asc5",    cat:"prestige", name:"Seasoned Ascender",  desc:"Ascend 5 times",           hint:"Ascend more",         check: s => s.totalAscensions >= 5, progress: s => ({ cur: s.totalAscensions, max: 5 }) },
+  { id:"ach_asc10",   cat:"prestige", name:"Eternal Returner",   desc:"Ascend 10 times",          hint:"The cycle continues", check: s => s.totalAscensions >= 10, progress: s => ({ cur: s.totalAscensions, max: 10 }) },
+  { id:"ach_asc25",   cat:"prestige", name:"Ascension Addict",   desc:"Ascend 25 times",          hint:"Can't stop ascending",check: s => s.totalAscensions >= 25, progress: s => ({ cur: s.totalAscensions, max: 25 }) },
+  { id:"ach_asc50",   cat:"prestige", name:"Cycle of Eternity",  desc:"Ascend 50 times",          hint:"Eternal return",      check: s => s.totalAscensions >= 50, progress: s => ({ cur: s.totalAscensions, max: 50 }) },
+  { id:"ach_gems10",  cat:"prestige", name:"Gem Collector",      desc:"Earn 10 total Soul Gems",  hint:"Collect Soul Gems",   check: s => s.totalGems >= 10, progress: s => ({ cur: s.totalGems, max: 10 }) },
+  { id:"ach_gems50",  cat:"prestige", name:"Gem Lord",           desc:"Earn 50 total Soul Gems",  hint:"More gems needed",    check: s => s.totalGems >= 50, progress: s => ({ cur: s.totalGems, max: 50 }) },
+  { id:"ach_gems100", cat:"prestige", name:"Gem Baron",          desc:"Earn 100 total Soul Gems", hint:"A baron's collection",check: s => s.totalGems >= 100, progress: s => ({ cur: s.totalGems, max: 100 }) },
+  { id:"ach_gems500", cat:"prestige", name:"Gem Emperor",        desc:"Earn 500 total Soul Gems", hint:"Unmatched gem wealth", check: s => s.totalGems >= 500, progress: s => ({ cur: s.totalGems, max: 500 }) },
+  { id:"ach_skill_all", cat:"prestige", name:"Scholar Supreme",  desc:"Unlock every skill tree node", hint:"Master the skill tree", check: s => Object.keys(s.unlockedSkills).length >= SKILL_TREE.length,
+    progress: s => ({ cur: Object.keys(s.unlockedSkills).length, max: SKILL_TREE.length }) },
+
+  // ── Upgrades ──
+  { id:"ach_upg1",           cat:"upgrades", name:"Apprentice",         desc:"Reach Apprentice in any profession",     hint:"Upgrade a profession",    check: s => s.profUpgrades.some(t => t >= 1) },
+  { id:"ach_apprentice1",    cat:"upgrades", name:"First Rank",         desc:"Upgrade a profession to Apprentice",     hint:"Upgrade a profession",    check: s => (s.profUpgrades || []).some(t => t >= 1) },
+  { id:"ach_journeyman1",    cat:"upgrades", name:"Skilled Tradesman",  desc:"Upgrade a profession to Journeyman",     hint:"Reach Journeyman tier",   check: s => (s.profUpgrades || []).some(t => t >= 2) },
+  { id:"ach_expert1",        cat:"upgrades", name:"Master of the Craft",desc:"Upgrade a profession to Expert",         hint:"Reach Expert tier",       check: s => (s.profUpgrades || []).some(t => t >= 3) },
+  { id:"ach_upg5",           cat:"upgrades", name:"Master Craftsman",   desc:"Reach Master in any profession",         hint:"Push to Master tier",     check: s => s.profUpgrades.some(t => t >= 4) },
+  { id:"ach_master1",        cat:"upgrades", name:"Sovereign",          desc:"Upgrade a profession to Master",         hint:"Reach Master tier",       check: s => (s.profUpgrades || []).some(t => t >= 4) },
+  { id:"ach_upg_gm",         cat:"upgrades", name:"Grandmaster",        desc:"Reach Grandmaster in any profession",    hint:"The highest rank",        check: s => s.profUpgrades.some(t => t >= 5) },
+  { id:"ach_grandmaster1",   cat:"upgrades", name:"Legend Forged",      desc:"Upgrade a profession to Grandmaster",    hint:"Become a legend",         check: s => (s.profUpgrades || []).some(t => t >= 5) },
+  { id:"ach_upgall",         cat:"upgrades", name:"Jack of All",        desc:"Reach Journeyman in all professions",    hint:"All at Journeyman",       check: s => s.profUpgrades.every(t => t >= 2),
+    progress: s => ({ cur: s.profUpgrades.filter(t => t >= 2).length, max: 10 }) },
+  { id:"ach_apprentice_all", cat:"upgrades", name:"The Whole Castle",   desc:"Every profession at Apprentice or higher", hint:"All at Apprentice",     check: s => (s.profUpgrades || []).length >= 10 && s.profUpgrades.every(t => t >= 1),
+    progress: s => ({ cur: (s.profUpgrades || []).filter(t => t >= 1).length, max: 10 }) },
+  { id:"ach_upg_master_all", cat:"upgrades", name:"Master of Trades",   desc:"Reach Master in every profession",      hint:"All at Master",           check: s => s.profUpgrades.every(t => t >= 4),
+    progress: s => ({ cur: s.profUpgrades.filter(t => t >= 4).length, max: 10 }) },
+  { id:"ach_upg_gm_all",     cat:"upgrades", name:"Peerless",           desc:"Reach Grandmaster in every profession",  hint:"All at Grandmaster",      check: s => s.profUpgrades.every(t => t >= 5),
+    progress: s => ({ cur: s.profUpgrades.filter(t => t >= 5).length, max: 10 }) },
+
+  // ── Activity ──
+  { id:"ach_click100", cat:"activity", name:"Restless Fingers", desc:"Manually start 100 cycles",      hint:"Click more",           check: s => s.manualClicks >= 100, progress: s => ({ cur: s.manualClicks, max: 100 }) },
+  { id:"ach_click1k",  cat:"activity", name:"Carpal Tunnel",    desc:"Manually start 1,000 cycles",    hint:"Keep clicking",        check: s => s.manualClicks >= 1000, progress: s => ({ cur: s.manualClicks, max: 1000 }) },
+  { id:"ach_click10k", cat:"activity", name:"Click Machine",    desc:"Manually start 10,000 cycles",   hint:"Unstoppable clicker",  check: s => s.manualClicks >= 10000, progress: s => ({ cur: s.manualClicks, max: 10000 }) },
+  { id:"ach_event5",   cat:"activity", name:"Event Hunter",     desc:"Activate 5 dungeon events",      hint:"Find dungeon events",  check: s => s.eventsActivated >= 5, progress: s => ({ cur: s.eventsActivated, max: 5 }) },
+  { id:"ach_event20",  cat:"activity", name:"Thrill Seeker",    desc:"Activate 20 dungeon events",     hint:"More events await",    check: s => s.eventsActivated >= 20, progress: s => ({ cur: s.eventsActivated, max: 20 }) },
+  { id:"ach_event50",  cat:"activity", name:"Festival Goer",    desc:"Activate 50 dungeon events",     hint:"Event enthusiast",     check: s => s.eventsActivated >= 50, progress: s => ({ cur: s.eventsActivated, max: 50 }) },
+  { id:"ach_event200", cat:"activity", name:"Event Devotee",    desc:"Activate 200 dungeon events",    hint:"Devoted to the cause", check: s => s.eventsActivated >= 200, progress: s => ({ cur: s.eventsActivated, max: 200 }) },
+  { id:"ach_mtx_all",  cat:"activity", name:"Deep Pockets",     desc:"Purchase all 4 bonus equipment slots", hint:"Buy all bonus slots", check: s => s.mtxSlots >= 4, progress: s => ({ cur: s.mtxSlots, max: 4 }) },
+
+  // ── Sacrifice ──
+  { id:"ach_sacrifice1",     cat:"sacrifice", name:"First Offering",  desc:"Sacrifice an item at the altar",       hint:"Visit the altar",      check: s => (s.lifetimeEssence || 0) > 0 || Object.values(s.consumedBuffs || {}).some(v => v > 0) },
+  { id:"ach_sacrifice_gold", cat:"sacrifice", name:"Altar of Power",  desc:"Buy 10 ranks across Altar buff nodes", hint:"Invest in altar buffs", check: s => { const r = s.altarRanks || {}; return ((r.greed||0) + (r.haste||0) + (r.fortune||0) + (r.legendary_touch||0)) >= 10; },
+    progress: s => { const r = s.altarRanks || {}; return { cur: (r.greed||0) + (r.haste||0) + (r.fortune||0) + (r.legendary_touch||0), max: 10 }; } },
+
+  // ── Evolution ──
+  { id:"ach_transform_any",  cat:"evolution", name:"Metamorphosis",      desc:"Transform any profession",                      hint:"Transform a profession",  check: s => s.profTransforms.some(t => t != null) },
+  { id:"ach_transform_all",  cat:"evolution", name:"Ultimate Evolution",  desc:"Transform every profession",                    hint:"Transform them all",      check: s => s.profTransforms.every(t => t != null),
+    progress: s => ({ cur: s.profTransforms.filter(t => t != null).length, max: 10 }) },
+  { id:"ach_evolve1",        cat:"evolution", name:"Reborn",              desc:"Evolve any profession to Stage 1",              hint:"Evolve a profession",     check: s => (s.profEvolutions || []).some(e => (e || 0) >= 1) },
+  { id:"ach_evolve_triple",  cat:"evolution", name:"Triple Mastered",     desc:"Evolve three professions to Stage 2 or higher", hint:"Evolve three to Stage 2", check: s => (s.profEvolutions || []).filter(e => (e || 0) >= 2).length >= 3,
+    progress: s => ({ cur: (s.profEvolutions || []).filter(e => (e || 0) >= 2).length, max: 3 }) },
+  { id:"ach_apotheosis",     cat:"evolution", name:"Apotheosis",          desc:"Evolve any profession to Stage 3 (Legendary)",  hint:"Reach Stage 3",           check: s => (s.profEvolutions || []).some(e => (e || 0) >= 3) },
 ];
 
 // Maps achievement id → icon number in /assets/achievements/. 30 hand-drawn
@@ -1302,6 +1321,7 @@ export default function CastleCapitalist() {
   const [showWatchInfo, setShowWatchInfo] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showAchievements, setShowAchievements] = useState(false);
+  const [achCollapsed, setAchCollapsed] = useState({});
   const [firstApprenticeSeen, setFirstApprenticeSeen] = useState(false);
   const [showFirstApprenticeModal, setShowFirstApprenticeModal] = useState(null);
   const [firstForgeSeen, setFirstForgeSeen] = useState(false);
@@ -1423,6 +1443,7 @@ export default function CastleCapitalist() {
   const gemsSpent = getGemsSpent(unlockedSkills);
   const gemsAvailable = prestigeGems - gemsSpent;
   const achievementCount = Object.keys(achievements).length;
+  const achState = { gold, lifetimeGold, ventures, inventory, hasFoundRare, totalGems, totalAscensions, profUpgrades, profTransforms, profEvolutions, materials, unlockedSkills, mtxSlots, manualClicks, eventsActivated, consumedBuffs, essence, lifetimeEssence, altarRanks };
   const prestigeMultiplier = 1 + (totalGems * GEM_GOLD_BONUS) + skillBonuses.goldMult + achievementCount * ACHIEVEMENT_BONUS;
 
   // ═══ PARTICLE SYSTEM ═══
@@ -1755,11 +1776,10 @@ export default function CastleCapitalist() {
 
   // ═══ ACHIEVEMENT CHECKER ═══
   useEffect(() => {
-    const state = { gold, lifetimeGold, ventures, inventory, hasFoundRare, totalGems, totalAscensions, profUpgrades, profTransforms, profEvolutions, materials, unlockedSkills, mtxSlots, manualClicks, eventsActivated, consumedBuffs, essence, lifetimeEssence, altarRanks };
     let newUnlocks = null;
     for (const ach of ACHIEVEMENTS) {
       if (achievements[ach.id]) continue;
-      if (ach.check(state)) {
+      if (ach.check(achState)) {
         if (!newUnlocks) newUnlocks = { ...achievements };
         newUnlocks[ach.id] = true;
         if (activeEventRef.current) {
@@ -2887,6 +2907,71 @@ export default function CastleCapitalist() {
 
   // ═══ RENDER ═══
 
+  const toggleAchCat = key => setAchCollapsed(p => ({ ...p, [key]: !p[key] }));
+
+  const renderAchievementPanel = () => {
+    const grouped = {};
+    for (const cat of ACH_CATEGORIES) grouped[cat.key] = [];
+    for (const ach of ACHIEVEMENTS) (grouped[ach.cat] || (grouped[ach.cat] = [])).push(ach);
+
+    return (
+      <div className="ach-panel">
+        <div className="ach-bonus">+{achievementCount}% gold from {achievementCount} achievements</div>
+        {ACH_CATEGORIES.map(cat => {
+          const achs = grouped[cat.key];
+          if (!achs || achs.length === 0) return null;
+          const unlockedInCat = achs.filter(a => achievements[a.id]).length;
+          const collapsed = !!achCollapsed[cat.key];
+          return (
+            <div key={cat.key} className="ach-category">
+              <button className="ach-cat-header" onClick={() => toggleAchCat(cat.key)}>
+                <span className="ach-cat-label">
+                  <span className="ach-cat-icon">{cat.icon}</span>
+                  {cat.label}
+                </span>
+                <span className="ach-cat-count">
+                  {unlockedInCat}/{achs.length}
+                  <span className={`ach-cat-arrow ${collapsed ? '' : 'ach-cat-arrow-open'}`}>{'\u25B6'}</span>
+                </span>
+              </button>
+              {!collapsed && (
+                <div className="ach-list">
+                  {achs.map(ach => {
+                    const unlocked = !!achievements[ach.id];
+                    const iconUrl = getAchievementIcon(ach.id);
+                    const prog = !unlocked && ach.progress ? ach.progress(achState) : null;
+                    const pct = prog ? Math.min(100, Math.max(0, (prog.cur / prog.max) * 100)) : 0;
+                    return (
+                      <div key={ach.id} className={`ach-card ${unlocked ? 'ach-unlocked' : 'ach-locked'}`}>
+                        <div className="ach-icon">
+                          {iconUrl
+                            ? <img src={iconUrl} alt="" className="ach-icon-img" />
+                            : (unlocked ? '\u2726' : '\uD83D\uDD12')}
+                        </div>
+                        <div className="ach-info">
+                          <span className="ach-name">{unlocked ? ach.name : (ach.hint || '???')}</span>
+                          <span className="ach-desc">{unlocked ? ach.desc : (ach.hint ? ach.desc : 'Keep playing to discover...')}</span>
+                          {prog && (
+                            <div className="ach-progress-wrap">
+                              <div className="ach-progress-bar">
+                                <div className="ach-progress-fill" style={{ width: pct + '%' }} />
+                              </div>
+                              <span className="ach-progress-text">{formatNumber(prog.cur)}/{formatNumber(prog.max)}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
   if (loading) {
     return (
       <div className="cc">
@@ -3898,30 +3983,7 @@ export default function CastleCapitalist() {
             </div>
           )}
 
-          {prestSub === 'achievements' && (
-            <div className="ach-panel">
-              <div className="ach-bonus">+{achievementCount}% gold from {achievementCount} achievements</div>
-              <div className="ach-list">
-                {ACHIEVEMENTS.map(ach => {
-                  const unlocked = !!achievements[ach.id];
-                  const iconUrl = getAchievementIcon(ach.id);
-                  return (
-                    <div key={ach.id} className={`ach-card ${unlocked ? 'ach-unlocked' : 'ach-locked'}`}>
-                      <div className="ach-icon">
-                        {iconUrl
-                          ? <img src={iconUrl} alt="" className="ach-icon-img" />
-                          : (unlocked ? '\u2726' : '\uD83D\uDD12')}
-                      </div>
-                      <div className="ach-info">
-                        <span className="ach-name">{unlocked ? ach.name : '???'}</span>
-                        <span className="ach-desc">{unlocked ? ach.desc : 'Keep playing to discover...'}</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
+          {prestSub === 'achievements' && renderAchievementPanel()}
         </div>
       )}
 
@@ -4075,28 +4137,7 @@ export default function CastleCapitalist() {
               <span className="watch-modal-title">Achievements ({achievementCount}/{ACHIEVEMENTS.length})</span>
               <button className="watch-modal-close" onClick={() => setShowAchievements(false)}>X</button>
             </div>
-            <div className="ach-panel">
-              <div className="ach-bonus">+{achievementCount}% gold from {achievementCount} achievements</div>
-              <div className="ach-list">
-                {ACHIEVEMENTS.map(ach => {
-                  const unlocked = !!achievements[ach.id];
-                  const iconUrl = getAchievementIcon(ach.id);
-                  return (
-                    <div key={ach.id} className={`ach-card ${unlocked ? 'ach-unlocked' : 'ach-locked'}`}>
-                      <div className="ach-icon">
-                        {iconUrl
-                          ? <img src={iconUrl} alt="" className="ach-icon-img" />
-                          : (unlocked ? '\u2726' : '\uD83D\uDD12')}
-                      </div>
-                      <div className="ach-info">
-                        <span className="ach-name">{unlocked ? ach.name : '???'}</span>
-                        <span className="ach-desc">{unlocked ? ach.desc : 'Keep playing to discover...'}</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+            {renderAchievementPanel()}
           </div>
         </div>
       )}
@@ -5291,12 +5332,20 @@ const STYLES = `
 .skill-owned .skill-name { color:var(--gm); }
 
 /* ── Achievements ── */
-.ach-panel { padding:4px 0; }
-.ach-bonus { font-family:'Fira Code',monospace; font-size:11px; color:var(--gold,#fbbf24); text-align:center; margin-bottom:12px; }
-.ach-list { display:flex; flex-direction:column; gap:6px; }
-.ach-card { display:flex; align-items:center; gap:10px; background:var(--sf); border:1px solid var(--bd); border-radius:8px; padding:10px 12px; transition:all .2s; }
-.ach-unlocked { border-color:rgba(251,191,36,.3); background:rgba(251,191,36,.05); }
-.ach-locked { opacity:.4; }
+.ach-panel { padding:4px 0; display:flex; flex-direction:column; gap:8px; }
+.ach-bonus { font-family:'Fira Code',monospace; font-size:11px; color:var(--gold,#fbbf24); text-align:center; margin-bottom:4px; }
+.ach-category { border:1px solid var(--bd); border-radius:8px; overflow:hidden; }
+.ach-cat-header { display:flex; align-items:center; justify-content:space-between; width:100%; background:rgba(255,255,255,.03); border:none; padding:10px 14px; cursor:pointer; color:var(--txb); font-family:'Cinzel',serif; font-size:13px; font-weight:700; transition:background .15s; }
+.ach-cat-header:hover { background:rgba(255,255,255,.06); }
+.ach-cat-label { display:flex; align-items:center; gap:8px; }
+.ach-cat-icon { font-size:16px; }
+.ach-cat-count { font-family:'Fira Code',monospace; font-size:11px; color:var(--txd); display:flex; align-items:center; gap:6px; }
+.ach-cat-arrow { font-size:9px; transition:transform .2s; display:inline-block; }
+.ach-cat-arrow-open { transform:rotate(90deg); }
+.ach-list { display:flex; flex-direction:column; gap:1px; background:var(--bd); }
+.ach-card { display:flex; align-items:center; gap:10px; background:var(--sf); padding:10px 12px; transition:all .2s; }
+.ach-unlocked { background:rgba(251,191,36,.05); }
+.ach-locked { opacity:.55; }
 .ach-icon { font-size:18px; flex-shrink:0; width:44px; height:44px; display:flex; align-items:center; justify-content:center; }
 .ach-icon-img { width:44px; height:44px; object-fit:contain; display:block; filter:drop-shadow(0 2px 4px rgba(0,0,0,.5)); }
 .ach-locked .ach-icon-img { filter:grayscale(1) brightness(.55) drop-shadow(0 2px 4px rgba(0,0,0,.5)); }
@@ -5304,6 +5353,11 @@ const STYLES = `
 .ach-name { font-family:'Cinzel',serif; font-size:12px; font-weight:700; color:var(--txb); display:block; }
 .ach-desc { font-size:10px; color:var(--txd); display:block; margin-top:2px; }
 .ach-unlocked .ach-name { color:var(--gold,#fbbf24); }
+.ach-locked .ach-name { color:var(--txb); font-style:italic; }
+.ach-progress-wrap { display:flex; align-items:center; gap:8px; margin-top:4px; }
+.ach-progress-bar { flex:1; height:6px; background:rgba(255,255,255,.08); border-radius:3px; overflow:hidden; }
+.ach-progress-fill { height:100%; background:linear-gradient(90deg,rgba(251,191,36,.4),rgba(251,191,36,.7)); border-radius:3px; transition:width .3s ease; min-width:1px; }
+.ach-progress-text { font-family:'Fira Code',monospace; font-size:9px; color:var(--txd); white-space:nowrap; }
 
 /* Achievement Toast */
 .achievement-toast { position:fixed; top:100px; left:50%; transform:translateX(-50%); background:linear-gradient(135deg,#2a2000,#1a1500); border:2px solid var(--gold,#fbbf24); border-radius:10px; padding:12px 24px; z-index:55; text-align:center; min-width:240px; max-width:360px; animation:toast-in .3s ease-out; box-shadow:0 4px 20px rgba(0,0,0,.6),0 0 20px rgba(251,191,36,.2); pointer-events:none; }
