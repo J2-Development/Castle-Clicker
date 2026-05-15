@@ -45,7 +45,7 @@ const UI_FILES = {
 };
 
 // ── Base path for assets ──
-const ASSET_BASE = "/assets";
+const ASSET_BASE = `${import.meta.env.BASE_URL}assets`;
 
 // ── Reusable image component with fallback ──
 function GameImage({ src, alt, size, fallbackColor, style, className }) {
