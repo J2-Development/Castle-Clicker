@@ -20,8 +20,8 @@ export default defineConfig({
         background_color: '#1a1b26',
         display: 'standalone',
         orientation: 'portrait',
-        start_url: '/',
-        scope: '/',
+        start_url: '/castle-clicker/',
+        scope: '/castle-clicker/',
         icons: [
           {
             src: 'pwa-64x64.png',
