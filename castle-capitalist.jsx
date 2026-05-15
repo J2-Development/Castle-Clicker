@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef, useCallback, useLayoutEffect } from "react";
 import { VentureIcon, CompanionPortrait, GoldCoinIcon, SoulGemIcon } from "./src/GameAssets.jsx";
 
+const ASSETS = import.meta.env.BASE_URL + 'assets';
+
 // ═══ ICONS ═══
 /* ═══════════════════════════════════════════════════════════════
    Castle Clicker — Custom SVG Icon Library
@@ -481,7 +483,7 @@ const ACH_ICONS = {
   // Activity / clicks
   ach_click100:21, ach_click1k:23, ach_click10k:25,
 };
-const getAchievementIcon = id => (ACH_ICONS[id] ? `/assets/achievements/${ACH_ICONS[id]}.png` : null);
+const getAchievementIcon = id => (ACH_ICONS[id] ? `${ASSETS}/achievements/${ACH_ICONS[id]}.png` : null);
 
 // ═══ DUNGEON EVENTS ═══
 const DUNGEON_EVENTS = [
@@ -793,58 +795,58 @@ const LOOT_REROLL_COST = 50;
 const LOOT_TABLE = [
   // ── Common ── (16 items)
   // Global
-  { id:"rusty_coin_pouch",  name:"Rusty Coin Pouch",  rarity:"common", icon:"/assets/loot/rusty_coin_pouch.png", description:"+3% gold from all professions",           effects:[{ type:"goldMultiplier", target:"all", value:0.03 }]},
-  { id:"copper_ring",       name:"Copper Ring",        rarity:"common", icon:"/assets/loot/copper_ring.png", description:"+2% gold from all professions",           effects:[{ type:"goldMultiplier", target:"all", value:0.02 }]},
-  { id:"frayed_rope",       name:"Frayed Rope",        rarity:"common", icon:"/assets/loot/frayed_rope.png", description:"+3% speed for all professions",           effects:[{ type:"speedBoost",     target:"all", value:0.03 }]},
-  { id:"cracked_gem",       name:"Cracked Gem",        rarity:"common", icon:"/assets/loot/cracked_gem.png", description:"+1% drop rates",                          effects:[{ type:"dropRateBoost",  target:"all", value:0.01 }]},
-  { id:"minor_rune",        name:"Minor Rune",         rarity:"common", icon:"/assets/loot/minor_rune.png", description:"+2% drop rates",                          effects:[{ type:"dropRateBoost",  target:"all", value:0.02 }]},
+  { id:"rusty_coin_pouch",  name:"Rusty Coin Pouch",  rarity:"common", icon:`${ASSETS}/loot/rusty_coin_pouch.png`, description:"+3% gold from all professions",           effects:[{ type:"goldMultiplier", target:"all", value:0.03 }]},
+  { id:"copper_ring",       name:"Copper Ring",        rarity:"common", icon:`${ASSETS}/loot/copper_ring.png`, description:"+2% gold from all professions",           effects:[{ type:"goldMultiplier", target:"all", value:0.02 }]},
+  { id:"frayed_rope",       name:"Frayed Rope",        rarity:"common", icon:`${ASSETS}/loot/frayed_rope.png`, description:"+3% speed for all professions",           effects:[{ type:"speedBoost",     target:"all", value:0.03 }]},
+  { id:"cracked_gem",       name:"Cracked Gem",        rarity:"common", icon:`${ASSETS}/loot/cracked_gem.png`, description:"+1% drop rates",                          effects:[{ type:"dropRateBoost",  target:"all", value:0.01 }]},
+  { id:"minor_rune",        name:"Minor Rune",         rarity:"common", icon:`${ASSETS}/loot/minor_rune.png`, description:"+2% drop rates",                          effects:[{ type:"dropRateBoost",  target:"all", value:0.02 }]},
   // Targeted
-  { id:"worn_gloves",       name:"Worn Gloves",        rarity:"common", icon:"/assets/loot/worn_gloves.png", description:"+3% speed for all professions",           effects:[{ type:"speedBoost",     target:"all", value:0.03 }]},
-  { id:"tattered_map",      name:"Tattered Map",       rarity:"common", icon:"/assets/loot/tattered_map.png", description:"+2% drop rates",                          effects:[{ type:"dropRateBoost",  target:"all", value:0.02 }]},
-  { id:"spore_poultice",    name:"Spore Poultice",     rarity:"common", icon:"/assets/loot/spore_poultice.png", description:"+2% speed for all professions",           effects:[{ type:"speedBoost",     target:"all", value:0.02 }]},
-  { id:"mushroom_cap",      name:"Mushroom Cap",       rarity:"common", icon:"/assets/loot/mushroom_cap.png", description:"+3% gold from all professions",           effects:[{ type:"goldMultiplier", target:"all", value:0.03 }]},
-  { id:"dull_blade",        name:"Dull Blade",         rarity:"common", icon:"/assets/loot/dull_blade.png", description:"+4% gold from all professions",           effects:[{ type:"goldMultiplier", target:"all", value:0.04 }]},
-  { id:"skeleton_key",      name:"Skeleton Key",       rarity:"common", icon:"/assets/loot/skeleton_key.png", description:"+2% drop rates",                          effects:[{ type:"dropRateBoost",  target:"all", value:0.02 }]},
-  { id:"broken_lockpick",   name:"Broken Lockpick",    rarity:"common", icon:"/assets/loot/broken_lockpick.png", description:"+4% speed for all professions",           effects:[{ type:"speedBoost",     target:"all", value:0.04 }]},
-  { id:"drake_whistle",     name:"Drake Whistle",      rarity:"common", icon:"/assets/loot/drake_whistle.png", description:"+4% gold from all professions",           effects:[{ type:"goldMultiplier", target:"all", value:0.04 }]},
-  { id:"blueprint_scrap",   name:"Blueprint Scrap",    rarity:"common", icon:"/assets/loot/blueprint_scrap.png", description:"+3% speed for all professions",           effects:[{ type:"speedBoost",     target:"all", value:0.03 }]},
-  { id:"hellfire_ember",    name:"Hellfire Ember",      rarity:"common", icon:"/assets/loot/hellfire_ember.png", description:"+3% gold from all professions",           effects:[{ type:"goldMultiplier", target:"all", value:0.03 }]},
-  { id:"star_map",          name:"Star Map",            rarity:"common", icon:"/assets/loot/star_map.png", description:"+3% drop rates",                          effects:[{ type:"dropRateBoost",  target:"all", value:0.03 }]},
+  { id:"worn_gloves",       name:"Worn Gloves",        rarity:"common", icon:`${ASSETS}/loot/worn_gloves.png`, description:"+3% speed for all professions",           effects:[{ type:"speedBoost",     target:"all", value:0.03 }]},
+  { id:"tattered_map",      name:"Tattered Map",       rarity:"common", icon:`${ASSETS}/loot/tattered_map.png`, description:"+2% drop rates",                          effects:[{ type:"dropRateBoost",  target:"all", value:0.02 }]},
+  { id:"spore_poultice",    name:"Spore Poultice",     rarity:"common", icon:`${ASSETS}/loot/spore_poultice.png`, description:"+2% speed for all professions",           effects:[{ type:"speedBoost",     target:"all", value:0.02 }]},
+  { id:"mushroom_cap",      name:"Mushroom Cap",       rarity:"common", icon:`${ASSETS}/loot/mushroom_cap.png`, description:"+3% gold from all professions",           effects:[{ type:"goldMultiplier", target:"all", value:0.03 }]},
+  { id:"dull_blade",        name:"Dull Blade",         rarity:"common", icon:`${ASSETS}/loot/dull_blade.png`, description:"+4% gold from all professions",           effects:[{ type:"goldMultiplier", target:"all", value:0.04 }]},
+  { id:"skeleton_key",      name:"Skeleton Key",       rarity:"common", icon:`${ASSETS}/loot/skeleton_key.png`, description:"+2% drop rates",                          effects:[{ type:"dropRateBoost",  target:"all", value:0.02 }]},
+  { id:"broken_lockpick",   name:"Broken Lockpick",    rarity:"common", icon:`${ASSETS}/loot/broken_lockpick.png`, description:"+4% speed for all professions",           effects:[{ type:"speedBoost",     target:"all", value:0.04 }]},
+  { id:"drake_whistle",     name:"Drake Whistle",      rarity:"common", icon:`${ASSETS}/loot/drake_whistle.png`, description:"+4% gold from all professions",           effects:[{ type:"goldMultiplier", target:"all", value:0.04 }]},
+  { id:"blueprint_scrap",   name:"Blueprint Scrap",    rarity:"common", icon:`${ASSETS}/loot/blueprint_scrap.png`, description:"+3% speed for all professions",           effects:[{ type:"speedBoost",     target:"all", value:0.03 }]},
+  { id:"hellfire_ember",    name:"Hellfire Ember",      rarity:"common", icon:`${ASSETS}/loot/hellfire_ember.png`, description:"+3% gold from all professions",           effects:[{ type:"goldMultiplier", target:"all", value:0.03 }]},
+  { id:"star_map",          name:"Star Map",            rarity:"common", icon:`${ASSETS}/loot/star_map.png`, description:"+3% drop rates",                          effects:[{ type:"dropRateBoost",  target:"all", value:0.03 }]},
 
   // ── Uncommon ── (12 items)
   // Global
-  { id:"goblin_lucky_charm", name:"Goblin's Lucky Charm", rarity:"uncommon", icon:"/assets/loot/goblin_lucky_charm.png", description:"+8% gold from all professions",        effects:[{ type:"goldMultiplier", target:"all", value:0.08 }]},
-  { id:"silver_compass",     name:"Silver Compass",       rarity:"uncommon", icon:"/assets/loot/silver_compass.png", description:"+6% speed for all professions",        effects:[{ type:"speedBoost",     target:"all", value:0.06 }]},
-  { id:"whispering_skull",   name:"Whispering Skull",     rarity:"uncommon", icon:"/assets/loot/whispering_skull.png", description:"Skill levels count +15% for drops",    effects:[{ type:"xpBoost",        target:"all", value:0.15 }]},
-  { id:"enchanted_satchel",  name:"Enchanted Satchel",    rarity:"uncommon", icon:"/assets/loot/enchanted_satchel.png", description:"+5% drop rates",                       effects:[{ type:"dropRateBoost",  target:"all", value:0.05 }]},
+  { id:"goblin_lucky_charm", name:"Goblin's Lucky Charm", rarity:"uncommon", icon:`${ASSETS}/loot/goblin_lucky_charm.png`, description:"+8% gold from all professions",        effects:[{ type:"goldMultiplier", target:"all", value:0.08 }]},
+  { id:"silver_compass",     name:"Silver Compass",       rarity:"uncommon", icon:`${ASSETS}/loot/silver_compass.png`, description:"+6% speed for all professions",        effects:[{ type:"speedBoost",     target:"all", value:0.06 }]},
+  { id:"whispering_skull",   name:"Whispering Skull",     rarity:"uncommon", icon:`${ASSETS}/loot/whispering_skull.png`, description:"Skill levels count +15% for drops",    effects:[{ type:"xpBoost",        target:"all", value:0.15 }]},
+  { id:"enchanted_satchel",  name:"Enchanted Satchel",    rarity:"uncommon", icon:`${ASSETS}/loot/enchanted_satchel.png`, description:"+5% drop rates",                       effects:[{ type:"dropRateBoost",  target:"all", value:0.05 }]},
   // Targeted
-  { id:"shadow_dagger",      name:"Shadow Dagger",        rarity:"uncommon", icon:"/assets/loot/shadow_dagger.png", description:"+15% Goblin Pickpocketing gold",       effects:[{ type:"goldMultiplier", target:1,     value:0.15 }]},
-  { id:"torch_oil",          name:"Torch Oil Flask",      rarity:"uncommon", icon:"/assets/loot/torch_oil.png", description:"-10% Torch Scavenging cooldown",       effects:[{ type:"speedBoost",     target:0,     value:0.10 }]},
-  { id:"alchemists_flask",   name:"Alchemist's Flask",    rarity:"uncommon", icon:"/assets/loot/alchemists_flask.png", description:"+12% Potion Brewing gold",             effects:[{ type:"goldMultiplier", target:5,     value:0.12 }]},
-  { id:"bubbling_retort",    name:"Bubbling Retort",      rarity:"uncommon", icon:"/assets/loot/bubbling_retort.png", description:"+8% speed for Potion Brewing",         effects:[{ type:"speedBoost",     target:5,     value:0.08 }]},
-  { id:"wyvern_fang",        name:"Wyvern Fang",          rarity:"uncommon", icon:"/assets/loot/wyvern_fang.png", description:"+12% Dragon Taming gold",              effects:[{ type:"goldMultiplier", target:6,     value:0.12 }]},
-  { id:"mystic_lens",        name:"Mystic Lens",          rarity:"uncommon", icon:"/assets/loot/mystic_lens.png", description:"+10% Dungeon Expansion gold",          effects:[{ type:"goldMultiplier", target:7,     value:0.10 }]},
-  { id:"ember_stone",        name:"Ember Stone",          rarity:"uncommon", icon:"/assets/loot/ember_stone.png", description:"+10% Demon Gate Siege gold",           effects:[{ type:"goldMultiplier", target:8,     value:0.10 }]},
-  { id:"eldritch_sigil",     name:"Eldritch Sigil",       rarity:"uncommon", icon:"/assets/loot/eldritch_sigil.png", description:"+10% Elder God Pact gold",             effects:[{ type:"goldMultiplier", target:9,     value:0.10 }]},
+  { id:"shadow_dagger",      name:"Shadow Dagger",        rarity:"uncommon", icon:`${ASSETS}/loot/shadow_dagger.png`, description:"+15% Goblin Pickpocketing gold",       effects:[{ type:"goldMultiplier", target:1,     value:0.15 }]},
+  { id:"torch_oil",          name:"Torch Oil Flask",      rarity:"uncommon", icon:`${ASSETS}/loot/torch_oil.png`, description:"-10% Torch Scavenging cooldown",       effects:[{ type:"speedBoost",     target:0,     value:0.10 }]},
+  { id:"alchemists_flask",   name:"Alchemist's Flask",    rarity:"uncommon", icon:`${ASSETS}/loot/alchemists_flask.png`, description:"+12% Potion Brewing gold",             effects:[{ type:"goldMultiplier", target:5,     value:0.12 }]},
+  { id:"bubbling_retort",    name:"Bubbling Retort",      rarity:"uncommon", icon:`${ASSETS}/loot/bubbling_retort.png`, description:"+8% speed for Potion Brewing",         effects:[{ type:"speedBoost",     target:5,     value:0.08 }]},
+  { id:"wyvern_fang",        name:"Wyvern Fang",          rarity:"uncommon", icon:`${ASSETS}/loot/wyvern_fang.png`, description:"+12% Dragon Taming gold",              effects:[{ type:"goldMultiplier", target:6,     value:0.12 }]},
+  { id:"mystic_lens",        name:"Mystic Lens",          rarity:"uncommon", icon:`${ASSETS}/loot/mystic_lens.png`, description:"+10% Dungeon Expansion gold",          effects:[{ type:"goldMultiplier", target:7,     value:0.10 }]},
+  { id:"ember_stone",        name:"Ember Stone",          rarity:"uncommon", icon:`${ASSETS}/loot/ember_stone.png`, description:"+10% Demon Gate Siege gold",           effects:[{ type:"goldMultiplier", target:8,     value:0.10 }]},
+  { id:"eldritch_sigil",     name:"Eldritch Sigil",       rarity:"uncommon", icon:`${ASSETS}/loot/eldritch_sigil.png`, description:"+10% Elder God Pact gold",             effects:[{ type:"goldMultiplier", target:9,     value:0.10 }]},
 
   // ── Rare ── (6 items)
-  { id:"shadow_step_boots",  name:"Shadow Step Boots",    rarity:"rare", icon:"/assets/loot/shadow_step_boots.png", description:"3% chance for a bonus cycle on completion",    effects:[{ type:"instantComplete", target:"all", value:0.03 }]},
-  { id:"alchemist_stone",    name:"Alchemist Stone",      rarity:"rare", icon:"/assets/loot/alchemist_stone.png", description:"2x Potion Brewing gold",                      effects:[{ type:"goldMultiplier",  target:5,     value:1.00 }]},
-  { id:"bone_whistle",       name:"Bone Whistle",         rarity:"rare", icon:"/assets/loot/bone_whistle.png", description:"Skeleton levels count double for drops",       effects:[{ type:"xpBoost",         target:3,     value:1.00 }]},
-  { id:"dragon_scale_shield",name:"Dragon Scale Shield",  rarity:"rare", icon:"/assets/loot/dragon_scale_shield.png", description:"+20% Dragon Taming gold, +10% speed",         effects:[{ type:"goldMultiplier", target:6, value:0.20 }, { type:"speedBoost", target:6, value:0.10 }]},
-  { id:"void_shard",         name:"Void Shard",           rarity:"rare", icon:"/assets/loot/void_shard.png", description:"+15% all drop rates",                         effects:[{ type:"dropRateBoost",   target:"all", value:0.15 }]},
-  { id:"runic_hammer",       name:"Runic Hammer",         rarity:"rare", icon:"/assets/loot/runic_hammer.png", description:"+25% Trap Disarming gold",                    effects:[{ type:"goldMultiplier",  target:4,     value:0.25 }]},
+  { id:"shadow_step_boots",  name:"Shadow Step Boots",    rarity:"rare", icon:`${ASSETS}/loot/shadow_step_boots.png`, description:"3% chance for a bonus cycle on completion",    effects:[{ type:"instantComplete", target:"all", value:0.03 }]},
+  { id:"alchemist_stone",    name:"Alchemist Stone",      rarity:"rare", icon:`${ASSETS}/loot/alchemist_stone.png`, description:"2x Potion Brewing gold",                      effects:[{ type:"goldMultiplier",  target:5,     value:1.00 }]},
+  { id:"bone_whistle",       name:"Bone Whistle",         rarity:"rare", icon:`${ASSETS}/loot/bone_whistle.png`, description:"Skeleton levels count double for drops",       effects:[{ type:"xpBoost",         target:3,     value:1.00 }]},
+  { id:"dragon_scale_shield",name:"Dragon Scale Shield",  rarity:"rare", icon:`${ASSETS}/loot/dragon_scale_shield.png`, description:"+20% Dragon Taming gold, +10% speed",         effects:[{ type:"goldMultiplier", target:6, value:0.20 }, { type:"speedBoost", target:6, value:0.10 }]},
+  { id:"void_shard",         name:"Void Shard",           rarity:"rare", icon:`${ASSETS}/loot/void_shard.png`, description:"+15% all drop rates",                         effects:[{ type:"dropRateBoost",   target:"all", value:0.15 }]},
+  { id:"runic_hammer",       name:"Runic Hammer",         rarity:"rare", icon:`${ASSETS}/loot/runic_hammer.png`, description:"+25% Trap Disarming gold",                    effects:[{ type:"goldMultiplier",  target:4,     value:0.25 }]},
 
   // ── Epic ── (4 items)
-  { id:"chain_lightning",    name:"Chain Lightning Scroll", rarity:"epic", icon:"/assets/loot/chain_lightning.png", description:"6% chance to auto-trigger adjacent profession", effects:[{ type:"chainRun",        target:"all", value:0.06 }]},
-  { id:"phoenix_feather",    name:"Phoenix Feather",        rarity:"epic", icon:"/assets/loot/phoenix_feather.png", description:"5% chance for a bonus cycle + 2x gold on that cycle",effects:[{ type:"instantComplete", target:"all", value:0.05 }, { type:"goldMultiplier", target:"all", value:0.15 }]},
-  { id:"greater_void_shard", name:"Greater Void Shard",     rarity:"epic", icon:"/assets/loot/greater_void_shard.png", description:"+30% all drop rates, +20% all speed",           effects:[{ type:"dropRateBoost",   target:"all", value:0.30 }, { type:"speedBoost", target:"all", value:0.20 }]},
-  { id:"warlords_signet",    name:"Warlord's Signet",       rarity:"epic", icon:"/assets/loot/warlords_signet.png", description:"+20% gold all, +10% speed all",                effects:[{ type:"goldMultiplier", target:"all", value:0.20 }, { type:"speedBoost", target:"all", value:0.10 }]},
+  { id:"chain_lightning",    name:"Chain Lightning Scroll", rarity:"epic", icon:`${ASSETS}/loot/chain_lightning.png`, description:"6% chance to auto-trigger adjacent profession", effects:[{ type:"chainRun",        target:"all", value:0.06 }]},
+  { id:"phoenix_feather",    name:"Phoenix Feather",        rarity:"epic", icon:`${ASSETS}/loot/phoenix_feather.png`, description:"5% chance for a bonus cycle + 2x gold on that cycle",effects:[{ type:"instantComplete", target:"all", value:0.05 }, { type:"goldMultiplier", target:"all", value:0.15 }]},
+  { id:"greater_void_shard", name:"Greater Void Shard",     rarity:"epic", icon:`${ASSETS}/loot/greater_void_shard.png`, description:"+30% all drop rates, +20% all speed",           effects:[{ type:"dropRateBoost",   target:"all", value:0.30 }, { type:"speedBoost", target:"all", value:0.20 }]},
+  { id:"warlords_signet",    name:"Warlord's Signet",       rarity:"epic", icon:`${ASSETS}/loot/warlords_signet.png`, description:"+20% gold all, +10% speed all",                effects:[{ type:"goldMultiplier", target:"all", value:0.20 }, { type:"speedBoost", target:"all", value:0.10 }]},
 
   // ── Legendary ── (3 items)
-  { id:"crown_dungeon_lord",  name:"Crown of the Dungeon Lord",  rarity:"legendary", icon:"/assets/loot/crown_dungeon_lord.png", description:"+30% all gold, +20% all speed",          effects:[{ type:"goldMultiplier", target:"all", value:0.30 }, { type:"speedBoost", target:"all", value:0.20 }]},
-  { id:"elder_gods_eye",      name:"Elder God's Eye",            rarity:"legendary", icon:"/assets/loot/elder_gods_eye.png", description:"All drop rates doubled",                  effects:[{ type:"dropRateBoost",  target:"all", value:1.00 }]},
-  { id:"blade_forgotten_king",name:"Blade of the Forgotten King",rarity:"legendary", icon:"/assets/loot/blade_forgotten_king.png", description:"0.5% chance for 50x gold on completion", effects:[{ type:"critGold",       target:"all", value:0.005}]},
+  { id:"crown_dungeon_lord",  name:"Crown of the Dungeon Lord",  rarity:"legendary", icon:`${ASSETS}/loot/crown_dungeon_lord.png`, description:"+30% all gold, +20% all speed",          effects:[{ type:"goldMultiplier", target:"all", value:0.30 }, { type:"speedBoost", target:"all", value:0.20 }]},
+  { id:"elder_gods_eye",      name:"Elder God's Eye",            rarity:"legendary", icon:`${ASSETS}/loot/elder_gods_eye.png`, description:"All drop rates doubled",                  effects:[{ type:"dropRateBoost",  target:"all", value:1.00 }]},
+  { id:"blade_forgotten_king",name:"Blade of the Forgotten King",rarity:"legendary", icon:`${ASSETS}/loot/blade_forgotten_king.png`, description:"0.5% chance for 50x gold on completion", effects:[{ type:"critGold",       target:"all", value:0.005}]},
 ];
 
 const LOOT_BY_ID = {};
