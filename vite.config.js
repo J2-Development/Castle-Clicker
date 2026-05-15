@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
-  base: '/castle-clicker/',
+  base: '/Castle-Clicker/',
   plugins: [
     react(),
     VitePWA({
@@ -20,8 +20,8 @@ export default defineConfig({
         background_color: '#1a1b26',
         display: 'standalone',
         orientation: 'portrait',
-        start_url: '/castle-clicker/',
-        scope: '/castle-clicker/',
+        start_url: '/Castle-Clicker/',
+        scope: '/Castle-Clicker/',
         icons: [
           {
             src: 'pwa-64x64.png',
