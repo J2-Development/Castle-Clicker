@@ -2977,7 +2977,7 @@ export default function CastleCapitalist() {
       <div className="cc">
         <style>{STYLES}</style>
         <div className="load-screen">
-          <img src="/assets/ui/loading_bg.png" alt="" className="load-bg" />
+          <img src={`${import.meta.env.BASE_URL}assets/ui/loading_bg.png`} alt="" className="load-bg" />
           <div className="load-overlay">
             <div className="load-title">
               <span className="load-castle-text">CASTLE</span>
@@ -4640,7 +4640,7 @@ const STYLES = `
   -webkit-tap-highlight-color: transparent;
 }
 .cc-content { position:relative; flex:1; min-height:0; }
-.cc-content::before { content:''; position:fixed; top:0; left:50%; transform:translateX(-50%); width:100%; max-width:480px; height:100vh; height:100dvh; background:url('/assets/backgrounds/dungeon_bg.png') center/cover no-repeat; z-index:0; pointer-events:none; opacity:0.15; animation:bg-flicker 4s ease-in-out infinite; }
+.cc-content::before { content:''; position:fixed; top:0; left:50%; transform:translateX(-50%); width:100%; max-width:480px; height:100vh; height:100dvh; background:url('${import.meta.env.BASE_URL}assets/backgrounds/dungeon_bg.png') center/cover no-repeat; z-index:0; pointer-events:none; opacity:0.15; animation:bg-flicker 4s ease-in-out infinite; }
 @keyframes bg-flicker { 0%,100%{opacity:0.15;} 30%{opacity:0.18;} 50%{opacity:0.13;} 70%{opacity:0.17;} 85%{opacity:0.14;} }
 .cc * { position: relative; box-sizing: border-box; }
 
